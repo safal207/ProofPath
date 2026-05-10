@@ -2,6 +2,10 @@
 
 **Verifiable intent for every critical action.**
 
+> **HTTPS protects the connection. ProofPath protects the meaning of the action.**
+>
+> HTTPS secures the channel. ProofPath secures the intent.
+
 ProofPath is an open protocol and gateway layer for adding verifiable intent, causal authorization, and auditable action chains to HTTPS APIs and AI-agent systems.
 
 HTTPS proves that a connection is secure. ProofPath proves that an action was authorized, causally grounded, and accountable.
