@@ -35,7 +35,11 @@ Every decision
   -> hash-chained audit trail
 ```
 
-See: `examples/agent-dangerous-action/README.md`
+See:
+
+- `examples/agent-dangerous-action/README.md`
+- `docs/demo-transcript.md`
+- `docs/launch-post.md`
 
 ## Why
 
