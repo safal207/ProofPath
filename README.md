@@ -41,6 +41,37 @@ See:
 - `docs/demo-transcript.md`
 - `docs/launch-post.md`
 
+## Join the Lab
+
+ProofPath is open for community experiments.
+
+We are not asking people to only confirm that it works. We want people to run it, break it, critique it, and tell us where the boundary is weak.
+
+Pick an experiment level:
+
+```text
+L0 — Reader feedback: is the idea understandable?
+L1 — Local demo: does the gateway work on your machine?
+L2 — Real model: does the LLM boundary feel clear?
+L3 — Red-team: can you break the model/action boundary?
+L4 — Integration: can ProofPath protect another toy or real system?
+L5 — Protocol critique: are the headers, reasons, and threat model right?
+```
+
+Start here:
+
+- `COMMUNITY_EXPERIMENTS.md`
+- #14 Reader feedback
+- #15 Local gateway demo
+- #16 Real model agent demo
+- #17 Red-team the model boundary
+- #18 Build an integration
+- #19 Protocol and threat model critique
+
+Lab principle:
+
+> Do not only tell us what works. Tell us where ProofPath breaks, where it is confusing, and where the protocol is too weak.
+
 ## Why
 
 Modern systems increasingly allow AI agents, services, and automated workflows to perform critical actions:
