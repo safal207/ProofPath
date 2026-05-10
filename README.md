@@ -12,6 +12,31 @@ HTTPS proves that a connection is secure. ProofPath proves that an action was au
 
 > HTTPS proves the channel. ProofPath proves the action.
 
+## Quick demo
+
+Run the one-minute AI agent dangerous action demo:
+
+```bash
+python3 examples/upstream/demo_server.py
+cargo run -p proofpath-gateway
+bash examples/agent-dangerous-action/agent_delete_without_approval.sh
+bash examples/agent-dangerous-action/agent_delete_with_approval.sh
+cat proofpath-audit.jsonl
+```
+
+Demo story:
+
+```text
+AI agent attempts irreversible delete without approval
+  -> ProofPath BLOCKS before protected API
+AI agent repeats with explicit human approval
+  -> ProofPath ACCEPTS and forwards
+Every decision
+  -> hash-chained audit trail
+```
+
+See: `examples/agent-dangerous-action/README.md`
+
 ## Why
 
 Modern systems increasingly allow AI agents, services, and automated workflows to perform critical actions:
