@@ -1,0 +1,17 @@
+POST /payments/transfer HTTP/1.1
+Host: api.example.com
+traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
+x-proofpath-intent-id: intent_9f21
+x-proofpath-causal-parent: decision_71ab
+x-proofpath-scope: payments.transfer.once
+x-proofpath-reversibility: irreversible
+x-proofpath-human-approval: approval_11fa
+signature-input: proofpath=("@method" "@target-uri" "x-proofpath-intent-id" "x-proofpath-causal-parent" "x-proofpath-scope" "x-proofpath-reversibility" "x-proofpath-human-approval");created=1778430000;keyid="agent-key-1"
+signature: proofpath=:BASE64_SIGNATURE:
+content-type: application/json
+
+{
+  "amount": "100.00",
+  "currency": "USD",
+  "recipient": "supplier_184"
+}
