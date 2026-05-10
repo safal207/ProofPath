@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "crates/proofpath-verifier"
+    "crates/proofpath-verifier",
+    "crates/proofpath-gateway"
 ]
 resolver = "2"
 
