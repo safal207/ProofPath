@@ -2,9 +2,17 @@
 
 Minimal Axum gateway for ProofPath-protected HTTP actions.
 
-The gateway accepts HTTP requests, extracts ProofPath headers, calls `proofpath-verifier`, and returns a structured decision.
+The gateway accepts HTTP requests, extracts ProofPath headers, calls `proofpath-verifier`, writes a hash-chained JSONL audit record, and forwards accepted requests to a protected upstream API.
 
-## Run
+## Run local demo
+
+Terminal 1: start demo protected API.
+
+```bash
+python3 examples/upstream/demo_server.py
+```
+
+Terminal 2: start ProofPath gateway.
 
 ```bash
 cargo run -p proofpath-gateway
@@ -16,13 +24,33 @@ The gateway listens on:
 http://127.0.0.1:8787
 ```
 
+Default upstream:
+
+```text
+http://127.0.0.1:9797/protected
+```
+
+Default audit log:
+
+```text
+proofpath-audit.jsonl
+```
+
+You can override both:
+
+```bash
+PROOFPATH_UPSTREAM_URL=http://127.0.0.1:9797/protected \
+PROOFPATH_AUDIT_LOG=proofpath-audit.jsonl \
+cargo run -p proofpath-gateway
+```
+
 ## Health check
 
 ```bash
 curl http://127.0.0.1:8787/health
 ```
 
-## Accepted request
+## Accepted and forwarded request
 
 ```bash
 curl -i -X POST http://127.0.0.1:8787/demo/protected \
@@ -30,7 +58,8 @@ curl -i -X POST http://127.0.0.1:8787/demo/protected \
   -H 'x-proofpath-causal-parent: decision_71ab' \
   -H 'x-proofpath-scope: payments.transfer.once' \
   -H 'x-proofpath-reversibility: irreversible' \
-  -H 'x-proofpath-human-approval: approval_11fa'
+  -H 'x-proofpath-human-approval: approval_11fa' \
+  -d '{"amount":"100.00","currency":"USD"}'
 ```
 
 Expected result:
@@ -38,6 +67,7 @@ Expected result:
 ```json
 {
   "forwarded": true,
+  "upstream_status": 200,
   "proofpath": {
     "decision": "ACCEPT"
   }
@@ -84,6 +114,24 @@ Expected result:
 }
 ```
 
-## Current limitation
+## Inspect audit log
 
-This MVP does not yet proxy accepted requests to a real upstream service. It returns `forwarded: true` to show that the request would pass the ProofPath gate.
+```bash
+cat proofpath-audit.jsonl
+```
+
+Each record includes:
+
+- audit id
+- previous hash
+- intent id
+- causal parent
+- scope
+- decision
+- reason
+- forwarded flag
+- upstream URL
+- upstream status
+- record hash
+
+This makes the gateway a small causal boundary: accepted actions move forward, blocked actions stop, and every decision leaves a verifiable trail.
