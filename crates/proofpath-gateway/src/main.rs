@@ -58,8 +58,7 @@ async fn main() {
     let upstream_url = env::var("PROOFPATH_UPSTREAM_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:9797/protected".to_owned());
     let audit_path = env::var("PROOFPATH_AUDIT_LOG")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("proofpath-audit.jsonl"));
+        .map_or_else(|_| PathBuf::from("proofpath-audit.jsonl"), PathBuf::from);
 
     let state = AppState {
         protected_api_name: Arc::from("demo-protected-api"),
@@ -203,7 +202,7 @@ impl AuditLog {
         file.write_all(line.as_bytes()).await?;
         file.write_all(b"\n").await?;
 
-        *previous_hash = hash.clone();
+        (*previous_hash).clone_from(&hash);
         Ok(hash)
     }
 }
