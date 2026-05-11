@@ -90,11 +90,7 @@ async fn health() -> impl IntoResponse {
     (StatusCode::OK, "proofpath-gateway: ok")
 }
 
-async fn gateway(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    body: Bytes,
-) -> impl IntoResponse {
+async fn gateway(State(state): State<AppState>, headers: HeaderMap, body: Bytes) -> impl IntoResponse {
     let ctx = request_context_from_headers(&headers);
     let result = verify(&ctx);
     let accepted = result.decision == Decision::Accept;
@@ -112,7 +108,12 @@ async fn gateway(
 
     let audit_hash = state
         .audit
-        .append(&result, forwarded, state.upstream_url.as_ref(), upstream_status)
+        .append(
+            &result,
+            forwarded,
+            state.upstream_url.as_ref(),
+            upstream_status,
+        )
         .await
         .unwrap_or_else(|_| "AUDIT_WRITE_FAILED".to_owned());
 
@@ -142,7 +143,10 @@ async fn forward_to_upstream(
     headers: &HeaderMap,
     body: Bytes,
 ) -> Result<reqwest::StatusCode, reqwest::Error> {
-    let mut request = state.client.post(state.upstream_url.as_ref()).body(body.to_vec());
+    let mut request = state
+        .client
+        .post(state.upstream_url.as_ref())
+        .body(body.to_vec());
 
     for (name, value) in headers {
         if let Ok(value) = value.to_str() {
@@ -261,7 +265,10 @@ mod tests {
 
     #[test]
     fn maps_reject_to_bad_request() {
-        assert_eq!(status_for_decision(Decision::Reject), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            status_for_decision(Decision::Reject),
+            StatusCode::BAD_REQUEST
+        );
     }
 
     #[test]
@@ -279,8 +286,22 @@ mod tests {
         let result = verify(&ctx);
         let audit_id = Uuid::nil();
 
-        let first = compute_hash("GENESIS", &audit_id, &result, true, "http://upstream", Some(200));
-        let second = compute_hash("GENESIS", &audit_id, &result, true, "http://upstream", Some(200));
+        let first = compute_hash(
+            "GENESIS",
+            &audit_id,
+            &result,
+            true,
+            "http://upstream",
+            Some(200),
+        );
+        let second = compute_hash(
+            "GENESIS",
+            &audit_id,
+            &result,
+            true,
+            "http://upstream",
+            Some(200),
+        );
 
         assert_eq!(first, second);
     }
