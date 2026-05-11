@@ -70,7 +70,7 @@ BLOCK:
 ### Reviewer links
 
 - [Reviewer summary](docs/reviewer-summary.md)
-- [OpenAI Cybersecurity revised submission note](docs/grant-updates/openai-cybersecurity-proofpath-update.md)
+- [Security grant revision note](docs/grant-updates/security-grant-revision-proofpath-update.md)
 - [Threat model](specs/threat-model.md)
 - [HTTP action-context profile](specs/proofpath-http-profile-v0.1.md)
 - [Community experiments](COMMUNITY_EXPERIMENTS.md)
