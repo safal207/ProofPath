@@ -1,6 +1,6 @@
-//! Minimal ProofPath verifier.
+//! Minimal `ProofPath` verifier.
 //!
-//! This crate validates the first ProofPath HTTP action context profile.
+//! This crate validates the first `ProofPath` HTTP action context profile.
 //! It intentionally starts small: required headers, reversibility values,
 //! decision outcomes, and structured reason codes.
 
@@ -52,7 +52,7 @@ impl RequestContext {
     }
 }
 
-/// ProofPath action reversibility class.
+/// `ProofPath` action reversibility class.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Reversibility {
@@ -197,7 +197,7 @@ fn value(ctx: &RequestContext, name: &str) -> Option<String> {
 }
 
 fn is_blank(value: Option<&str>) -> bool {
-    value.map_or(true, |v| v.trim().is_empty())
+    value.is_none_or(|v| v.trim().is_empty())
 }
 
 #[cfg(test)]
