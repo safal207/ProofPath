@@ -104,6 +104,37 @@ See:
 - `docs/demo-transcript.md`
 - `docs/launch-post.md`
 
+## Execution-boundary demo matrix
+
+ProofPath is intentionally demonstrated across multiple high-risk action boundaries.
+
+| Demo | Core boundary | Expected decisions |
+| --- | --- | --- |
+| [AI agent dangerous action](examples/agent-dangerous-action/README.md) | Valid agent/API access is not the same as valid irreversible action. | `BLOCK` unsafe action, `ACCEPT` approved action |
+| [Website builder gate](examples/website-builder-gate/README.md) | Valid deploy access is not the same as valid website change. | `ACCEPT` safe edit, `BLOCK` production/destructive changes without approval |
+| [Network and broker gate](examples/network-broker-gate/README.md) | Valid infra access is not the same as valid network or broker action. | `ACCEPT` diagnostic, `BLOCK` high-risk infra changes without approval |
+| [Database migration gate](examples/database-migration-gate/README.md) | Valid DB credentials are not the same as valid schema or data change. | `ACCEPT` inspection, `BLOCK` schema/data changes without approval |
+
+Reviewer pattern:
+
+```text
+valid credential
+  != valid action
+  != valid scope
+  != valid reversibility
+  != valid approval
+```
+
+Each demo uses the same execution-boundary structure:
+
+```text
+agent proposes action
+  -> ProofPath checks declared intent, causal parent, scope, reversibility, and approval
+  -> safe action is forwarded
+  -> high-risk action without approval is blocked
+  -> decision is written to hash-chained audit log
+```
+
 ## Join the Lab
 
 ProofPath is open for community experiments.
