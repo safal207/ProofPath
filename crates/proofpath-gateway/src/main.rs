@@ -58,8 +58,7 @@ async fn main() {
     let upstream_url = env::var("PROOFPATH_UPSTREAM_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:9797/protected".to_owned());
     let audit_path = env::var("PROOFPATH_AUDIT_LOG")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("proofpath-audit.jsonl"));
+        .map_or_else(|_| PathBuf::from("proofpath-audit.jsonl"), PathBuf::from);
 
     let state = AppState {
         protected_api_name: Arc::from("demo-protected-api"),
@@ -112,7 +111,12 @@ async fn gateway(
 
     let audit_hash = state
         .audit
-        .append(&result, forwarded, state.upstream_url.as_ref(), upstream_status)
+        .append(
+            &result,
+            forwarded,
+            state.upstream_url.as_ref(),
+            upstream_status,
+        )
         .await
         .unwrap_or_else(|_| "AUDIT_WRITE_FAILED".to_owned());
 
@@ -142,7 +146,10 @@ async fn forward_to_upstream(
     headers: &HeaderMap,
     body: Bytes,
 ) -> Result<reqwest::StatusCode, reqwest::Error> {
-    let mut request = state.client.post(state.upstream_url.as_ref()).body(body.to_vec());
+    let mut request = state
+        .client
+        .post(state.upstream_url.as_ref())
+        .body(body.to_vec());
 
     for (name, value) in headers {
         if let Ok(value) = value.to_str() {
@@ -195,7 +202,7 @@ impl AuditLog {
         file.write_all(line.as_bytes()).await?;
         file.write_all(b"\n").await?;
 
-        *previous_hash = hash.clone();
+        (*previous_hash).clone_from(&hash);
         Ok(hash)
     }
 }
@@ -261,7 +268,10 @@ mod tests {
 
     #[test]
     fn maps_reject_to_bad_request() {
-        assert_eq!(status_for_decision(Decision::Reject), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            status_for_decision(Decision::Reject),
+            StatusCode::BAD_REQUEST
+        );
     }
 
     #[test]
@@ -279,8 +289,22 @@ mod tests {
         let result = verify(&ctx);
         let audit_id = Uuid::nil();
 
-        let first = compute_hash("GENESIS", &audit_id, &result, true, "http://upstream", Some(200));
-        let second = compute_hash("GENESIS", &audit_id, &result, true, "http://upstream", Some(200));
+        let first = compute_hash(
+            "GENESIS",
+            &audit_id,
+            &result,
+            true,
+            "http://upstream",
+            Some(200),
+        );
+        let second = compute_hash(
+            "GENESIS",
+            &audit_id,
+            &result,
+            true,
+            "http://upstream",
+            Some(200),
+        );
 
         assert_eq!(first, second);
     }
