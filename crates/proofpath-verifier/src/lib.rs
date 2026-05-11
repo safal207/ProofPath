@@ -46,7 +46,9 @@ impl RequestContext {
     /// Get a normalized header value.
     #[must_use]
     pub fn header(&self, name: &str) -> Option<&str> {
-        self.headers.get(&name.to_ascii_lowercase()).map(String::as_str)
+        self.headers
+            .get(&name.to_ascii_lowercase())
+            .map(String::as_str)
     }
 }
 
@@ -124,7 +126,11 @@ impl VerificationResult {
         }
     }
 
-    fn block(reason: ReasonCode, ctx: &RequestContext, reversibility: Option<Reversibility>) -> Self {
+    fn block(
+        reason: ReasonCode,
+        ctx: &RequestContext,
+        reversibility: Option<Reversibility>,
+    ) -> Self {
         Self {
             decision: Decision::Block,
             reason: Some(reason),
