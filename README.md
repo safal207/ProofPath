@@ -12,6 +12,69 @@ HTTPS proves that a connection is secure. ProofPath proves that an action was au
 
 > HTTPS proves the channel. ProofPath proves the action.
 
+## 60-second reviewer summary
+
+**ProofPath is a defensive pre-execution gateway that prevents valid AI-agent/API credentials from becoming unsafe, unaudited, or irreversible actions.**
+
+ProofPath does **not** replace HTTPS, OAuth, IAM, API keys, or ordinary infrastructure security. Those layers remain necessary. ProofPath adds an action-level security and audit layer at the execution boundary: before a high-risk AI-agent or API action reaches the protected upstream system.
+
+### Why HTTPS is not enough
+
+HTTPS can protect the connection. API authentication can prove that a credential is valid. IAM can define broad permissions.
+
+But high-risk AI-agent systems need an additional question:
+
+> Should this specific action be allowed to execute now?
+
+A request can be authenticated and still be unsafe. For example, an AI agent may have valid credentials while attempting to delete data, modify infrastructure, push unsafe code, trigger a financial workflow, or perform an irreversible administrative action outside the intended scope.
+
+ProofPath focuses on that gap.
+
+### What ProofPath does
+
+ProofPath evaluates high-risk actions before execution and can produce explicit decisions such as `ACCEPT`, `HOLD`, `REJECT`, `BLOCK`, or `AUDIT`.
+
+The current prototype demonstrates:
+
+- declared intent checks;
+- causal parent checks;
+- scope checks;
+- reversibility classification;
+- human approval requirements for irreversible actions;
+- a Rust verifier crate;
+- an Axum gateway;
+- upstream forwarding only after a ProofPath decision;
+- blocking unsafe irreversible actions before they reach the protected API;
+- hash-chained JSONL audit logs;
+- dangerous-action and real-model-agent demos.
+
+### ACCEPT vs BLOCK
+
+Conceptually:
+
+```text
+ACCEPT:
+  action has declared intent
+  action has causal parent
+  action is within scope
+  action is reversible or approved
+  gateway forwards upstream
+
+BLOCK:
+  action is irreversible
+  action lacks required human approval
+  gateway blocks before upstream execution
+  decision is written to the audit log
+```
+
+### Reviewer links
+
+- [Reviewer summary](docs/reviewer-summary.md)
+- [OpenAI Cybersecurity revised submission note](docs/grant-updates/openai-cybersecurity-proofpath-update.md)
+- [Threat model](specs/threat-model.md)
+- [HTTP action-context profile](specs/proofpath-http-profile-v0.1.md)
+- [Community experiments](COMMUNITY_EXPERIMENTS.md)
+
 ## Quick demo
 
 Run the one-minute AI agent dangerous action demo:
