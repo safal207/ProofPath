@@ -70,6 +70,7 @@ BLOCK:
 ### Reviewer links
 
 - [Reviewer summary](docs/reviewer-summary.md)
+- [Internet Action Layer](docs/internet-action-layer.md)
 - [Security grant revision note](docs/grant-updates/security-grant-revision-proofpath-update.md)
 - [Threat model](specs/threat-model.md)
 - [HTTP action-context profile](specs/proofpath-http-profile-v0.1.md)
@@ -106,7 +107,7 @@ See:
 
 ## Execution-boundary demo matrix
 
-ProofPath is intentionally demonstrated across multiple high-risk action boundaries.
+ProofPath is intentionally demonstrated across multiple high-risk action boundaries. See also: [Internet Action Layer](docs/internet-action-layer.md).
 
 | Demo | Core boundary | Expected decisions |
 | --- | --- | --- |
