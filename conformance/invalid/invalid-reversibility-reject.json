@@ -1,0 +1,19 @@
+{
+  "id": "invalid-invalid-reversibility-reject",
+  "description": "A request with an unknown x-proofpath-reversibility value is rejected.",
+  "request": {
+    "headers": {
+      "x-proofpath-intent-id": "intent_9f21",
+      "x-proofpath-causal-parent": "decision_71ab",
+      "x-proofpath-scope": "payments.transfer.once",
+      "x-proofpath-reversibility": "forever",
+      "x-proofpath-human-approval": "approval_11fa"
+    }
+  },
+  "expected": {
+    "decision": "REJECT",
+    "reason": "INVALID_REVERSIBILITY",
+    "causal_valid": false,
+    "scope_valid": false
+  }
+}
