@@ -115,6 +115,7 @@ ProofPath is intentionally demonstrated across multiple high-risk action boundar
 | [Website builder gate](examples/website-builder-gate/README.md) | Valid deploy access is not the same as valid website change. | `ACCEPT` safe edit, `BLOCK` production/destructive changes without approval |
 | [Network and broker gate](examples/network-broker-gate/README.md) | Valid infra access is not the same as valid network or broker action. | `ACCEPT` diagnostic, `BLOCK` high-risk infra changes without approval |
 | [Database migration gate](examples/database-migration-gate/README.md) | Valid DB credentials are not the same as valid schema or data change. | `ACCEPT` inspection, `BLOCK` schema/data changes without approval |
+| [CI/CD deploy gate](examples/cicd-deploy-gate/README.md) | Valid CI credentials are not the same as valid production deployment. | `ACCEPT` preview deploy, `BLOCK` production deploy without approval, `ACCEPT` approved rollback |
 
 Reviewer pattern:
 
