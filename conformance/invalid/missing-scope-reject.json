@@ -1,0 +1,18 @@
+{
+  "id": "invalid-missing-scope-reject",
+  "description": "A request without x-proofpath-scope is rejected.",
+  "request": {
+    "headers": {
+      "x-proofpath-intent-id": "intent_9f21",
+      "x-proofpath-causal-parent": "decision_71ab",
+      "x-proofpath-reversibility": "irreversible",
+      "x-proofpath-human-approval": "approval_11fa"
+    }
+  },
+  "expected": {
+    "decision": "REJECT",
+    "reason": "MISSING_SCOPE",
+    "causal_valid": false,
+    "scope_valid": false
+  }
+}

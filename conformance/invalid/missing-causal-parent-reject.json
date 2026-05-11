@@ -1,0 +1,18 @@
+{
+  "id": "invalid-missing-causal-parent-reject",
+  "description": "A request without x-proofpath-causal-parent is rejected.",
+  "request": {
+    "headers": {
+      "x-proofpath-intent-id": "intent_9f21",
+      "x-proofpath-scope": "payments.transfer.once",
+      "x-proofpath-reversibility": "irreversible",
+      "x-proofpath-human-approval": "approval_11fa"
+    }
+  },
+  "expected": {
+    "decision": "REJECT",
+    "reason": "MISSING_CAUSAL_PARENT",
+    "causal_valid": false,
+    "scope_valid": false
+  }
+}

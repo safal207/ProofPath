@@ -1,0 +1,54 @@
+{
+  "profile": "proofpath-http-profile-v0.1",
+  "description": "Reviewer-facing behavioral fixtures for the minimal ProofPath v0.1 verifier.",
+  "fixtures": [
+    {
+      "id": "valid-reversible-accept",
+      "path": "valid/reversible-accept.json",
+      "expected_decision": "ACCEPT",
+      "expected_reason": null
+    },
+    {
+      "id": "valid-irreversible-with-approval-accept",
+      "path": "valid/irreversible-with-approval-accept.json",
+      "expected_decision": "ACCEPT",
+      "expected_reason": null
+    },
+    {
+      "id": "invalid-missing-intent-reject",
+      "path": "invalid/missing-intent-reject.json",
+      "expected_decision": "REJECT",
+      "expected_reason": "MISSING_INTENT"
+    },
+    {
+      "id": "invalid-missing-causal-parent-reject",
+      "path": "invalid/missing-causal-parent-reject.json",
+      "expected_decision": "REJECT",
+      "expected_reason": "MISSING_CAUSAL_PARENT"
+    },
+    {
+      "id": "invalid-missing-scope-reject",
+      "path": "invalid/missing-scope-reject.json",
+      "expected_decision": "REJECT",
+      "expected_reason": "MISSING_SCOPE"
+    },
+    {
+      "id": "invalid-missing-reversibility-reject",
+      "path": "invalid/missing-reversibility-reject.json",
+      "expected_decision": "REJECT",
+      "expected_reason": "MISSING_REVERSIBILITY"
+    },
+    {
+      "id": "invalid-invalid-reversibility-reject",
+      "path": "invalid/invalid-reversibility-reject.json",
+      "expected_decision": "REJECT",
+      "expected_reason": "INVALID_REVERSIBILITY"
+    },
+    {
+      "id": "invalid-irreversible-without-approval-block",
+      "path": "invalid/irreversible-without-approval-block.json",
+      "expected_decision": "BLOCK",
+      "expected_reason": "IRREVERSIBLE_ACTION_REQUIRES_APPROVAL"
+    }
+  ]
+}

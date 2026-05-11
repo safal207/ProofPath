@@ -1,0 +1,19 @@
+{
+  "id": "valid-reversible-accept",
+  "description": "A reversible action with intent, causal parent, scope, and reversibility is accepted without human approval.",
+  "request": {
+    "headers": {
+      "x-proofpath-intent-id": "intent_update_profile_001",
+      "x-proofpath-causal-parent": "decision_user_requested_profile_update",
+      "x-proofpath-scope": "profile.update",
+      "x-proofpath-reversibility": "reversible"
+    }
+  },
+  "expected": {
+    "decision": "ACCEPT",
+    "reason": null,
+    "causal_valid": true,
+    "scope_valid": true,
+    "reversibility": "reversible"
+  }
+}

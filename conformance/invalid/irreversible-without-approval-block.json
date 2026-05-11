@@ -1,0 +1,19 @@
+{
+  "id": "invalid-irreversible-without-approval-block",
+  "description": "An irreversible action without x-proofpath-human-approval is blocked before execution.",
+  "request": {
+    "headers": {
+      "x-proofpath-intent-id": "intent_transfer_payment_001",
+      "x-proofpath-causal-parent": "decision_agent_ready_to_transfer",
+      "x-proofpath-scope": "payments.transfer.once",
+      "x-proofpath-reversibility": "irreversible"
+    }
+  },
+  "expected": {
+    "decision": "BLOCK",
+    "reason": "IRREVERSIBLE_ACTION_REQUIRES_APPROVAL",
+    "causal_valid": true,
+    "scope_valid": true,
+    "reversibility": "irreversible"
+  }
+}
