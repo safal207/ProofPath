@@ -1,0 +1,21 @@
+{
+  "id": "valid-irreversible-with-approval-accept",
+  "description": "An irreversible action with explicit human approval is accepted.",
+  "request": {
+    "headers": {
+      "x-proofpath-intent-id": "intent_transfer_payment_001",
+      "x-proofpath-causal-parent": "decision_human_approved_payment_transfer",
+      "x-proofpath-scope": "payments.transfer.once",
+      "x-proofpath-reversibility": "irreversible",
+      "x-proofpath-human-approval": "approval_11fa"
+    }
+  },
+  "expected": {
+    "decision": "ACCEPT",
+    "reason": null,
+    "causal_valid": true,
+    "scope_valid": true,
+    "reversibility": "irreversible",
+    "human_approval": "approval_11fa"
+  }
+}
