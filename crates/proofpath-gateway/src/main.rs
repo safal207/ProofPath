@@ -90,7 +90,11 @@ async fn health() -> impl IntoResponse {
     (StatusCode::OK, "proofpath-gateway: ok")
 }
 
-async fn gateway(State(state): State<AppState>, headers: HeaderMap, body: Bytes) -> impl IntoResponse {
+async fn gateway(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> impl IntoResponse {
     let ctx = request_context_from_headers(&headers);
     let result = verify(&ctx);
     let accepted = result.decision == Decision::Accept;
