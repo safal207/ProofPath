@@ -7,10 +7,12 @@ It shows two minimal cases:
 1. `job_manifest.accept.json` -> a bounded compute request with declared intent and causal authorization.
 2. `job_manifest.block.json` -> an unbounded compute request missing causal authorization.
 
-Each manifest has a corresponding receipt:
+Each manifest has a corresponding receipt and audit log entry:
 
 - `compute_receipt.accept.json`
 - `compute_receipt.block.json`
+- `audit_log.accept.json`
+- `audit_log.block.json`
 
 ## Demo story
 
@@ -18,7 +20,8 @@ Each manifest has a corresponding receipt:
 Agent proposes compute job
   -> job manifest records intent, scope, causal parent, and commitments
   -> ProofPath verifier decides ACCEPT or BLOCK
-  -> compute receipt records the decision and evidence hash
+  -> compute receipt records the decision and audit hash
+  -> audit log entry is verified through canonical SHA-256 hashing
 ```
 
 ## Run validation
@@ -53,7 +56,9 @@ This demo proves a narrow but useful contract:
 - the scope is bounded for accepted jobs;
 - model, runtime, input, and output commitments are recorded;
 - blocked jobs explain why they were not accepted;
-- every receipt can point to audit evidence;
+- every receipt is anchored to audit evidence;
+- audit evidence is verified through canonical SHA-256 hashing;
+- optional `previous_audit_hash` links to an earlier audit entry;
 - the fixture contract is executable through `scripts/validate_compute_witness.py`.
 
 ## What it does not prove yet
@@ -77,6 +82,8 @@ examples/compute-witness/
   job_manifest.block.json
   compute_receipt.accept.json
   compute_receipt.block.json
+  audit_log.accept.json
+  audit_log.block.json
 
 conformance/compute-witness/
   manifest.json
@@ -85,8 +92,18 @@ scripts/
   validate_compute_witness.py
 ```
 
+## Contract path
+
+```text
+job manifest
+  -> compute receipt
+  -> audit log entry
+  -> canonical SHA-256 verification
+  -> CI conformance check
+```
+
 ## Review phrase
 
 ```text
-ProofPath Compute Witness proves that a compute/action result was requested, scoped, causally authorized, decided, and recorded before it is trusted.
+ProofPath Compute Witness proves that a compute/action result was requested, scoped, causally authorized, decided, anchored to audit evidence, and recorded before it is trusted.
 ```
