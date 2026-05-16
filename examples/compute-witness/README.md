@@ -21,6 +21,28 @@ Agent proposes compute job
   -> compute receipt records the decision and evidence hash
 ```
 
+## Run validation
+
+From the repository root:
+
+```bash
+python3 scripts/validate_compute_witness.py
+```
+
+Expected output:
+
+```text
+PASS accepted demo inference job
+PASS blocked unbounded gpu job
+PASS compute witness conformance (2 fixtures)
+```
+
+You can also pass an explicit conformance manifest path:
+
+```bash
+python3 scripts/validate_compute_witness.py conformance/compute-witness/manifest.json
+```
+
 ## What this proves in v0.1
 
 This demo proves a narrow but useful contract:
@@ -31,7 +53,8 @@ This demo proves a narrow but useful contract:
 - the scope is bounded for accepted jobs;
 - model, runtime, input, and output commitments are recorded;
 - blocked jobs explain why they were not accepted;
-- every receipt can point to audit evidence.
+- every receipt can point to audit evidence;
+- the fixture contract is executable through `scripts/validate_compute_witness.py`.
 
 ## What it does not prove yet
 
@@ -54,6 +77,12 @@ examples/compute-witness/
   job_manifest.block.json
   compute_receipt.accept.json
   compute_receipt.block.json
+
+conformance/compute-witness/
+  manifest.json
+
+scripts/
+  validate_compute_witness.py
 ```
 
 ## Review phrase
