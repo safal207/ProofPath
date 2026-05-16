@@ -1,0 +1,13 @@
+{
+  "profile": "proofpath.compute-witness.audit-entry.v0.1",
+  "audit_id": "audit_demo_block_001",
+  "receipt_id": "cwr_demo_block_001",
+  "job_id": "job_demo_block_001",
+  "agent_id": "agent_unbounded_runner",
+  "intent_id": "intent_unbounded_gpu_use",
+  "decision": "BLOCK",
+  "reason": "MISSING_CAUSAL_PARENT",
+  "event_type": "COMPUTE_WITNESS_BLOCKED",
+  "previous_audit_hash": "sha256:5f37260103eb5848ffb0fc07c11b4da38d67a2137ebe0898c1ac65d7396ed88f",
+  "recorded_at": "2026-05-16T07:31:03Z"
+}
