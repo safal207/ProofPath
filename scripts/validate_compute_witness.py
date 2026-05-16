@@ -5,10 +5,11 @@ This validator intentionally stays small and dependency-free. It checks the
 reviewer-facing fixture contract introduced by the Compute Witness Environment:
 
 - conformance manifest is valid JSON;
-- referenced job manifests and receipts exist;
+- referenced job manifests, receipts, and audit entries exist;
 - required manifest fields are present and non-empty;
 - receipt decision/reason matches the expected conformance entry;
-- identity and commitment fields are stable between manifest and receipt.
+- identity and commitment fields are stable between manifest and receipt;
+- receipt.audit_hash equals the canonical SHA-256 hash of the audit entry.
 
 It does not claim to prove GPU execution, zkML correctness, hardware identity,
 or distributed settlement. It only validates the v0.1 fixture contract.
@@ -17,7 +18,9 @@ or distributed settlement. It only validates the v0.1 fixture contract.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -39,7 +42,17 @@ COMMITMENT_FIELDS = (
     "input_hash",
 )
 
+AUDIT_RECEIPT_FIELDS = (
+    "receipt_id",
+    "job_id",
+    "agent_id",
+    "intent_id",
+    "decision",
+    "reason",
+)
+
 VALID_DECISIONS = {"ACCEPT", "HOLD", "REJECT", "BLOCK", "AUDIT"}
+SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -65,6 +78,27 @@ def resolve_fixture_path(raw_path: str) -> Path:
     if path.is_absolute():
         return path
     return REPO_ROOT / path
+
+
+def canonical_json_bytes(value: dict[str, Any]) -> bytes:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+
+def sha256_canonical_json(value: dict[str, Any]) -> str:
+    digest = hashlib.sha256(canonical_json_bytes(value)).hexdigest()
+    return f"sha256:{digest}"
+
+
+def assert_sha256_value(entry_name: str, field_name: str, value: Any) -> None:
+    if not isinstance(value, str) or SHA256_RE.fullmatch(value) is None:
+        raise AssertionError(
+            f"{entry_name}: `{field_name}` must use lowercase sha256:<64 hex>"
+        )
 
 
 def assert_required_fields(entry_name: str, fixture: dict[str, Any], required_fields: list[str]) -> None:
@@ -122,11 +156,52 @@ def assert_manifest_receipt_stability(
     if is_blank(receipt.get("audit_hash")):
         raise AssertionError(f"{entry_name}: audit_hash is required")
 
+    assert_sha256_value(entry_name, "audit_hash", receipt.get("audit_hash"))
+
     if is_blank(receipt.get("verified_at")):
         raise AssertionError(f"{entry_name}: verified_at is required")
 
     if receipt.get("decision") == "ACCEPT" and is_blank(receipt.get("output_hash")):
         raise AssertionError(f"{entry_name}: ACCEPT receipt requires output_hash")
+
+
+def assert_audit_log_matches_receipt(
+    entry_name: str,
+    receipt: dict[str, Any],
+    audit_entry: dict[str, Any],
+    seen_audit_hashes: set[str],
+) -> str:
+    if audit_entry.get("profile") != "proofpath.compute-witness.audit-entry.v0.1":
+        raise AssertionError(f"{entry_name}: invalid audit entry profile")
+
+    if is_blank(audit_entry.get("audit_id")):
+        raise AssertionError(f"{entry_name}: audit_id is required")
+
+    for field in AUDIT_RECEIPT_FIELDS:
+        if audit_entry.get(field) != receipt.get(field):
+            raise AssertionError(
+                f"{entry_name}: audit `{field}` mismatch with receipt: "
+                f"audit={audit_entry.get(field)!r}, receipt={receipt.get(field)!r}"
+            )
+
+    previous_audit_hash = audit_entry.get("previous_audit_hash")
+    if previous_audit_hash is not None:
+        assert_sha256_value(entry_name, "previous_audit_hash", previous_audit_hash)
+        if previous_audit_hash not in seen_audit_hashes:
+            raise AssertionError(
+                f"{entry_name}: previous_audit_hash does not point to an earlier audit entry"
+            )
+
+    computed_audit_hash = sha256_canonical_json(audit_entry)
+    receipt_audit_hash = receipt.get("audit_hash")
+
+    if receipt_audit_hash != computed_audit_hash:
+        raise AssertionError(
+            f"{entry_name}: audit_hash mismatch: "
+            f"receipt={receipt_audit_hash!r}, computed={computed_audit_hash!r}"
+        )
+
+    return computed_audit_hash
 
 
 def validate_conformance_manifest(path: Path) -> list[str]:
@@ -136,6 +211,7 @@ def validate_conformance_manifest(path: Path) -> list[str]:
         raise AssertionError("conformance manifest must contain a non-empty `fixtures` list")
 
     results: list[str] = []
+    seen_audit_hashes: set[str] = set()
 
     for index, entry in enumerate(fixtures, start=1):
         if not isinstance(entry, dict):
@@ -144,6 +220,7 @@ def validate_conformance_manifest(path: Path) -> list[str]:
         name = str(entry.get("name") or f"fixture #{index}")
         manifest_path = resolve_fixture_path(str(entry.get("manifest", "")))
         receipt_path = resolve_fixture_path(str(entry.get("receipt", "")))
+        audit_path = resolve_fixture_path(str(entry.get("audit", "")))
 
         expected_decision = entry.get("expected_decision")
         expected_reason = entry.get("expected_reason")
@@ -152,6 +229,9 @@ def validate_conformance_manifest(path: Path) -> list[str]:
         if expected_decision not in VALID_DECISIONS:
             raise AssertionError(f"{name}: invalid expected_decision `{expected_decision}`")
 
+        if is_blank(entry.get("audit")):
+            raise AssertionError(f"{name}: audit fixture path is required")
+
         if not isinstance(required_fields, list) or not all(
             isinstance(item, str) for item in required_fields
         ):
@@ -159,10 +239,13 @@ def validate_conformance_manifest(path: Path) -> list[str]:
 
         manifest = load_json(manifest_path)
         receipt = load_json(receipt_path)
+        audit_entry = load_json(audit_path)
 
         assert_required_fields(name, manifest, required_fields)
         assert_receipt_expectations(name, receipt, expected_decision, expected_reason)
         assert_manifest_receipt_stability(name, manifest, receipt)
+        audit_hash = assert_audit_log_matches_receipt(name, receipt, audit_entry, seen_audit_hashes)
+        seen_audit_hashes.add(audit_hash)
 
         results.append(f"PASS {name}")
 
