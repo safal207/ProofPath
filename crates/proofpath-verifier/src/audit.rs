@@ -49,7 +49,9 @@ fn canonical_json(value: &Value) -> String {
         Value::Null => "null".to_owned(),
         Value::Bool(value) => value.to_string(),
         Value::Number(value) => value.to_string(),
-        Value::String(value) => serde_json::to_string(value).expect("serializing JSON string cannot fail"),
+        Value::String(value) => {
+            serde_json::to_string(value).expect("serializing JSON string cannot fail")
+        }
         Value::Array(items) => {
             let body = items
                 .iter()
@@ -93,8 +95,10 @@ fn hex_lower(bytes: &[u8]) -> String {
 mod tests {
     use super::*;
 
-    const ACCEPT_AUDIT_LOG: &str = include_str!("../../../examples/compute-witness/audit_log.accept.json");
-    const ACCEPT_RECEIPT: &str = include_str!("../../../examples/compute-witness/compute_receipt.accept.json");
+    const ACCEPT_AUDIT_LOG: &str =
+        include_str!("../../../examples/compute-witness/audit_log.accept.json");
+    const ACCEPT_RECEIPT: &str =
+        include_str!("../../../examples/compute-witness/compute_receipt.accept.json");
 
     #[test]
     fn computes_expected_accept_audit_hash() {
