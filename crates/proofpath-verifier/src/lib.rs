@@ -183,7 +183,7 @@ pub struct ComputeWitnessReceiptDraft {
     pub reason: Option<ReasonCode>,
 }
 
-/// Project a Compute Witness job manifest into the generic ProofPath request context.
+/// Project a Compute Witness job manifest into the generic `ProofPath` request context.
 #[must_use]
 pub fn manifest_to_request_context(manifest: &ComputeWitnessJobManifest) -> RequestContext {
     let mut ctx = RequestContext::new()
@@ -205,7 +205,7 @@ pub fn manifest_to_request_context(manifest: &ComputeWitnessJobManifest) -> Requ
     ctx
 }
 
-/// Verify a Compute Witness manifest using the generic ProofPath verifier.
+/// Verify a Compute Witness manifest using the generic `ProofPath` verifier.
 #[must_use]
 pub fn verify_compute_manifest(manifest: &ComputeWitnessJobManifest) -> ComputeWitnessReceiptDraft {
     let ctx = manifest_to_request_context(manifest);
