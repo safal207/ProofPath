@@ -11,6 +11,8 @@ It shows four minimal cases:
 
 Each manifest has a corresponding receipt and audit log entry.
 
+For market positioning and pilot packaging, see [`docs/compute-witness-market-value.md`](../../docs/compute-witness-market-value.md).
+
 ## Demo story
 
 ```text
