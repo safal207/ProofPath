@@ -68,6 +68,8 @@ At the end of the pilot, the team should have:
 - one audit packet or packet draft;
 - one short risk note describing what passed, what failed, and what is still not proven.
 
+For concrete packet examples, see [`examples/compute-witness/audit-packet/`](../examples/compute-witness/audit-packet/).
+
 ## Required artifacts
 
 Each compute step should produce three artifacts.
@@ -246,8 +248,9 @@ Use this five-minute script:
 3. Show the audit log entry.
 4. Run the validator.
 5. Show the parent-to-child chain.
-6. Explain what is proven.
-7. Explain what is not proven yet.
+6. Show the audit packet.
+7. Explain what is proven.
+8. Explain what is not proven yet.
 ```
 
 ## Adoption ladder
@@ -268,9 +271,10 @@ Level 7: Add optional TEE, zkML, or provider-specific attestation.
 - [Compute Witness Environment](compute-witness-environment.md)
 - [Compute Witness Market Value](compute-witness-market-value.md)
 - [Compute Witness Demo](../examples/compute-witness/README.md)
+- [Compute Witness Audit Packet Example](../examples/compute-witness/audit-packet/README.md)
 
 ## Short formulation
 
 ```text
-ProofPath Compute Witness is pilot-ready when one workflow can emit manifests, receipts, audit logs, and validator output that a reviewer can inspect without trusting the model or a hidden service.
+ProofPath Compute Witness is pilot-ready when one workflow can emit manifests, receipts, audit logs, audit packets, and validator output that a reviewer can inspect without trusting the model or a hidden service.
 ```
