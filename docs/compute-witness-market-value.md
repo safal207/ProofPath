@@ -6,6 +6,8 @@ Status: Draft v0.1
 
 ProofPath Compute Witness gives AI compute providers, agent platforms, and regulated AI teams a small, executable way to prove that a compute result was requested, scoped, causally authorized, decided, anchored to audit evidence, and linked to prior accepted evidence before it is trusted.
 
+For a practical first deployment path, see [Compute Witness Pilot Integration Guide](compute-witness-pilot-guide.md).
+
 ## Market problem
 
 AI systems increasingly perform multi-step actions where the final output is not enough.
