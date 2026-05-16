@@ -10,7 +10,8 @@ reviewer-facing fixture contract introduced by the Compute Witness Environment:
 - receipt decision/reason matches the expected conformance entry;
 - identity and commitment fields are stable between manifest and receipt;
 - receipt.audit_hash equals the canonical SHA-256 hash of the audit entry;
-- optional causal chain fixtures link child inputs to parent outputs.
+- optional causal chain fixtures link child inputs to parent outputs;
+- optional challenge fixtures prove expected failures are caught.
 
 It does not claim to prove GPU execution, zkML correctness, hardware identity,
 or distributed settlement. It only validates the v0.1 fixture contract.
@@ -246,6 +247,60 @@ def assert_causal_parent_receipt(
         )
 
 
+def validate_fixture_entry(
+    entry: dict[str, Any],
+    index: int,
+    seen_audit_hashes: set[str],
+    accepted_receipts: dict[str, dict[str, Any]],
+) -> tuple[str, bool]:
+    name = str(entry.get("name") or f"fixture #{index}")
+    manifest_path = resolve_fixture_path(str(entry.get("manifest", "")))
+    receipt_path = resolve_fixture_path(str(entry.get("receipt", "")))
+    audit_path = resolve_fixture_path(str(entry.get("audit", "")))
+
+    expected_decision = entry.get("expected_decision")
+    expected_reason = entry.get("expected_reason")
+    required_fields = entry.get("required_fields", [])
+
+    if expected_decision not in VALID_DECISIONS:
+        raise AssertionError(f"{name}: invalid expected_decision `{expected_decision}`")
+
+    if is_blank(entry.get("audit")):
+        raise AssertionError(f"{name}: audit fixture path is required")
+
+    if not isinstance(required_fields, list) or not all(
+        isinstance(item, str) for item in required_fields
+    ):
+        raise AssertionError(f"{name}: required_fields must be a list of strings")
+
+    causal_parent_receipt = entry.get("causal_parent_receipt")
+    if causal_parent_receipt is not None and not isinstance(causal_parent_receipt, str):
+        raise AssertionError(f"{name}: causal_parent_receipt must be a string when provided")
+
+    manifest = load_json(manifest_path)
+    receipt = load_json(receipt_path)
+    audit_entry = load_json(audit_path)
+
+    assert_required_fields(name, manifest, required_fields)
+    assert_receipt_expectations(name, receipt, expected_decision, expected_reason)
+    assert_manifest_receipt_stability(name, manifest, receipt)
+    if causal_parent_receipt is not None:
+        assert_causal_parent_receipt(
+            name,
+            manifest,
+            receipt,
+            causal_parent_receipt,
+            accepted_receipts,
+        )
+    audit_hash = assert_audit_log_matches_receipt(name, receipt, audit_entry, seen_audit_hashes)
+    seen_audit_hashes.add(audit_hash)
+
+    if receipt.get("decision") == "ACCEPT":
+        accepted_receipts[str(receipt["receipt_id"])] = receipt
+
+    return name, False
+
+
 def validate_conformance_manifest(path: Path) -> list[str]:
     conformance = load_json(path)
     fixtures = conformance.get("fixtures")
@@ -261,49 +316,25 @@ def validate_conformance_manifest(path: Path) -> list[str]:
             raise AssertionError(f"fixture entry #{index} must be an object")
 
         name = str(entry.get("name") or f"fixture #{index}")
-        manifest_path = resolve_fixture_path(str(entry.get("manifest", "")))
-        receipt_path = resolve_fixture_path(str(entry.get("receipt", "")))
-        audit_path = resolve_fixture_path(str(entry.get("audit", "")))
+        expected_failure = entry.get("expected_failure")
+        if expected_failure is not None and not isinstance(expected_failure, str):
+            raise AssertionError(f"{name}: expected_failure must be a string when provided")
 
-        expected_decision = entry.get("expected_decision")
-        expected_reason = entry.get("expected_reason")
-        required_fields = entry.get("required_fields", [])
+        try:
+            validate_fixture_entry(entry, index, seen_audit_hashes, accepted_receipts)
+        except AssertionError as exc:
+            if expected_failure is None:
+                raise
+            message = str(exc)
+            if expected_failure not in message:
+                raise AssertionError(
+                    f"{name}: expected failure containing {expected_failure!r}, got {message!r}"
+                ) from exc
+            results.append(f"PASS {name} expected failure: {expected_failure}")
+            continue
 
-        if expected_decision not in VALID_DECISIONS:
-            raise AssertionError(f"{name}: invalid expected_decision `{expected_decision}`")
-
-        if is_blank(entry.get("audit")):
-            raise AssertionError(f"{name}: audit fixture path is required")
-
-        if not isinstance(required_fields, list) or not all(
-            isinstance(item, str) for item in required_fields
-        ):
-            raise AssertionError(f"{name}: required_fields must be a list of strings")
-
-        causal_parent_receipt = entry.get("causal_parent_receipt")
-        if causal_parent_receipt is not None and not isinstance(causal_parent_receipt, str):
-            raise AssertionError(f"{name}: causal_parent_receipt must be a string when provided")
-
-        manifest = load_json(manifest_path)
-        receipt = load_json(receipt_path)
-        audit_entry = load_json(audit_path)
-
-        assert_required_fields(name, manifest, required_fields)
-        assert_receipt_expectations(name, receipt, expected_decision, expected_reason)
-        assert_manifest_receipt_stability(name, manifest, receipt)
-        if causal_parent_receipt is not None:
-            assert_causal_parent_receipt(
-                name,
-                manifest,
-                receipt,
-                causal_parent_receipt,
-                accepted_receipts,
-            )
-        audit_hash = assert_audit_log_matches_receipt(name, receipt, audit_entry, seen_audit_hashes)
-        seen_audit_hashes.add(audit_hash)
-
-        if receipt.get("decision") == "ACCEPT":
-            accepted_receipts[str(receipt["receipt_id"])] = receipt
+        if expected_failure is not None:
+            raise AssertionError(f"{name}: expected failure did not occur: {expected_failure}")
 
         results.append(f"PASS {name}")
 

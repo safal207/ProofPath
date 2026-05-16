@@ -1,0 +1,17 @@
+{
+  "profile": "proofpath.compute-witness.receipt.v0.1",
+  "receipt_id": "cwr_chain_child_001",
+  "job_id": "job_chain_child_001",
+  "agent_id": "agent_chain_runner",
+  "intent_id": "intent_chain_followup_analysis",
+  "causal_parent": "receipt:cwr_chain_parent_001",
+  "scope": "compute.inference.chain.child",
+  "model_hash": "sha256:5656565656565656565656565656565656565656565656565656565656565656",
+  "runtime_hash": "sha256:6767676767676767676767676767676767676767676767676767676767676767",
+  "input_hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+  "output_hash": "sha256:7878787878787878787878787878787878787878787878787878787878787878",
+  "decision": "ACCEPT",
+  "reason": null,
+  "audit_hash": "sha256:f37add2dee71455adeaf13ac476ba82b3a7eb1ce69c8708195531e16cdf6b861",
+  "verified_at": "2026-05-16T07:33:03Z"
+}
