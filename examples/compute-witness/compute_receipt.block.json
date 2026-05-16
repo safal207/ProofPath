@@ -12,6 +12,6 @@
   "output_hash": null,
   "decision": "BLOCK",
   "reason": "MISSING_CAUSAL_PARENT",
-  "audit_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "audit_hash": "sha256:d7e725dfebcce88bcf8c2a75ad4d18c6411eac3a667844d4ac7f08092cd55395",
   "verified_at": "2026-05-16T07:31:02Z"
 }
