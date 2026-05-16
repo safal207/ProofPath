@@ -67,9 +67,18 @@ BLOCK:
   decision is written to the audit log
 ```
 
+### Why Compute Witness matters
+
+Compute Witness turns AI/agent compute into reviewable evidence: a job manifest declares intent, scope, causal authorization, and commitments before a result is trusted.
+
+The repository includes Python conformance, audit packet examples, challenge fixtures, a Rust verifier adapter, a Rust CLI, expected output fixtures, and CI regression checks.
+
+Reviewers can run the path locally without trusting a hidden service: start with the [Compute Witness reviewer quickstart](examples/compute-witness/README.md#reviewer-quickstart).
+
 ### Reviewer links
 
 - [Reviewer summary](docs/reviewer-summary.md)
+- [Compute Witness reviewer quickstart](examples/compute-witness/README.md#reviewer-quickstart)
 - [Internet Action Layer](docs/internet-action-layer.md)
 - [Conformance fixtures](conformance/README.md)
 - [Security grant revision note](docs/grant-updates/security-grant-revision-proofpath-update.md)
