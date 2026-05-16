@@ -266,10 +266,13 @@ Level 6: Add Rust verifier integration.
 Level 7: Add optional TEE, zkML, or provider-specific attestation.
 ```
 
+For the proposed Rust integration path, see [Compute Witness Rust Integration Spike](compute-witness-rust-integration-spike.md).
+
 ## Links
 
 - [Compute Witness Environment](compute-witness-environment.md)
 - [Compute Witness Market Value](compute-witness-market-value.md)
+- [Compute Witness Rust Integration Spike](compute-witness-rust-integration-spike.md)
 - [Compute Witness Demo](../examples/compute-witness/README.md)
 - [Compute Witness Audit Packet Example](../examples/compute-witness/audit-packet/README.md)
 
