@@ -1,0 +1,72 @@
+{
+  "profile": "proofpath.compute-witness.challenge.v0.1",
+  "description": "Expected-failure challenge fixtures for the ProofPath Compute Witness Environment.",
+  "fixtures": [
+    {
+      "name": "challenge catches bad audit hash",
+      "manifest": "examples/compute-witness/job_manifest.accept.json",
+      "receipt": "examples/compute-witness/compute_receipt.challenge.bad_audit_hash.json",
+      "audit": "examples/compute-witness/audit_log.accept.json",
+      "expected_decision": "ACCEPT",
+      "expected_reason": null,
+      "expected_failure": "audit_hash mismatch",
+      "required_fields": [
+        "job_id",
+        "agent_id",
+        "intent_id",
+        "causal_parent",
+        "scope",
+        "reversibility",
+        "model_hash",
+        "runtime_hash",
+        "input_hash"
+      ]
+    },
+    {
+      "name": "challenge catches broken child input commitment",
+      "manifest": "examples/compute-witness/job_manifest.chain.parent.json",
+      "receipt": "examples/compute-witness/compute_receipt.chain.parent.json",
+      "audit": "examples/compute-witness/audit_log.chain.parent.json",
+      "expected_decision": "ACCEPT",
+      "expected_reason": null,
+      "required_fields": [
+        "job_id",
+        "agent_id",
+        "intent_id",
+        "causal_parent",
+        "scope",
+        "reversibility",
+        "model_hash",
+        "runtime_hash",
+        "input_hash"
+      ]
+    },
+    {
+      "name": "challenge catches broken child input commitment",
+      "manifest": "examples/compute-witness/job_manifest.challenge.broken_child.json",
+      "receipt": "examples/compute-witness/compute_receipt.chain.child.json",
+      "audit": "examples/compute-witness/audit_log.chain.child.json",
+      "expected_decision": "ACCEPT",
+      "expected_reason": null,
+      "causal_parent_receipt": "cwr_chain_parent_001",
+      "expected_failure": "manifest input_hash must equal parent output_hash",
+      "required_fields": [
+        "job_id",
+        "agent_id",
+        "intent_id",
+        "causal_parent",
+        "scope",
+        "reversibility",
+        "model_hash",
+        "runtime_hash",
+        "input_hash"
+      ]
+    }
+  ],
+  "non_claims": [
+    "does_not_prove_gpu_hardware_identity",
+    "does_not_prove_zkml_execution_correctness",
+    "does_not_provide_distributed_settlement",
+    "does_not_replace_external_key_management"
+  ]
+}
