@@ -14,6 +14,23 @@ Each manifest has a corresponding receipt and audit log entry.
 For market positioning and pilot packaging, see [`docs/compute-witness-market-value.md`](../../docs/compute-witness-market-value.md).
 For buyer/reviewer-facing evidence bundles, see [`audit-packet/`](audit-packet/).
 
+## Reviewer quickstart
+
+From the repository root, reviewers can inspect both the Python conformance path and the Rust receipt-draft path:
+
+```bash
+python3 scripts/validate_compute_witness.py
+cargo run -q -p proofpath-verifier --bin proofpath-compute-witness -- examples/compute-witness/job_manifest.accept.json
+```
+
+The Rust command output can be compared against:
+
+```text
+examples/compute-witness/rust_receipt_draft.accept.json
+```
+
+This quickstart does not require trusting a hidden service: the manifest input, receipt fixtures, audit log fixtures, Rust CLI, and expected Rust output are all committed in the repository.
+
 ## Demo story
 
 ```text
