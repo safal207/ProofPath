@@ -2,17 +2,14 @@
 
 This demo documents the first ProofPath compute-boundary proof environment.
 
-It shows two minimal cases:
+It shows four minimal cases:
 
 1. `job_manifest.accept.json` -> a bounded compute request with declared intent and causal authorization.
 2. `job_manifest.block.json` -> an unbounded compute request missing causal authorization.
+3. `job_manifest.chain.parent.json` -> the first accepted job in a causal compute chain.
+4. `job_manifest.chain.child.json` -> a follow-up job that depends on the parent receipt output.
 
-Each manifest has a corresponding receipt and audit log entry:
-
-- `compute_receipt.accept.json`
-- `compute_receipt.block.json`
-- `audit_log.accept.json`
-- `audit_log.block.json`
+Each manifest has a corresponding receipt and audit log entry.
 
 ## Demo story
 
@@ -22,6 +19,7 @@ Agent proposes compute job
   -> ProofPath verifier decides ACCEPT or BLOCK
   -> compute receipt records the decision and audit hash
   -> audit log entry is verified through canonical SHA-256 hashing
+  -> optional child jobs prove continuity by referencing parent receipts
 ```
 
 ## Run validation
@@ -37,7 +35,9 @@ Expected output:
 ```text
 PASS accepted demo inference job
 PASS blocked unbounded gpu job
-PASS compute witness conformance (2 fixtures)
+PASS causal chain parent job
+PASS causal chain child job
+PASS compute witness conformance (4 fixtures)
 ```
 
 You can also pass an explicit conformance manifest path:
@@ -59,6 +59,8 @@ This demo proves a narrow but useful contract:
 - every receipt is anchored to audit evidence;
 - audit evidence is verified through canonical SHA-256 hashing;
 - optional `previous_audit_hash` links to an earlier audit entry;
+- child jobs can reference a prior accepted receipt as their causal parent;
+- child job input commitments can be checked against parent receipt output commitments;
 - the fixture contract is executable through `scripts/validate_compute_witness.py`.
 
 ## What it does not prove yet
@@ -80,10 +82,16 @@ examples/compute-witness/
   README.md
   job_manifest.accept.json
   job_manifest.block.json
+  job_manifest.chain.parent.json
+  job_manifest.chain.child.json
   compute_receipt.accept.json
   compute_receipt.block.json
+  compute_receipt.chain.parent.json
+  compute_receipt.chain.child.json
   audit_log.accept.json
   audit_log.block.json
+  audit_log.chain.parent.json
+  audit_log.chain.child.json
 
 conformance/compute-witness/
   manifest.json
@@ -99,11 +107,12 @@ job manifest
   -> compute receipt
   -> audit log entry
   -> canonical SHA-256 verification
+  -> optional causal parent receipt verification
   -> CI conformance check
 ```
 
 ## Review phrase
 
 ```text
-ProofPath Compute Witness proves that a compute/action result was requested, scoped, causally authorized, decided, anchored to audit evidence, and recorded before it is trusted.
+ProofPath Compute Witness proves that a compute/action result was requested, scoped, causally authorized, decided, anchored to audit evidence, and linked to prior accepted evidence before it is trusted.
 ```
