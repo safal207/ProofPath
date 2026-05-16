@@ -10,7 +10,8 @@ It extends ProofPath from action-boundary verification into compute-boundary acc
 
 This document does not claim to cryptographically prove arbitrary large-model execution. The first version is intentionally narrower and reviewable.
 
-For market positioning and pilot packaging, see [Compute Witness Market Value](compute-witness-market-value.md).
+For market positioning, see [Compute Witness Market Value](compute-witness-market-value.md).
+For practical deployment, see [Compute Witness Pilot Integration Guide](compute-witness-pilot-guide.md).
 
 ## Core claim
 
