@@ -49,6 +49,18 @@ You can also pass an explicit conformance manifest path:
 python3 scripts/validate_compute_witness.py conformance/compute-witness/manifest.json
 ```
 
+## Run the Rust receipt-draft CLI
+
+The Rust verifier can also project a Compute Witness job manifest into a receipt draft:
+
+```bash
+cargo run -p proofpath-verifier --bin proofpath-compute-witness -- examples/compute-witness/job_manifest.accept.json
+```
+
+This command emits a `ComputeWitnessReceiptDraft` JSON object.
+
+It does not emit a final audit-anchored receipt yet. Audit hashes, audit packets, and challenge execution remain in the conformance layer for v0.1.
+
 ## What this proves in v0.1
 
 This demo proves a narrow but useful contract:
