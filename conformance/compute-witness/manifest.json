@@ -38,6 +38,45 @@
         "runtime_hash",
         "input_hash"
       ]
+    },
+    {
+      "name": "causal chain parent job",
+      "manifest": "examples/compute-witness/job_manifest.chain.parent.json",
+      "receipt": "examples/compute-witness/compute_receipt.chain.parent.json",
+      "audit": "examples/compute-witness/audit_log.chain.parent.json",
+      "expected_decision": "ACCEPT",
+      "expected_reason": null,
+      "required_fields": [
+        "job_id",
+        "agent_id",
+        "intent_id",
+        "causal_parent",
+        "scope",
+        "reversibility",
+        "model_hash",
+        "runtime_hash",
+        "input_hash"
+      ]
+    },
+    {
+      "name": "causal chain child job",
+      "manifest": "examples/compute-witness/job_manifest.chain.child.json",
+      "receipt": "examples/compute-witness/compute_receipt.chain.child.json",
+      "audit": "examples/compute-witness/audit_log.chain.child.json",
+      "expected_decision": "ACCEPT",
+      "expected_reason": null,
+      "causal_parent_receipt": "cwr_chain_parent_001",
+      "required_fields": [
+        "job_id",
+        "agent_id",
+        "intent_id",
+        "causal_parent",
+        "scope",
+        "reversibility",
+        "model_hash",
+        "runtime_hash",
+        "input_hash"
+      ]
     }
   ],
   "non_claims": [
@@ -48,10 +87,10 @@
   ],
   "completed_steps": [
     "add executable fixture validator",
-    "add audit log verification"
+    "add audit log verification",
+    "add multi step causal chain fixture"
   ],
   "next_steps": [
-    "add multi step causal chain fixture",
     "add replay challenge fixture"
   ]
 }
