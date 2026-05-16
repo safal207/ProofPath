@@ -151,6 +151,28 @@ The validator also checks that audit identity fields match the receipt and that 
 
 This does not prove GPU execution or zkML correctness. It proves that the receipt is anchored to inspectable audit evidence.
 
+## Causal chain verification
+
+A fixture can declare a prior accepted receipt as its causal parent:
+
+```text
+"causal_parent_receipt": "cwr_chain_parent_001"
+```
+
+For that fixture, the job manifest and receipt must use:
+
+```text
+"causal_parent": "receipt:cwr_chain_parent_001"
+```
+
+The validator also checks that the child job input commitment equals the parent receipt output commitment:
+
+```text
+child.input_hash == parent.output_hash
+```
+
+This makes the v0.1 chain inspectable: a follow-up compute job cannot silently claim continuity unless it points to an accepted parent receipt and consumes that parent's committed output.
+
 ## Example flow
 
 ```text
@@ -161,7 +183,8 @@ This does not prove GPU execution or zkML correctness. It proves that the receip
 5. Unsafe or unauthorized job receives REJECT/BLOCK/HOLD.
 6. Result is recorded as a compute receipt.
 7. Receipt is anchored to audit evidence through canonical SHA-256 verification.
-8. Receipt can be attached to replay, challenge, or future dispute flows.
+8. Optional child jobs can reference prior accepted receipts as causal parents.
+9. Receipt can be attached to replay, challenge, or future dispute flows.
 ```
 
 ## Relationship to the broader stack
@@ -182,7 +205,8 @@ A reviewer should be able to inspect this environment and see:
 - valid and blocked examples;
 - explicit non-claims;
 - a path from action proof to compute proof;
-- executable conformance for receipt-to-audit evidence anchoring.
+- executable conformance for receipt-to-audit evidence anchoring;
+- executable conformance for parent-to-child compute continuity.
 
 ## Future work
 
@@ -199,5 +223,5 @@ v0.7 - decentralized compute market integration sketch
 
 ```text
 ProofPath Compute Witness does not prove that all AI computation is mathematically correct.
-It proves that a compute/action result was requested, scoped, causally authorized, committed, decided, and recorded in a way that can be inspected later.
+It proves that a compute/action result was requested, scoped, causally authorized, committed, decided, anchored to audit evidence, and linked to prior accepted evidence in a way that can be inspected later.
 ```
