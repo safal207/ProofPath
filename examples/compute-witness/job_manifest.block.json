@@ -1,0 +1,15 @@
+{
+  "profile": "proofpath.compute-witness.v0.1",
+  "job_id": "job_demo_block_001",
+  "agent_id": "agent_unbounded_runner",
+  "intent_id": "intent_unbounded_gpu_use",
+  "causal_parent": null,
+  "scope": "compute.gpu.unbounded",
+  "reversibility": "irreversible",
+  "human_approval": null,
+  "model_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "runtime_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "input_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "expected_output_kind": "model.finetune",
+  "requested_at": "2026-05-16T07:31:00Z"
+}
