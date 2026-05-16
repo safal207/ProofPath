@@ -9,7 +9,8 @@ reviewer-facing fixture contract introduced by the Compute Witness Environment:
 - required manifest fields are present and non-empty;
 - receipt decision/reason matches the expected conformance entry;
 - identity and commitment fields are stable between manifest and receipt;
-- receipt.audit_hash equals the canonical SHA-256 hash of the audit entry.
+- receipt.audit_hash equals the canonical SHA-256 hash of the audit entry;
+- optional causal chain fixtures link child inputs to parent outputs.
 
 It does not claim to prove GPU execution, zkML correctness, hardware identity,
 or distributed settlement. It only validates the v0.1 fixture contract.
@@ -204,6 +205,47 @@ def assert_audit_log_matches_receipt(
     return computed_audit_hash
 
 
+def assert_causal_parent_receipt(
+    entry_name: str,
+    manifest: dict[str, Any],
+    receipt: dict[str, Any],
+    expected_parent_receipt_id: str,
+    accepted_receipts: dict[str, dict[str, Any]],
+) -> None:
+    parent = accepted_receipts.get(expected_parent_receipt_id)
+    if parent is None:
+        raise AssertionError(
+            f"{entry_name}: causal_parent_receipt `{expected_parent_receipt_id}` was not previously accepted"
+        )
+
+    expected_parent_ref = f"receipt:{expected_parent_receipt_id}"
+    if manifest.get("causal_parent") != expected_parent_ref:
+        raise AssertionError(
+            f"{entry_name}: manifest causal_parent must be `{expected_parent_ref}`"
+        )
+
+    if receipt.get("causal_parent") != expected_parent_ref:
+        raise AssertionError(
+            f"{entry_name}: receipt causal_parent must be `{expected_parent_ref}`"
+        )
+
+    parent_output_hash = parent.get("output_hash")
+    if is_blank(parent_output_hash):
+        raise AssertionError(
+            f"{entry_name}: parent receipt `{expected_parent_receipt_id}` has no output_hash"
+        )
+
+    if manifest.get("input_hash") != parent_output_hash:
+        raise AssertionError(
+            f"{entry_name}: manifest input_hash must equal parent output_hash"
+        )
+
+    if receipt.get("input_hash") != parent_output_hash:
+        raise AssertionError(
+            f"{entry_name}: receipt input_hash must equal parent output_hash"
+        )
+
+
 def validate_conformance_manifest(path: Path) -> list[str]:
     conformance = load_json(path)
     fixtures = conformance.get("fixtures")
@@ -212,6 +254,7 @@ def validate_conformance_manifest(path: Path) -> list[str]:
 
     results: list[str] = []
     seen_audit_hashes: set[str] = set()
+    accepted_receipts: dict[str, dict[str, Any]] = {}
 
     for index, entry in enumerate(fixtures, start=1):
         if not isinstance(entry, dict):
@@ -237,6 +280,10 @@ def validate_conformance_manifest(path: Path) -> list[str]:
         ):
             raise AssertionError(f"{name}: required_fields must be a list of strings")
 
+        causal_parent_receipt = entry.get("causal_parent_receipt")
+        if causal_parent_receipt is not None and not isinstance(causal_parent_receipt, str):
+            raise AssertionError(f"{name}: causal_parent_receipt must be a string when provided")
+
         manifest = load_json(manifest_path)
         receipt = load_json(receipt_path)
         audit_entry = load_json(audit_path)
@@ -244,8 +291,19 @@ def validate_conformance_manifest(path: Path) -> list[str]:
         assert_required_fields(name, manifest, required_fields)
         assert_receipt_expectations(name, receipt, expected_decision, expected_reason)
         assert_manifest_receipt_stability(name, manifest, receipt)
+        if causal_parent_receipt is not None:
+            assert_causal_parent_receipt(
+                name,
+                manifest,
+                receipt,
+                causal_parent_receipt,
+                accepted_receipts,
+            )
         audit_hash = assert_audit_log_matches_receipt(name, receipt, audit_entry, seen_audit_hashes)
         seen_audit_hashes.add(audit_hash)
+
+        if receipt.get("decision") == "ACCEPT":
+            accepted_receipts[str(receipt["receipt_id"])] = receipt
 
         results.append(f"PASS {name}")
 
