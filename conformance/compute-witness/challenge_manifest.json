@@ -81,7 +81,7 @@
     {
       "name": "challenge catches broken child input commitment",
       "manifest": "examples/compute-witness/job_manifest.challenge.broken_child.json",
-      "receipt": "examples/compute-witness/compute_receipt.chain.child.json",
+      "receipt": "examples/compute-witness/compute_receipt.challenge.broken_child.json",
       "audit": "examples/compute-witness/audit_log.chain.child.json",
       "expected_decision": "ACCEPT",
       "expected_reason": null,
