@@ -189,7 +189,10 @@ pub fn manifest_to_request_context(manifest: &ComputeWitnessJobManifest) -> Requ
     let mut ctx = RequestContext::new()
         .with_header(HEADER_INTENT_ID, manifest.intent_id.clone())
         .with_header(HEADER_SCOPE, manifest.scope.clone())
-        .with_header(HEADER_REVERSIBILITY, reversibility_wire_value(manifest.reversibility));
+        .with_header(
+            HEADER_REVERSIBILITY,
+            reversibility_wire_value(manifest.reversibility),
+        );
 
     if let Some(causal_parent) = manifest.causal_parent.as_deref() {
         ctx = ctx.with_header(HEADER_CAUSAL_PARENT, causal_parent);
@@ -407,7 +410,10 @@ mod tests {
             ctx.header(HEADER_CAUSAL_PARENT),
             Some("decision_compute_budget_approved_001")
         );
-        assert_eq!(ctx.header(HEADER_SCOPE), Some("compute.inference.demo.once"));
+        assert_eq!(
+            ctx.header(HEADER_SCOPE),
+            Some("compute.inference.demo.once")
+        );
         assert_eq!(ctx.header(HEADER_REVERSIBILITY), Some("reversible"));
         assert_eq!(ctx.header(HEADER_HUMAN_APPROVAL), None);
     }
@@ -424,7 +430,10 @@ mod tests {
             receipt.causal_parent.as_deref(),
             Some("decision_compute_budget_approved_001")
         );
-        assert_eq!(receipt.scope.as_deref(), Some("compute.inference.demo.once"));
+        assert_eq!(
+            receipt.scope.as_deref(),
+            Some("compute.inference.demo.once")
+        );
         assert_eq!(receipt.decision, Decision::Accept);
         assert_eq!(receipt.reason, None);
         assert_eq!(
