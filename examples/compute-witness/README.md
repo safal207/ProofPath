@@ -59,6 +59,19 @@ cargo run -p proofpath-verifier --bin proofpath-compute-witness -- examples/comp
 
 This command emits a `ComputeWitnessReceiptDraft` JSON object.
 
+Expected output fixture:
+
+```text
+examples/compute-witness/rust_receipt_draft.accept.json
+```
+
+You can compare the command output against the fixture:
+
+```bash
+cargo run -q -p proofpath-verifier --bin proofpath-compute-witness -- examples/compute-witness/job_manifest.accept.json > /tmp/rust_receipt_draft.accept.json
+diff -u examples/compute-witness/rust_receipt_draft.accept.json /tmp/rust_receipt_draft.accept.json
+```
+
 It does not emit a final audit-anchored receipt yet. Audit hashes, audit packets, and challenge execution remain in the conformance layer for v0.1.
 
 ## What this proves in v0.1
@@ -103,6 +116,7 @@ examples/compute-witness/
   compute_receipt.block.json
   compute_receipt.chain.parent.json
   compute_receipt.chain.child.json
+  rust_receipt_draft.accept.json
   audit_log.accept.json
   audit_log.block.json
   audit_log.chain.parent.json
