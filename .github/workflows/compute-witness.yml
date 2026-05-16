@@ -1,0 +1,37 @@
+name: Compute Witness Conformance
+
+on:
+  pull_request:
+    paths:
+      - "docs/compute-witness-environment.md"
+      - "examples/compute-witness/**"
+      - "conformance/compute-witness/**"
+      - "scripts/validate_compute_witness.py"
+      - ".github/workflows/compute-witness.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/compute-witness-environment.md"
+      - "examples/compute-witness/**"
+      - "conformance/compute-witness/**"
+      - "scripts/validate_compute_witness.py"
+      - ".github/workflows/compute-witness.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-compute-witness:
+    name: Validate Compute Witness fixtures
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate Compute Witness conformance
+        run: python3 scripts/validate_compute_witness.py
