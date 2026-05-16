@@ -6,6 +6,7 @@
       "name": "accepted demo inference job",
       "manifest": "examples/compute-witness/job_manifest.accept.json",
       "receipt": "examples/compute-witness/compute_receipt.accept.json",
+      "audit": "examples/compute-witness/audit_log.accept.json",
       "expected_decision": "ACCEPT",
       "expected_reason": null,
       "required_fields": [
@@ -24,6 +25,7 @@
       "name": "blocked unbounded gpu job",
       "manifest": "examples/compute-witness/job_manifest.block.json",
       "receipt": "examples/compute-witness/compute_receipt.block.json",
+      "audit": "examples/compute-witness/audit_log.block.json",
       "expected_decision": "BLOCK",
       "expected_reason": "MISSING_CAUSAL_PARENT",
       "required_fields": [
@@ -44,9 +46,11 @@
     "does_not_provide_distributed_settlement",
     "does_not_replace_external_key_management"
   ],
-  "next_steps": [
+  "completed_steps": [
     "add executable fixture validator",
-    "add audit log verification",
+    "add audit log verification"
+  ],
+  "next_steps": [
     "add multi step causal chain fixture",
     "add replay challenge fixture"
   ]
