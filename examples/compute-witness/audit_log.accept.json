@@ -1,0 +1,13 @@
+{
+  "profile": "proofpath.compute-witness.audit-entry.v0.1",
+  "audit_id": "audit_demo_accept_001",
+  "receipt_id": "cwr_demo_accept_001",
+  "job_id": "job_demo_accept_001",
+  "agent_id": "agent_demo_runner",
+  "intent_id": "intent_demo_inference",
+  "decision": "ACCEPT",
+  "reason": null,
+  "event_type": "COMPUTE_WITNESS_VERIFIED",
+  "previous_audit_hash": null,
+  "recorded_at": "2026-05-16T07:30:06Z"
+}

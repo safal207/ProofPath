@@ -1,0 +1,13 @@
+{
+  "profile": "proofpath.compute-witness.audit-entry.v0.1",
+  "audit_id": "audit_chain_child_001",
+  "receipt_id": "cwr_chain_child_001",
+  "job_id": "job_chain_child_001",
+  "agent_id": "agent_chain_runner",
+  "intent_id": "intent_chain_followup_analysis",
+  "decision": "ACCEPT",
+  "reason": null,
+  "event_type": "COMPUTE_WITNESS_VERIFIED",
+  "previous_audit_hash": "sha256:ba2a86f3402c356633d98b4221dfdbd2bc7f36be590034012ea2c4a142989dac",
+  "recorded_at": "2026-05-16T07:33:04Z"
+}
