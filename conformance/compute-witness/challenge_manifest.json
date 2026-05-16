@@ -3,6 +3,43 @@
   "description": "Expected-failure challenge fixtures for the ProofPath Compute Witness Environment.",
   "fixtures": [
     {
+      "name": "challenge setup accepted demo inference job",
+      "manifest": "examples/compute-witness/job_manifest.accept.json",
+      "receipt": "examples/compute-witness/compute_receipt.accept.json",
+      "audit": "examples/compute-witness/audit_log.accept.json",
+      "expected_decision": "ACCEPT",
+      "expected_reason": null,
+      "required_fields": [
+        "job_id",
+        "agent_id",
+        "intent_id",
+        "causal_parent",
+        "scope",
+        "reversibility",
+        "model_hash",
+        "runtime_hash",
+        "input_hash"
+      ]
+    },
+    {
+      "name": "challenge setup blocked unbounded gpu job",
+      "manifest": "examples/compute-witness/job_manifest.block.json",
+      "receipt": "examples/compute-witness/compute_receipt.block.json",
+      "audit": "examples/compute-witness/audit_log.block.json",
+      "expected_decision": "BLOCK",
+      "expected_reason": "MISSING_CAUSAL_PARENT",
+      "required_fields": [
+        "job_id",
+        "agent_id",
+        "intent_id",
+        "scope",
+        "reversibility",
+        "model_hash",
+        "runtime_hash",
+        "input_hash"
+      ]
+    },
+    {
       "name": "challenge catches bad audit hash",
       "manifest": "examples/compute-witness/job_manifest.accept.json",
       "receipt": "examples/compute-witness/compute_receipt.challenge.bad_audit_hash.json",
@@ -23,7 +60,7 @@
       ]
     },
     {
-      "name": "challenge catches broken child input commitment",
+      "name": "challenge setup causal chain parent job",
       "manifest": "examples/compute-witness/job_manifest.chain.parent.json",
       "receipt": "examples/compute-witness/compute_receipt.chain.parent.json",
       "audit": "examples/compute-witness/audit_log.chain.parent.json",
