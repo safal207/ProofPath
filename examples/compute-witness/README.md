@@ -12,6 +12,7 @@ It shows four minimal cases:
 Each manifest has a corresponding receipt and audit log entry.
 
 For market positioning and pilot packaging, see [`docs/compute-witness-market-value.md`](../../docs/compute-witness-market-value.md).
+For buyer/reviewer-facing evidence bundles, see [`audit-packet/`](audit-packet/).
 
 ## Demo story
 
@@ -94,6 +95,10 @@ examples/compute-witness/
   audit_log.block.json
   audit_log.chain.parent.json
   audit_log.chain.child.json
+  audit-packet/
+    README.md
+    packet.accept.json
+    packet.chain.json
 
 conformance/compute-witness/
   manifest.json
