@@ -130,6 +130,27 @@ audit_hash
 verified_at
 ```
 
+## Audit-log verification
+
+Each compute receipt must point to an audit log entry through `receipt.audit_hash`.
+
+For v0.1, the hash is computed as:
+
+```text
+sha256(canonical_json(audit_entry))
+```
+
+Canonical JSON means:
+
+- keys sorted;
+- compact separators;
+- UTF-8 encoding;
+- no runtime-dependent formatting.
+
+The validator also checks that audit identity fields match the receipt and that `previous_audit_hash`, when present, points to an earlier audit entry in the same conformance run.
+
+This does not prove GPU execution or zkML correctness. It proves that the receipt is anchored to inspectable audit evidence.
+
 ## Example flow
 
 ```text
@@ -139,7 +160,8 @@ verified_at
 4. Safe job receives ACCEPT.
 5. Unsafe or unauthorized job receives REJECT/BLOCK/HOLD.
 6. Result is recorded as a compute receipt.
-7. Receipt can be attached to audit evidence, replay, or future dispute flows.
+7. Receipt is anchored to audit evidence through canonical SHA-256 verification.
+8. Receipt can be attached to replay, challenge, or future dispute flows.
 ```
 
 ## Relationship to the broader stack
@@ -160,7 +182,7 @@ A reviewer should be able to inspect this environment and see:
 - valid and blocked examples;
 - explicit non-claims;
 - a path from action proof to compute proof;
-- a credible next step toward challenge/replay and audit-log verification.
+- executable conformance for receipt-to-audit evidence anchoring.
 
 ## Future work
 
