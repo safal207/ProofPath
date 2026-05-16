@@ -1,0 +1,13 @@
+{
+  "job_id": "job_demo_accept_001",
+  "agent_id": "agent_demo_runner",
+  "intent_id": "intent_demo_inference",
+  "causal_parent": "decision_compute_budget_approved_001",
+  "scope": "compute.inference.demo.once",
+  "model_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "runtime_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "input_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+  "expected_output_kind": "text.summary",
+  "decision": "ACCEPT",
+  "reason": null
+}
