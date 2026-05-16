@@ -4,6 +4,8 @@
 //! It intentionally starts small: required headers, reversibility values,
 //! decision outcomes, and structured reason codes.
 
+pub mod audit;
+
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
