@@ -73,11 +73,12 @@ Compute Witness turns AI/agent compute into reviewable evidence: a job manifest 
 
 The repository includes Python conformance, audit packet examples, challenge fixtures, a Rust verifier adapter, a Rust CLI, expected output fixtures, and CI regression checks.
 
-Reviewers can run the path locally without trusting a hidden service: start with the [Compute Witness reviewer quickstart](examples/compute-witness/README.md#reviewer-quickstart).
+Reviewers can run the path locally without trusting a hidden service: start with the [Compute Witness grant reviewer path](docs/COMPUTE_WITNESS_GRANT_REVIEWER_PATH.md) or the [Compute Witness reviewer quickstart](examples/compute-witness/README.md#reviewer-quickstart).
 
 ### Reviewer links
 
 - [Reviewer summary](docs/reviewer-summary.md)
+- [Compute Witness grant reviewer path](docs/COMPUTE_WITNESS_GRANT_REVIEWER_PATH.md)
 - [Compute Witness reviewer quickstart](examples/compute-witness/README.md#reviewer-quickstart)
 - [Internet Action Layer](docs/internet-action-layer.md)
 - [Conformance fixtures](conformance/README.md)
