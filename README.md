@@ -18,7 +18,7 @@ HTTPS proves that a connection is secure. ProofPath proves that an action was au
 
 ProofPath does **not** replace HTTPS, OAuth, IAM, API keys, or ordinary infrastructure security. Those layers remain necessary. ProofPath adds an action-level security and audit layer at the execution boundary: before a high-risk AI-agent or API action reaches the protected upstream system.
 
-If you arrived here from an already-submitted grant application under an earlier name or framing, start with the [Submitted Application Reviewer Bridge](docs/SUBMITTED_APPLICATION_REVIEWER_BRIDGE.md).
+If you arrived here from an already-submitted grant application under an earlier name or framing, start with the [Submitted Application Reviewer Bridge](docs/SUBMITTED_APPLICATION_REVIEWER_BRIDGE.md). To understand how the related repositories fit together, see the [Ecosystem Graph](docs/ECOSYSTEM_GRAPH.md).
 
 ### Why HTTPS is not enough
 
@@ -75,12 +75,13 @@ Compute Witness turns AI/agent compute into reviewable evidence: a job manifest 
 
 The repository includes Python conformance, audit packet examples, challenge fixtures, a Rust verifier adapter, a Rust CLI, expected output fixtures, Rust audit-hash verification, and CI regression checks.
 
-Reviewers can run the path locally without trusting a hidden service: start with the [Compute Witness grant reviewer path](docs/COMPUTE_WITNESS_GRANT_REVIEWER_PATH.md), the [Submitted Application Reviewer Bridge](docs/SUBMITTED_APPLICATION_REVIEWER_BRIDGE.md), or the [Compute Witness reviewer quickstart](examples/compute-witness/README.md#reviewer-quickstart).
+Reviewers can run the path locally without trusting a hidden service: start with the [Compute Witness grant reviewer path](docs/COMPUTE_WITNESS_GRANT_REVIEWER_PATH.md), the [Submitted Application Reviewer Bridge](docs/SUBMITTED_APPLICATION_REVIEWER_BRIDGE.md), the [Ecosystem Graph](docs/ECOSYSTEM_GRAPH.md), or the [Compute Witness reviewer quickstart](examples/compute-witness/README.md#reviewer-quickstart).
 
 ### Reviewer links
 
 - [Reviewer summary](docs/reviewer-summary.md)
 - [Submitted Application Reviewer Bridge](docs/SUBMITTED_APPLICATION_REVIEWER_BRIDGE.md)
+- [Ecosystem Graph](docs/ECOSYSTEM_GRAPH.md)
 - [Compute Witness grant reviewer path](docs/COMPUTE_WITNESS_GRANT_REVIEWER_PATH.md)
 - [Compute Witness reviewer quickstart](examples/compute-witness/README.md#reviewer-quickstart)
 - [Internet Action Layer](docs/internet-action-layer.md)
