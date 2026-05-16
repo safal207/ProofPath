@@ -95,6 +95,31 @@ This workstream currently proves a narrow but useful contract:
 - the Rust verifier can project a Compute Witness manifest into a receipt draft;
 - the Rust CLI output is compared against a committed fixture in CI.
 
+## Grant evidence checklist
+
+| Evidence item | Current status | Reviewer value |
+| --- | --- | --- |
+| Committed manifest, receipt, and audit fixtures | Present | Shows the proof contract as inspectable data rather than prose. |
+| Python conformance validator | Present | Lets reviewers execute the fixture contract locally. |
+| Audit packet examples | Present | Packages the evidence in a buyer/reviewer-friendly format. |
+| Broken-evidence challenge cases | Present | Demonstrates that invalid audit hashes and broken causal chains are rejected. |
+| Rust verifier adapter | Present | Shows a production-facing implementation path beyond Python scripts. |
+| Rust CLI | Present | Makes the Rust path executable from a reviewer command. |
+| Expected Rust CLI output fixture | Present | Gives reviewers a committed expected output for comparison. |
+| CI regression check | Present | Enforces that the Rust CLI output does not silently drift. |
+| Full Rust audit packet verification | Not yet | Funding target: move deeper verification into Rust while preserving the Python harness. |
+| Richer adversarial challenge suite | Not yet | Funding target: cover missing scope, invalid reversibility, and commitment mismatch cases. |
+| Pilot agent integration | Not yet | Funding target: prove the boundary in an end-to-end agent workflow. |
+
+Funding would move Compute Witness from a v0.1 proof contract into a deeper verifier and pilot layer:
+
+```text
+current: inspectable + executable + challengeable + regression-tested
+next: deeper Rust verification + richer challenges + pilot integrations
+```
+
+The current milestone is fundable because the core claim is already materialized as artifacts, commands, expected outputs, and CI checks. The remaining work is not to invent the concept from scratch; it is to harden and extend the existing proof environment.
+
 ## What this does not prove yet
 
 This is not yet a full compute attestation system.
