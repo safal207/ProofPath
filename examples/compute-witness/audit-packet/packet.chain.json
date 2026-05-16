@@ -1,0 +1,70 @@
+{
+  "profile": "proofpath.compute-witness.audit-packet.v0.1",
+  "packet_id": "packet_compute_witness_chain_001",
+  "packet_type": "parent_child_compute_chain",
+  "workflow_id": "workflow_demo_chain_001",
+  "chain": [
+    {
+      "role": "parent",
+      "evidence": {
+        "job_manifest": "examples/compute-witness/job_manifest.chain.parent.json",
+        "compute_receipt": "examples/compute-witness/compute_receipt.chain.parent.json",
+        "audit_log": "examples/compute-witness/audit_log.chain.parent.json"
+      },
+      "decision": "ACCEPT",
+      "reason": null,
+      "receipt_id": "cwr_chain_parent_001",
+      "job_id": "job_chain_parent_001",
+      "agent_id": "agent_chain_runner",
+      "intent_id": "intent_chain_root_analysis",
+      "output_hash": "sha256:4545454545454545454545454545454545454545454545454545454545454545",
+      "computed_audit_hash": "sha256:ba2a86f3402c356633d98b4221dfdbd2bc7f36be590034012ea2c4a142989dac"
+    },
+    {
+      "role": "child",
+      "evidence": {
+        "job_manifest": "examples/compute-witness/job_manifest.chain.child.json",
+        "compute_receipt": "examples/compute-witness/compute_receipt.chain.child.json",
+        "audit_log": "examples/compute-witness/audit_log.chain.child.json"
+      },
+      "decision": "ACCEPT",
+      "reason": null,
+      "receipt_id": "cwr_chain_child_001",
+      "job_id": "job_chain_child_001",
+      "agent_id": "agent_chain_runner",
+      "intent_id": "intent_chain_followup_analysis",
+      "causal_parent_receipt": "cwr_chain_parent_001",
+      "causal_parent": "receipt:cwr_chain_parent_001",
+      "input_hash": "sha256:4545454545454545454545454545454545454545454545454545454545454545",
+      "computed_audit_hash": "sha256:f37add2dee71455adeaf13ac476ba82b3a7eb1ce69c8708195531e16cdf6b861"
+    }
+  ],
+  "continuity_check": {
+    "rule": "child.input_hash == parent.output_hash",
+    "parent_output_hash": "sha256:4545454545454545454545454545454545454545454545454545454545454545",
+    "child_input_hash": "sha256:4545454545454545454545454545454545454545454545454545454545454545",
+    "result": "PASS"
+  },
+  "validator_command": "python3 scripts/validate_compute_witness.py",
+  "expected_validator_output": [
+    "PASS accepted demo inference job",
+    "PASS blocked unbounded gpu job",
+    "PASS causal chain parent job",
+    "PASS causal chain child job",
+    "PASS compute witness conformance (4 fixtures)"
+  ],
+  "claims": [
+    "parent compute job was accepted",
+    "child compute job references the accepted parent receipt",
+    "child input commitment equals parent output commitment",
+    "both receipts are anchored to audit evidence",
+    "audit hashes are reproducible from canonical JSON"
+  ],
+  "non_claims": [
+    "does_not_prove_gpu_hardware_identity",
+    "does_not_prove_zkml_execution_correctness",
+    "does_not_prove_model_output_truth",
+    "does_not_replace_key_management",
+    "does_not_provide_distributed_settlement"
+  ]
+}
