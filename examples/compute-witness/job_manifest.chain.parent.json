@@ -1,0 +1,14 @@
+{
+  "profile": "proofpath.compute-witness.v0.1",
+  "job_id": "job_chain_parent_001",
+  "agent_id": "agent_chain_runner",
+  "intent_id": "intent_chain_root_analysis",
+  "causal_parent": "decision_chain_compute_approved_001",
+  "scope": "compute.inference.chain.parent",
+  "reversibility": "reversible",
+  "model_hash": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+  "runtime_hash": "sha256:2323232323232323232323232323232323232323232323232323232323232323",
+  "input_hash": "sha256:3434343434343434343434343434343434343434343434343434343434343434",
+  "expected_output_kind": "text.analysis.seed",
+  "requested_at": "2026-05-16T07:32:00Z"
+}
