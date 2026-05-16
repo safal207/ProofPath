@@ -10,6 +10,8 @@ It extends ProofPath from action-boundary verification into compute-boundary acc
 
 This document does not claim to cryptographically prove arbitrary large-model execution. The first version is intentionally narrower and reviewable.
 
+For market positioning and pilot packaging, see [Compute Witness Market Value](compute-witness-market-value.md).
+
 ## Core claim
 
 ProofPath does not merely ask whether a request was authenticated.
@@ -206,7 +208,8 @@ A reviewer should be able to inspect this environment and see:
 - explicit non-claims;
 - a path from action proof to compute proof;
 - executable conformance for receipt-to-audit evidence anchoring;
-- executable conformance for parent-to-child compute continuity.
+- executable conformance for parent-to-child compute continuity;
+- a clear first market wedge for pilots and adoption.
 
 ## Future work
 
