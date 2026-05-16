@@ -1,0 +1,40 @@
+{
+  "profile": "proofpath.compute-witness.audit-packet.v0.1",
+  "packet_id": "packet_compute_witness_accept_001",
+  "packet_type": "single_accepted_compute_job",
+  "workflow_id": "workflow_demo_accept_001",
+  "evidence": {
+    "job_manifest": "examples/compute-witness/job_manifest.accept.json",
+    "compute_receipt": "examples/compute-witness/compute_receipt.accept.json",
+    "audit_log": "examples/compute-witness/audit_log.accept.json"
+  },
+  "decision": "ACCEPT",
+  "reason": null,
+  "receipt_id": "cwr_demo_accept_001",
+  "job_id": "job_demo_accept_001",
+  "agent_id": "agent_demo_runner",
+  "intent_id": "intent_demo_inference",
+  "causal_parent": "decision_compute_budget_approved_001",
+  "computed_audit_hash": "sha256:5f37260103eb5848ffb0fc07c11b4da38d67a2137ebe0898c1ac65d7396ed88f",
+  "validator_command": "python3 scripts/validate_compute_witness.py",
+  "expected_validator_output": [
+    "PASS accepted demo inference job",
+    "PASS blocked unbounded gpu job",
+    "PASS causal chain parent job",
+    "PASS causal chain child job",
+    "PASS compute witness conformance (4 fixtures)"
+  ],
+  "claims": [
+    "compute request was declared before trust",
+    "receipt decision is ACCEPT",
+    "receipt is anchored to audit evidence",
+    "audit hash is reproducible from canonical JSON"
+  ],
+  "non_claims": [
+    "does_not_prove_gpu_hardware_identity",
+    "does_not_prove_zkml_execution_correctness",
+    "does_not_prove_model_output_truth",
+    "does_not_replace_key_management",
+    "does_not_provide_distributed_settlement"
+  ]
+}
