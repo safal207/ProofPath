@@ -79,6 +79,7 @@ Reviewers can run the path locally without trusting a hidden service: start with
 
 ### Reviewer links
 
+- [Start Here: ProofPath v0.1](docs/START_HERE_V0_1.md)
 - [Reviewer summary](docs/reviewer-summary.md)
 - [ProofPath v0.1 Product Milestone](docs/RELEASE_V0_1.md)
 - [Evidence Packet v0.1](docs/EVIDENCE_PACKET_V0_1.md)
