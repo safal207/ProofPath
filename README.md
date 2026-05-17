@@ -80,6 +80,7 @@ Reviewers can run the path locally without trusting a hidden service: start with
 ### Reviewer links
 
 - [Reviewer summary](docs/reviewer-summary.md)
+- [ProofPath v0.1 Product Milestone](docs/RELEASE_V0_1.md)
 - [Evidence Packet v0.1](docs/EVIDENCE_PACKET_V0_1.md)
 - [Evidence Metrics v0.1](docs/EVIDENCE_METRICS_V0_1.md)
 - [ProofPath GitHub Action quickstart](docs/GITHUB_ACTION_QUICKSTART.md)
