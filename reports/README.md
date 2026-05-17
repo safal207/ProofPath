@@ -4,6 +4,53 @@ This directory contains reviewer-facing measured and planned evidence reports fo
 
 ## Current reports
 
+### Action-Boundary Fixture Metrics — 2026-05-17
+
+Human-readable summary:
+
+```text
+reports/action-boundary-fixture-2026-05-17.md
+```
+
+Machine-readable JSON:
+
+```text
+reports/action-boundary-fixture-2026-05-17.json
+```
+
+Source fixture:
+
+```text
+fixtures/action-boundary/dangerous-action-audit.jsonl
+```
+
+Collector script:
+
+```text
+scripts/collect_action_boundary_metrics.py
+```
+
+Measured fixture values:
+
+```text
+actions_total -> 2
+actions_blocked -> 1
+actions_accepted -> 1
+unsafe_without_approval_blocked -> 1
+unsafe_without_approval_false_accepts -> 0
+safe_with_approval_false_blocks -> 0
+audit_records_written -> 2
+blocked_forwarded_count -> 0
+accepted_forwarded_count -> 1
+audit_hash_chain_present -> true
+```
+
+Claim boundary:
+
+```text
+fixture baseline only; not production benchmark; no latency measurement yet
+```
+
 ### Evidence Metrics CI Baseline — 2026-05-17
 
 Human-readable summary:
@@ -45,13 +92,13 @@ ci_failure_count -> 0
 
 ## Claim boundary
 
-This baseline is not a domain benchmark.
+The current reports are not full domain benchmarks.
 
-It does not yet report:
+They do not yet report:
 
 ```text
-ProofPath action-boundary false accept / false block rates
-ProofPath decision latency
+live-run ProofPath latency
+large scenario false accept / false block rates
 CML causal-validity measured results
 LTP trace / replay measured results
 PythiaLabs ALLOW / BLOCK / ESCALATE measured distribution
