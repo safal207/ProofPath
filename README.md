@@ -83,6 +83,7 @@ Reviewers can run the path locally without trusting a hidden service: start with
 - [Submitted Application Reviewer Bridge](docs/SUBMITTED_APPLICATION_REVIEWER_BRIDGE.md)
 - [Ecosystem Graph](docs/ECOSYSTEM_GRAPH.md)
 - [Compute Witness grant reviewer path](docs/COMPUTE_WITNESS_GRANT_REVIEWER_PATH.md)
+- [TRC / TPU evidence plan](docs/TRC_TPU_EVIDENCE_PLAN.md)
 - [Compute Witness reviewer quickstart](examples/compute-witness/README.md#reviewer-quickstart)
 - [Internet Action Layer](docs/internet-action-layer.md)
 - [Conformance fixtures](conformance/README.md)
