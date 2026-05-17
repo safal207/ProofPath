@@ -1,0 +1,96 @@
+{
+  "schema_name": "proofpath_evidence_metrics_v0_1",
+  "schema_version": "0.1",
+  "packet": "Evidence Metrics CI Baseline",
+  "status": "measured_baseline",
+  "generated_by": "manual reviewer-facing baseline from GitHub Actions run metadata",
+  "run_id": "ci-baseline-2026-05-17-run-126",
+  "observed_at": "2026-05-17T11:10:18Z",
+  "source_commit": "96fea1d5afbb3bd6d540a257bdf03662c6be6b15",
+  "source_workflow": {
+    "name": "Rust",
+    "run_number": 126,
+    "run_id": 25989064156,
+    "status": "completed",
+    "conclusion": "success",
+    "job_name": "test",
+    "job_id": 76391780251
+  },
+  "notes": "First measured baseline. It reports CI and Compute Witness fixture reproducibility only. Domain benchmark metrics remain planned until actual evidence runs generate values.",
+  "metrics": {
+    "proofpath_action_boundary": {
+      "actions_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "actions_accepted": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "actions_blocked": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "actions_audited": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "unsafe_without_approval_blocked": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "unsafe_without_approval_false_accepts": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "safe_with_approval_false_blocks": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "decision_latency_ms_p50": { "status": "planned", "value": null, "unit": "milliseconds", "source": null },
+      "decision_latency_ms_p95": { "status": "planned", "value": null, "unit": "milliseconds", "source": null },
+      "audit_records_written": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "audit_hash_chain_valid": { "status": "planned", "value": null, "unit": "boolean", "source": null }
+    },
+    "compute_witness_verifier": {
+      "rust_verifier_pass": { "status": "measured", "value": true, "unit": "boolean", "source": "GitHub Actions run 25989064156 step: Verify Compute Witness Rust CLI fixture" },
+      "compute_witness_cli_fixture_pass": { "status": "measured", "value": true, "unit": "boolean", "source": "GitHub Actions run 25989064156 step: Verify Compute Witness Rust CLI fixture" },
+      "manifests_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "receipts_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "valid_packets_accepted": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "invalid_packets_rejected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "audit_hash_mismatches_detected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "python_conformance_pass": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "cross_language_agreement": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "challenge_fixtures_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "challenge_fixtures_failed_as_expected": { "status": "planned", "value": null, "unit": "count", "source": null }
+    },
+    "cml_causal_validity": {
+      "causal_cases_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "valid_lineages_accepted": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "broken_lineages_rejected": { "status": "planned", "value": null, "unit": "count", "source": null }
+    },
+    "ltp_trace_replay": {
+      "traces_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "missing_anchors_detected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "replay_fidelity_rate": { "status": "planned", "value": null, "unit": "ratio", "source": null }
+    },
+    "pythialabs_gate_decisions": {
+      "gate_cases_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "allow_count": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "block_count": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "escalate_count": { "status": "planned", "value": null, "unit": "count", "source": null }
+    },
+    "ci_reproducibility": {
+      "ci_runs_total": { "status": "measured", "value": 1, "unit": "count", "source": "GitHub Actions workflow run 25989064156" },
+      "ci_success_count": { "status": "measured", "value": 1, "unit": "count", "source": "GitHub Actions workflow run 25989064156" },
+      "ci_failure_count": { "status": "measured", "value": 0, "unit": "count", "source": "GitHub Actions workflow run 25989064156" },
+      "workflow_success": { "status": "measured", "value": true, "unit": "boolean", "source": "Rust workflow run 126 conclusion: success" },
+      "formatting_pass": { "status": "measured", "value": true, "unit": "boolean", "source": "GitHub Actions step: Check formatting" },
+      "clippy_pass": { "status": "measured", "value": true, "unit": "boolean", "source": "GitHub Actions step: Run clippy" },
+      "tests_pass": { "status": "measured", "value": true, "unit": "boolean", "source": "GitHub Actions step: Run tests" },
+      "compute_witness_cli_fixture_pass": { "status": "measured", "value": true, "unit": "boolean", "source": "GitHub Actions step: Verify Compute Witness Rust CLI fixture" },
+      "docs_links_checked": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "reproducible_from_clean_checkout": { "status": "planned", "value": null, "unit": "boolean", "source": null }
+    },
+    "reviewer_artifact_completeness": {
+      "metrics_template_present": { "status": "measured", "value": true, "unit": "boolean", "source": "reports/evidence-metrics-template-v0.1.json" },
+      "measured_baseline_present": { "status": "measured", "value": true, "unit": "boolean", "source": "reports/evidence-metrics-2026-05-17-ci-baseline.json" },
+      "artifact_bundle_present": { "status": "planned", "value": null, "unit": "boolean", "source": null }
+    }
+  },
+  "measured_summary": {
+    "workflow_success": true,
+    "formatting_pass": true,
+    "clippy_pass": true,
+    "tests_pass": true,
+    "compute_witness_cli_fixture_pass": true,
+    "ci_failures": 0
+  },
+  "non_claims": [
+    "This baseline is not a domain benchmark result.",
+    "It does not report action-boundary false accept or false block rates yet.",
+    "It does not report latency yet.",
+    "It does not report CML, LTP, or PythiaLabs measured domain results yet.",
+    "It does not claim production security, institutional endorsement, or funding approval."
+  ]
+}
