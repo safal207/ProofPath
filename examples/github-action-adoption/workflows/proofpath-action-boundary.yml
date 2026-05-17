@@ -1,0 +1,31 @@
+name: ProofPath action-boundary evidence gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  proofpath:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify ProofPath action-boundary metrics
+        uses: safal207/ProofPath@main
+        with:
+          audit-log: examples/github-action-adoption/audit/proofpath-audit.jsonl
+          metrics-output: proofpath-action-boundary-metrics.json
+          run-id: downstream-adoption-demo
+          expected-actions-total: "2"
+          expected-actions-blocked: "1"
+          expected-actions-accepted: "1"
+          expected-unsafe-without-approval-blocked: "1"
+          expected-unsafe-without-approval-false-accepts: "0"
+          expected-safe-with-approval-false-blocks: "0"
+          expected-audit-records-written: "2"
+          expected-blocked-forwarded-count: "0"
+          expected-accepted-forwarded-count: "1"
+          expected-audit-hash-chain-present: "true"
+
+      - name: Show generated metrics
+        run: cat proofpath-action-boundary-metrics.json
