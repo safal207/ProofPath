@@ -1,0 +1,99 @@
+{
+  "schema_name": "proofpath_evidence_metrics_v0_1",
+  "schema_version": "0.1",
+  "packet": "Evidence Metrics v0.1",
+  "status": "template",
+  "generated_by": null,
+  "run_id": null,
+  "observed_at": null,
+  "source_commit": null,
+  "notes": "Template only. Do not treat null values as measured results.",
+  "metrics": {
+    "proofpath_action_boundary": {
+      "actions_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "actions_accepted": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "actions_blocked": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "actions_audited": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "unsafe_without_approval_blocked": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "unsafe_without_approval_false_accepts": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "safe_with_approval_false_blocks": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "decision_latency_ms_p50": { "status": "planned", "value": null, "unit": "milliseconds", "source": null },
+      "decision_latency_ms_p95": { "status": "planned", "value": null, "unit": "milliseconds", "source": null },
+      "audit_records_written": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "audit_hash_chain_valid": { "status": "planned", "value": null, "unit": "boolean", "source": null }
+    },
+    "compute_witness_verifier": {
+      "manifests_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "receipts_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "valid_packets_accepted": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "invalid_packets_rejected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "audit_hash_mismatches_detected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "python_conformance_pass": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "rust_verifier_pass": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "cross_language_agreement": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "challenge_fixtures_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "challenge_fixtures_failed_as_expected": { "status": "planned", "value": null, "unit": "count", "source": null }
+    },
+    "cml_causal_validity": {
+      "causal_cases_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "valid_lineages_accepted": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "broken_lineages_rejected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "missing_parent_detected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "unmarked_gap_detected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "secret_to_network_violation_detected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "violation_classes_covered": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "causal_reconstruction_success": { "status": "planned", "value": null, "unit": "boolean", "source": null }
+    },
+    "ltp_trace_replay": {
+      "traces_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "traces_proceeded": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "traces_rejected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "traces_audited": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "missing_anchors_detected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "invalid_anchors_detected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "drift_detected": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "replay_fidelity_rate": { "status": "planned", "value": null, "unit": "ratio", "source": null },
+      "conformance_pass": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "inspection_latency_ms_p95": { "status": "planned", "value": null, "unit": "milliseconds", "source": null }
+    },
+    "pythialabs_gate_decisions": {
+      "gate_cases_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "allow_count": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "block_count": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "escalate_count": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "stable_stop_reasons_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "unexpected_stop_reasons": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "counterfactual_flips_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "digest_reproducibility_pass": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "scenario_domains_covered": { "status": "planned", "value": null, "unit": "count", "source": null }
+    },
+    "ci_reproducibility": {
+      "ci_runs_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "ci_success_count": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "ci_failure_count": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "formatting_pass": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "clippy_pass": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "tests_pass": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "compute_witness_cli_fixture_pass": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "docs_links_checked": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "reproducible_from_clean_checkout": { "status": "planned", "value": null, "unit": "boolean", "source": null }
+    },
+    "reviewer_artifact_completeness": {
+      "reviewer_paths_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "evidence_docs_total": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "demo_commands_documented": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "expected_outputs_documented": { "status": "planned", "value": null, "unit": "count", "source": null },
+      "non_claim_sections_present": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "cross_repo_routes_present": { "status": "planned", "value": null, "unit": "boolean", "source": null },
+      "metrics_template_present": { "status": "measured", "value": true, "unit": "boolean", "source": "reports/evidence-metrics-template-v0.1.json" },
+      "artifact_bundle_present": { "status": "planned", "value": null, "unit": "boolean", "source": null }
+    }
+  },
+  "non_claims": [
+    "This template is not a benchmark result.",
+    "Null values are not measurements.",
+    "Planned metrics do not imply completed validation.",
+    "CI success does not imply production security.",
+    "This does not claim institutional endorsement or funding approval."
+  ]
+}
