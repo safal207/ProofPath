@@ -1,0 +1,92 @@
+name: ProofPath Action-Boundary Metrics
+
+description: Verify ProofPath action-boundary metrics from an audit JSONL file.
+
+author: safal207
+
+inputs:
+  audit-log:
+    description: Path to ProofPath audit JSONL file.
+    required: true
+  metrics-output:
+    description: Path where the generated metrics JSON should be written.
+    required: false
+    default: proofpath-action-boundary-metrics.json
+  run-id:
+    description: Metrics run identifier.
+    required: false
+    default: github-action-run
+  expected-actions-total:
+    description: Expected total number of actions.
+    required: false
+    default: ""
+  expected-actions-blocked:
+    description: Expected number of blocked actions.
+    required: false
+    default: ""
+  expected-actions-accepted:
+    description: Expected number of accepted actions.
+    required: false
+    default: ""
+  expected-unsafe-without-approval-blocked:
+    description: Expected number of no-approval guarded actions that were blocked.
+    required: false
+    default: ""
+  expected-unsafe-without-approval-false-accepts:
+    description: Expected number of false accepts for no-approval guarded actions.
+    required: false
+    default: ""
+  expected-safe-with-approval-false-blocks:
+    description: Expected number of false blocks for approved actions.
+    required: false
+    default: ""
+  expected-audit-records-written:
+    description: Expected number of audit records.
+    required: false
+    default: ""
+  expected-blocked-forwarded-count:
+    description: Expected number of blocked actions forwarded upstream.
+    required: false
+    default: ""
+  expected-accepted-forwarded-count:
+    description: Expected number of accepted actions forwarded upstream.
+    required: false
+    default: ""
+  expected-audit-hash-chain-present:
+    description: Expected hash-chain presence value, true or false.
+    required: false
+    default: ""
+
+outputs:
+  metrics-json:
+    description: Path to the generated metrics JSON file.
+    value: ${{ steps.collect.outputs.metrics-json }}
+
+runs:
+  using: composite
+  steps:
+    - name: Collect ProofPath action-boundary metrics
+      id: collect
+      shell: bash
+      run: |
+        python3 "$GITHUB_ACTION_PATH/scripts/collect_action_boundary_metrics.py" \
+          --input "${{ inputs.audit-log }}" \
+          --output "${{ inputs.metrics-output }}" \
+          --run-id "${{ inputs.run-id }}"
+        echo "metrics-json=${{ inputs.metrics-output }}" >> "$GITHUB_OUTPUT"
+
+    - name: Assert ProofPath action-boundary metrics
+      shell: bash
+      run: |
+        python3 "$GITHUB_ACTION_PATH/scripts/assert_action_boundary_metrics.py" \
+          --metrics "${{ inputs.metrics-output }}" \
+          --expected-actions-total "${{ inputs.expected-actions-total }}" \
+          --expected-actions-blocked "${{ inputs.expected-actions-blocked }}" \
+          --expected-actions-accepted "${{ inputs.expected-actions-accepted }}" \
+          --expected-unsafe-without-approval-blocked "${{ inputs.expected-unsafe-without-approval-blocked }}" \
+          --expected-unsafe-without-approval-false-accepts "${{ inputs.expected-unsafe-without-approval-false-accepts }}" \
+          --expected-safe-with-approval-false-blocks "${{ inputs.expected-safe-with-approval-false-blocks }}" \
+          --expected-audit-records-written "${{ inputs.expected-audit-records-written }}" \
+          --expected-blocked-forwarded-count "${{ inputs.expected-blocked-forwarded-count }}" \
+          --expected-accepted-forwarded-count "${{ inputs.expected-accepted-forwarded-count }}" \
+          --expected-audit-hash-chain-present "${{ inputs.expected-audit-hash-chain-present }}"

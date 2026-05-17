@@ -32,3 +32,20 @@ jobs:
 
       - name: Verify live action-boundary metrics
         run: bash scripts/run_live_action_boundary_check.sh
+
+      - name: Verify reusable ProofPath GitHub Action
+        uses: ./
+        with:
+          audit-log: fixtures/action-boundary/dangerous-action-audit.jsonl
+          metrics-output: /tmp/proofpath-action-boundary-metrics.json
+          run-id: reusable-action-self-test
+          expected-actions-total: "2"
+          expected-actions-blocked: "1"
+          expected-actions-accepted: "1"
+          expected-unsafe-without-approval-blocked: "1"
+          expected-unsafe-without-approval-false-accepts: "0"
+          expected-safe-with-approval-false-blocks: "0"
+          expected-audit-records-written: "2"
+          expected-blocked-forwarded-count: "0"
+          expected-accepted-forwarded-count: "1"
+          expected-audit-hash-chain-present: "true"
