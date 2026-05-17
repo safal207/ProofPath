@@ -80,6 +80,7 @@ Reviewers can run the path locally without trusting a hidden service: start with
 ### Reviewer links
 
 - [Reviewer summary](docs/reviewer-summary.md)
+- [Evidence Packet v0.1](docs/EVIDENCE_PACKET_V0_1.md)
 - [Submitted Application Reviewer Bridge](docs/SUBMITTED_APPLICATION_REVIEWER_BRIDGE.md)
 - [Ecosystem Graph](docs/ECOSYSTEM_GRAPH.md)
 - [Compute Witness grant reviewer path](docs/COMPUTE_WITNESS_GRANT_REVIEWER_PATH.md)
