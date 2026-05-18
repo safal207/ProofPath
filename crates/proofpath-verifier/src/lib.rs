@@ -141,8 +141,8 @@ impl VerificationResult {
             scope: value(ctx, HEADER_SCOPE),
             reversibility,
             human_approval: value(ctx, HEADER_HUMAN_APPROVAL),
-            causal_valid: ctx.header(HEADER_CAUSAL_PARENT).is_some(),
-            scope_valid: ctx.header(HEADER_SCOPE).is_some(),
+            causal_valid: !is_blank(ctx.header(HEADER_CAUSAL_PARENT)),
+            scope_valid: !is_blank(ctx.header(HEADER_SCOPE)),
         }
     }
 }

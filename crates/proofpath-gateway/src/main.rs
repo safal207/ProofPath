@@ -193,7 +193,8 @@ impl AuditLog {
             hash: hash.clone(),
         };
 
-        let line = serde_json::to_string(&record).expect("serialize audit record");
+        let line = serde_json::to_string(&record)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
