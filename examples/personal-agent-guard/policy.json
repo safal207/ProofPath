@@ -1,0 +1,43 @@
+{
+  "version": "0.1",
+  "default_decision": "ALLOW",
+  "audit_log": ".proofpath/audit.jsonl",
+  "approval_file": ".proofpath/approvals.json",
+  "rules": [
+    {
+      "id": "main_branch_push_requires_approval",
+      "match_contains": ["git push origin main"],
+      "decision": "BLOCK_UNLESS_APPROVED",
+      "approval_scope": "repo.push.main",
+      "reason": "MAIN_BRANCH_PUSH_REQUIRES_APPROVAL"
+    },
+    {
+      "id": "release_publish_requires_approval",
+      "match_contains": ["npm publish"],
+      "decision": "BLOCK_UNLESS_APPROVED",
+      "approval_scope": "package.publish",
+      "reason": "PACKAGE_PUBLISH_REQUIRES_APPROVAL"
+    },
+    {
+      "id": "infra_apply_requires_approval",
+      "match_contains": ["terraform apply"],
+      "decision": "BLOCK_UNLESS_APPROVED",
+      "approval_scope": "infra.apply",
+      "reason": "INFRA_CHANGE_REQUIRES_APPROVAL"
+    },
+    {
+      "id": "database_migration_requires_approval",
+      "match_contains": ["prisma migrate deploy", "diesel migration run", "alembic upgrade head"],
+      "decision": "BLOCK_UNLESS_APPROVED",
+      "approval_scope": "db.migration",
+      "reason": "DATABASE_MIGRATION_REQUIRES_APPROVAL"
+    },
+    {
+      "id": "recursive_remove_requires_approval",
+      "match_contains": ["rm -r", "rm -rf", "Remove-Item -Recurse"],
+      "decision": "BLOCK_UNLESS_APPROVED",
+      "approval_scope": "filesystem.recursive_remove",
+      "reason": "RECURSIVE_REMOVE_REQUIRES_APPROVAL"
+    }
+  ]
+}

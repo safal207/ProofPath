@@ -1,0 +1,17 @@
+# Example Codex-style hook configuration for ProofPath Personal Agent Guard.
+#
+# Copy/adapt this into your local Codex configuration if your Codex setup
+# supports PreToolUse / PermissionRequest-style hooks.
+#
+# The guard reads the hook payload from stdin, checks policy.json, writes
+# .proofpath/audit.jsonl, and returns an allow/deny-style JSON decision.
+
+[hooks]
+
+[[hooks.PreToolUse]]
+matcher = "Bash"
+command = "python3 examples/personal-agent-guard/proofpath_guard.py --mode codex"
+
+[[hooks.PermissionRequest]]
+matcher = "Bash"
+command = "python3 examples/personal-agent-guard/proofpath_guard.py --mode codex"
