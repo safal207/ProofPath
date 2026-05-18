@@ -33,7 +33,8 @@ pub struct ComputeWitnessAuditEntry {
 /// fixture contract without requiring every future audit field to be modeled first.
 #[must_use]
 pub fn compute_audit_hash(value: &Value) -> String {
-    let canonical = canonical_json(value);
+    let mut canonical = String::new();
+    write_canonical_json(&mut canonical, value);
     let digest = Sha256::digest(canonical.as_bytes());
     format!("sha256:{}", hex_lower(&digest))
 }
@@ -44,37 +45,46 @@ pub fn verify_audit_hash(value: &Value, expected_audit_hash: &str) -> bool {
     compute_audit_hash(value) == expected_audit_hash
 }
 
-fn canonical_json(value: &Value) -> String {
+fn write_canonical_json(out: &mut String, value: &Value) {
+    use std::fmt::Write as _;
     match value {
-        Value::Null => "null".to_owned(),
-        Value::Bool(value) => value.to_string(),
-        Value::Number(value) => value.to_string(),
+        Value::Null => out.push_str("null"),
+        Value::Bool(true) => out.push_str("true"),
+        Value::Bool(false) => out.push_str("false"),
+        Value::Number(value) => {
+            let _ = write!(out, "{value}");
+        }
         Value::String(value) => {
-            serde_json::to_string(value).expect("serializing JSON string cannot fail")
+            let encoded =
+                serde_json::to_string(value).expect("serializing JSON string cannot fail");
+            out.push_str(&encoded);
         }
         Value::Array(items) => {
-            let body = items
-                .iter()
-                .map(canonical_json)
-                .collect::<Vec<_>>()
-                .join(",");
-            format!("[{body}]")
+            out.push('[');
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                write_canonical_json(out, item);
+            }
+            out.push(']');
         }
         Value::Object(map) => {
             let mut keys = map.keys().collect::<Vec<_>>();
             keys.sort();
 
-            let body = keys
-                .into_iter()
-                .map(|key| {
-                    let encoded_key = serde_json::to_string(key)
-                        .expect("serializing JSON object key cannot fail");
-                    let encoded_value = canonical_json(&map[key]);
-                    format!("{encoded_key}:{encoded_value}")
-                })
-                .collect::<Vec<_>>()
-                .join(",");
-            format!("{{{body}}}")
+            out.push('{');
+            for (i, key) in keys.into_iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                let encoded_key =
+                    serde_json::to_string(key).expect("serializing JSON object key cannot fail");
+                out.push_str(&encoded_key);
+                out.push(':');
+                write_canonical_json(out, &map[key]);
+            }
+            out.push('}');
         }
     }
 }

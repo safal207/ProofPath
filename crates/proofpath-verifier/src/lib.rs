@@ -40,17 +40,22 @@ impl RequestContext {
     /// Insert a header. Header names are normalized to lowercase.
     #[must_use]
     pub fn with_header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
-        self.headers
-            .insert(name.into().to_ascii_lowercase(), value.into());
+        let mut name = name.into();
+        name.make_ascii_lowercase();
+        self.headers.insert(name, value.into());
         self
     }
 
     /// Get a normalized header value.
     #[must_use]
     pub fn header(&self, name: &str) -> Option<&str> {
-        self.headers
-            .get(&name.to_ascii_lowercase())
-            .map(String::as_str)
+        if name.bytes().any(|b| b.is_ascii_uppercase()) {
+            self.headers
+                .get(&name.to_ascii_lowercase())
+                .map(String::as_str)
+        } else {
+            self.headers.get(name).map(String::as_str)
+        }
     }
 }
 
@@ -65,11 +70,15 @@ pub enum Reversibility {
 
 impl Reversibility {
     fn parse(value: &str) -> Option<Self> {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "reversible" => Some(Self::Reversible),
-            "compensatable" => Some(Self::Compensatable),
-            "irreversible" => Some(Self::Irreversible),
-            _ => None,
+        let trimmed = value.trim();
+        if trimmed.eq_ignore_ascii_case("reversible") {
+            Some(Self::Reversible)
+        } else if trimmed.eq_ignore_ascii_case("compensatable") {
+            Some(Self::Compensatable)
+        } else if trimmed.eq_ignore_ascii_case("irreversible") {
+            Some(Self::Irreversible)
+        } else {
+            None
         }
     }
 }
