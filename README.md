@@ -20,6 +20,27 @@ ProofPath does **not** replace HTTPS, OAuth, IAM, API keys, or ordinary infrastr
 
 If you arrived here from an already-submitted grant application under an earlier name or framing, start with the [Submitted Application Reviewer Bridge](docs/SUBMITTED_APPLICATION_REVIEWER_BRIDGE.md). To understand how the related repositories fit together, see the [Ecosystem Graph](docs/ECOSYSTEM_GRAPH.md).
 
+### Two ways to use ProofPath v0.1
+
+ProofPath v0.1 now has two practical product surfaces:
+
+| Surface | Path | What it gives you |
+| --- | --- | --- |
+| CI evidence gate | [`action.yml`](action.yml), [`docs/GITHUB_ACTION_QUICKSTART.md`](docs/GITHUB_ACTION_QUICKSTART.md) | Turn ProofPath audit logs into CI-verifiable metrics and pass/fail checks. |
+| Personal Agent Guard | [`examples/personal-agent-guard/`](examples/personal-agent-guard/) | Add a local approval boundary and audit log around Claude Code / Codex-style AI coding tools. |
+
+Product phrase:
+
+```text
+ProofPath turns action-boundary audit logs into CI-verifiable evidence.
+```
+
+Personal workflow phrase:
+
+```text
+ProofPath Personal Agent Guard is a local seatbelt for AI coding tools.
+```
+
 ### Why HTTPS is not enough
 
 HTTPS can protect the connection. API authentication can prove that a credential is valid. IAM can define broad permissions.
@@ -48,7 +69,9 @@ The current prototype demonstrates:
 - upstream forwarding only after a ProofPath decision;
 - blocking unsafe irreversible actions before they reach the protected API;
 - hash-chained JSONL audit logs;
-- dangerous-action and real-model-agent demos.
+- dangerous-action and real-model-agent demos;
+- reusable GitHub Action evidence gate;
+- local Personal Agent Guard for Claude Code / Codex-style tools.
 
 ### ACCEPT vs BLOCK
 
@@ -80,6 +103,8 @@ Reviewers can run the path locally without trusting a hidden service: start with
 ### Reviewer links
 
 - [Start Here: ProofPath v0.1](docs/START_HERE_V0_1.md)
+- [ProofPath v0.1 landing](docs/LANDING_V0_1.md)
+- [Personal Agent Guard](examples/personal-agent-guard/)
 - [Reviewer summary](docs/reviewer-summary.md)
 - [ProofPath v0.1 Product Milestone](docs/RELEASE_V0_1.md)
 - [Evidence Packet v0.1](docs/EVIDENCE_PACKET_V0_1.md)
@@ -126,6 +151,32 @@ See:
 - `docs/demo-transcript.md`
 - `docs/launch-post.md`
 
+## Personal Agent Guard demo
+
+Run the local AI coding tool guard demo:
+
+```bash
+bash examples/personal-agent-guard/run_demo_check.sh
+```
+
+Demo story:
+
+```text
+AI coding tool proposes a guarded command
+  -> ProofPath Personal Agent Guard BLOCKS before approval
+User creates a scoped time-limited approval
+  -> the same command is ALLOWed
+Every decision
+  -> local .proofpath/audit.jsonl
+```
+
+See:
+
+- `examples/personal-agent-guard/README.md`
+- `examples/personal-agent-guard/demo-transcript.md`
+- `examples/personal-agent-guard/claude-settings.example.json`
+- `examples/personal-agent-guard/codex-config.example.toml`
+
 ## Execution-boundary demo matrix
 
 ProofPath is intentionally demonstrated across multiple high-risk action boundaries. See also: [Internet Action Layer](docs/internet-action-layer.md).
@@ -137,6 +188,7 @@ ProofPath is intentionally demonstrated across multiple high-risk action boundar
 | [Network and broker gate](examples/network-broker-gate/README.md) | Valid infra access is not the same as valid network or broker action. | `ACCEPT` diagnostic, `BLOCK` high-risk infra changes without approval |
 | [Database migration gate](examples/database-migration-gate/README.md) | Valid DB credentials are not the same as valid schema or data change. | `ACCEPT` inspection, `BLOCK` schema/data changes without approval |
 | [CI/CD deploy gate](examples/cicd-deploy-gate/README.md) | Valid CI credentials are not the same as valid production deployment. | `ACCEPT` preview deploy, `BLOCK` production deploy without approval, `ACCEPT` approved rollback |
+| [Personal Agent Guard](examples/personal-agent-guard/README.md) | Valid local AI-tool access is not the same as valid high-impact command execution. | `BLOCK` before approval, `ALLOW` after scoped time-limited approval |
 
 Reviewer pattern:
 
