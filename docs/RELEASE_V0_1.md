@@ -1,19 +1,25 @@
 # ProofPath v0.1 Product Milestone
 
-ProofPath v0.1 is the first product milestone for a CI-verifiable action-boundary evidence gate.
+ProofPath v0.1 is the first product milestone for a CI-verifiable action-boundary evidence gate and a local Personal Agent Guard workflow.
 
-It turns ProofPath audit logs into machine-checkable CI evidence.
+It turns ProofPath audit logs into machine-checkable CI evidence and shows how local AI coding tools can be wrapped with a personal approval boundary.
 
 ## One-sentence summary
 
 ```text
-ProofPath v0.1 verifies whether high-risk AI-agent/API actions produced the expected BLOCK / ACCEPT / audit metrics before CI passes.
+ProofPath v0.1 verifies whether high-impact AI-agent/API actions produced the expected BLOCK / ACCEPT / audit metrics before CI passes.
 ```
 
 ## Product phrase
 
 ```text
 ProofPath turns action-boundary audit logs into CI-verifiable evidence.
+```
+
+## Personal workflow phrase
+
+```text
+ProofPath Personal Agent Guard is a local seatbelt for AI coding tools.
 ```
 
 ## What is included in v0.1
@@ -27,6 +33,7 @@ live demo
 -> CI verification
 -> reusable GitHub Action
 -> downstream-style adoption example
+-> Personal Agent Guard local workflow
 ```
 
 ## Core artifacts
@@ -37,8 +44,10 @@ live demo
 | `scripts/collect_action_boundary_metrics.py` | Converts audit JSONL into metrics JSON. |
 | `scripts/assert_action_boundary_metrics.py` | Asserts expected metrics for CI. |
 | `action.yml` | Reusable composite GitHub Action. |
+| `docs/LANDING_V0_1.md` | Short landing page for v0.1 product surfaces. |
 | `docs/GITHUB_ACTION_QUICKSTART.md` | Product quickstart for GitHub Action users. |
 | `examples/github-action-adoption/` | Downstream-style adoption example. |
+| `examples/personal-agent-guard/` | Local guard example for Claude Code / Codex-style AI coding tools. |
 | `scripts/run_live_action_boundary_check.sh` | Live CI demo runner. |
 | `reports/action-boundary-fixture-2026-05-17.json` | First fixture metrics baseline. |
 | `reports/evidence-metrics-2026-05-17-ci-baseline.json` | First CI reproducibility baseline. |
@@ -54,15 +63,25 @@ Rust tests
 Compute Witness Rust CLI fixture
 live action-boundary metrics
 reusable ProofPath GitHub Action self-test
+Personal Agent Guard demo self-test
 ```
 
-The important product-level check is:
+The repository product-level check is:
 
 ```text
 ProofPath audit JSONL
 -> action-boundary metrics JSON
 -> expected-value assertions
 -> CI pass / fail
+```
+
+The personal workflow check is:
+
+```text
+AI coding tool command
+-> local policy
+-> scoped approval boundary
+-> local audit log
 ```
 
 ## GitHub Action usage
@@ -87,6 +106,33 @@ A downstream repository can use ProofPath as a CI evidence gate:
     expected-audit-hash-chain-present: "true"
 ```
 
+## Personal Agent Guard usage
+
+A local user can run:
+
+```bash
+bash examples/personal-agent-guard/run_demo_check.sh
+```
+
+Expected self-test path:
+
+```text
+first guarded command -> BLOCK
+approval token written
+second guarded command -> ALLOW
+audit log contains both decisions
+```
+
+Relevant files:
+
+```text
+examples/personal-agent-guard/policy.json
+examples/personal-agent-guard/proofpath_guard.py
+examples/personal-agent-guard/proofpath_approve.py
+examples/personal-agent-guard/claude-settings.example.json
+examples/personal-agent-guard/codex-config.example.toml
+```
+
 ## Demo story
 
 The canonical action-boundary demo checks two actions:
@@ -96,7 +142,16 @@ The canonical action-boundary demo checks two actions:
 2. approved irreversible action -> ACCEPT
 ```
 
-Expected v0.1 metrics:
+The Personal Agent Guard demo checks a local AI-tool workflow:
+
+```text
+1. guarded local command -> BLOCK
+2. scoped time-limited approval -> written
+3. same command -> ALLOW
+4. both decisions -> audit log
+```
+
+Expected v0.1 action-boundary metrics:
 
 ```text
 actions_total = 2
@@ -116,13 +171,13 @@ audit_hash_chain_present = true
 Safe claim:
 
 ```text
-ProofPath v0.1 demonstrates a CI-verifiable evidence gate for action-boundary audit metrics.
+ProofPath v0.1 demonstrates CI-verifiable and local evidence-gate patterns for action-boundary audit metrics.
 ```
 
 Stronger but still bounded claim:
 
 ```text
-ProofPath v0.1 shows that an AI-agent/API action boundary can be expressed as audit logs, measured as metrics, and enforced as CI pass/fail evidence.
+ProofPath v0.1 shows that an AI-agent/API action boundary can be expressed as audit logs, measured as metrics, and enforced as CI or local pass/fail evidence.
 ```
 
 Do not overstate this as:
@@ -139,23 +194,30 @@ v0.1 does not claim:
 
 ```text
 production security certification
-complete prevention of unsafe actions
+complete prevention coverage
 formal verification
 regulatory compliance
 external production adoption
 large-scenario benchmark coverage
 latency benchmark coverage
+full sandboxing
 ```
 
 ## What v0.1 proves
 
-v0.1 proves that the first product surface exists:
+v0.1 proves that two useful product surfaces exist:
 
 ```text
 an audit log can be checked by a reusable CI action
 ```
 
-That is the minimum useful product slice.
+and:
+
+```text
+a local AI-tool command can pass through a personal approval boundary and audit trail
+```
+
+These are the minimum useful product slices.
 
 ## Next milestones
 
@@ -166,19 +228,31 @@ publish versioned GitHub release/tag
 add larger action-boundary scenario suite
 emit artifact uploads from CI
 add latency measurement
+add richer Personal Agent Guard policies
 ```
 
 ### v0.3
 
 ```text
-add policy configuration file
+add policy configuration file for hosted/API use
 support multiple action profiles
 add richer report summaries
 add third-party/downstream repo demo
+add local installer or one-command setup for personal guard
 ```
 
 ## Bottom line
 
 ProofPath v0.1 is no longer only a protocol idea or local demo.
 
-It is a reusable CI evidence gate for action-boundary audit metrics.
+It is both:
+
+```text
+a reusable CI evidence gate for action-boundary audit metrics
+```
+
+and:
+
+```text
+a local seatbelt pattern for AI coding tools
+```
