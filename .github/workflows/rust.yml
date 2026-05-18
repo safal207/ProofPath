@@ -49,3 +49,6 @@ jobs:
           expected-blocked-forwarded-count: "0"
           expected-accepted-forwarded-count: "1"
           expected-audit-hash-chain-present: "true"
+
+      - name: Verify Personal Agent Guard demo
+        run: bash examples/personal-agent-guard/run_demo_check.sh
