@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Gateway audit append no longer panics on `serde_json` errors; the error is
+  propagated as `io::Error` (`crates/proofpath-gateway/src/main.rs`).
+- Verifier `block()` now uses `!is_blank(...)` for `causal_valid` /
+  `scope_valid` so future call sites without pre-validation stay correct.
+
+### Performance
+
+- `RequestContext::header` skips the lowercase allocation when the lookup
+  name is already lowercase (true for all `HEADER_*` constants).
+- `RequestContext::with_header` lowercases in place instead of allocating a
+  second `String`.
+- `Reversibility::parse` uses `eq_ignore_ascii_case` instead of allocating a
+  lowercased copy.
+- `audit::compute_audit_hash` writes canonical JSON into a single `String`
+  buffer instead of building intermediate `Vec<String>` and concatenating
+  via `format!`. Hash output is byte-identical (verified by the existing
+  conformance test).
+
 ## v0.1 — Product Milestone
 
 ProofPath v0.1 is the first product milestone for a CI-verifiable action-boundary evidence gate.
