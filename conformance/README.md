@@ -18,6 +18,31 @@ x-proofpath-human-approval optional
 
 They describe expected decisions and reason codes for valid and invalid request contexts.
 
+## Run the fixture contract
+
+Run the conformance fixture runner from the repository root:
+
+```bash
+python3 scripts/check_conformance_fixtures.py conformance/manifest.json
+```
+
+Expected output:
+
+```text
+PASS valid/reversible-accept.json -> ACCEPT
+PASS valid/irreversible-with-approval-accept.json -> ACCEPT
+PASS invalid/missing-intent-reject.json -> REJECT MISSING_INTENT
+PASS invalid/missing-causal-parent-reject.json -> REJECT MISSING_CAUSAL_PARENT
+PASS invalid/missing-scope-reject.json -> REJECT MISSING_SCOPE
+PASS invalid/missing-reversibility-reject.json -> REJECT MISSING_REVERSIBILITY
+PASS invalid/invalid-reversibility-reject.json -> REJECT INVALID_REVERSIBILITY
+PASS invalid/irreversible-without-approval-block.json -> BLOCK IRREVERSIBLE_ACTION_REQUIRES_APPROVAL
+
+ProofPath conformance fixtures passed: 8
+```
+
+The runner exits non-zero and prints readable failures if any fixture does not match its expected decision or reason.
+
 ## Important limitations
 
 These fixtures are not a full interoperability suite yet.
