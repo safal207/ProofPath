@@ -103,6 +103,7 @@ Reviewers can run the path locally without trusting a hidden service: start with
 ### Reviewer links
 
 - [Start Here: ProofPath v0.1](docs/START_HERE_V0_1.md)
+- [Clean-checkout reviewer runbook](docs/reviewer-runbook.md)
 - [ProofPath v0.1 landing](docs/LANDING_V0_1.md)
 - [Personal Agent Guard](examples/personal-agent-guard/)
 - [Reviewer summary](docs/reviewer-summary.md)
