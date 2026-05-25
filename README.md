@@ -122,6 +122,7 @@ Reviewers can run the path locally without trusting a hidden service: start with
 - [Conformance fixtures](conformance/README.md)
 - [Security grant revision note](docs/grant-updates/security-grant-revision-proofpath-update.md)
 - [Threat model](specs/threat-model.md)
+- [Model guardrail bypass threat note](docs/threats/model_guardrail_bypass.md)
 - [HTTP action-context profile](specs/proofpath-http-profile-v0.1.md)
 - [Community experiments](COMMUNITY_EXPERIMENTS.md)
 
