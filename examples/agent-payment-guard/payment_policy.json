@@ -1,0 +1,6 @@
+{
+  "allowed_assets": ["USDC"],
+  "allowed_recipients": ["market-data-api.example"],
+  "default_approved_budget": "5.00",
+  "recurring_payments_require_approval": true
+}
