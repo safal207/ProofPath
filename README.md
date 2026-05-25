@@ -192,6 +192,7 @@ ProofPath is intentionally demonstrated across multiple high-risk action boundar
 | [Database migration gate](examples/database-migration-gate/README.md) | Valid DB credentials are not the same as valid schema or data change. | `ACCEPT` inspection, `BLOCK` schema/data changes without approval |
 | [CI/CD deploy gate](examples/cicd-deploy-gate/README.md) | Valid CI credentials are not the same as valid production deployment. | `ACCEPT` preview deploy, `BLOCK` production deploy without approval, `ACCEPT` approved rollback |
 | [Personal Agent Guard](examples/personal-agent-guard/README.md) | Valid local AI-tool access is not the same as valid high-impact command execution. | `BLOCK` before approval, `ALLOW` after scoped time-limited approval |
+| [Agent Payment Guard](examples/agent-payment-guard/README.md) | Valid wallet/API access is not the same as valid causal permission to spend. | `ACCEPT` in-scope payments, `BLOCK` over-budget or off-scope recipient, `HOLD` for recurring without approval |
 
 Reviewer pattern:
 
