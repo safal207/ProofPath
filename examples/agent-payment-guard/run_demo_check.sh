@@ -6,9 +6,10 @@ cd "$ROOT_DIR"
 rm -f .proofpath/audit.jsonl
 
 check_case() {
-  local file="$1" expected_decision="$2" expected_reason="$3" expected_status="$4"
+  local expected_decision="$1" expected_reason="$2" expected_status="$3"
+  shift 3
   set +e
-  output=$(python3 examples/agent-payment-guard/payment_guard.py "$file")
+  output=$(python3 examples/agent-payment-guard/payment_guard.py "$@")
   status=$?
   set -e
   [[ "$status" -eq "$expected_status" ]]
@@ -20,22 +21,23 @@ assert payload["reason"] == sys.argv[3], payload
 PY
 }
 
-check_case examples/agent-payment-guard/payment_proposal.valid_micro_payment.json ACCEPT PAYMENT_WITHIN_SCOPE_AND_BUDGET 0
-check_case examples/agent-payment-guard/payment_proposal.over_budget.json BLOCK OVER_BUDGET 2
-check_case examples/agent-payment-guard/payment_proposal.missing_intent.json BLOCK MISSING_PAYMENT_INTENT 2
-check_case examples/agent-payment-guard/payment_proposal.recipient_changed.json BLOCK RECIPIENT_MISMATCH 2
-check_case examples/agent-payment-guard/payment_proposal.recurring_without_approval.json HOLD RECURRING_PAYMENT_REQUIRES_APPROVAL 3
-check_case examples/agent-payment-guard/payment_proposal.asset_not_allowed.json BLOCK ASSET_NOT_ALLOWED 2
-check_case examples/agent-payment-guard/payment_proposal.invalid_amount.json BLOCK INVALID_AMOUNT 2
+BASE_PROPOSAL="examples/agent-payment-guard/payment_proposal.valid_micro_payment.json"
+
+check_case ACCEPT PAYMENT_WITHIN_SIGNED_INTENT_ENVELOPE 0 "$BASE_PROPOSAL" --intent-envelope examples/agent-payment-guard/intent_envelopes/intent.valid.json --require-intent-envelope
+check_case BLOCK MISSING_INTENT_ENVELOPE 2 "$BASE_PROPOSAL" --require-intent-envelope
+check_case BLOCK INTENT_EXPIRED 2 "$BASE_PROPOSAL" --intent-envelope examples/agent-payment-guard/intent_envelopes/intent.expired.json
+check_case BLOCK INTENT_RECIPIENT_MISMATCH 2 "$BASE_PROPOSAL" --intent-envelope examples/agent-payment-guard/intent_envelopes/intent.recipient_mismatch.json
+check_case BLOCK INVALID_INTENT_SIGNATURE 2 "$BASE_PROPOSAL" --intent-envelope examples/agent-payment-guard/intent_envelopes/intent.invalid_signature.json
+check_case BLOCK INTENT_REPLAYED 2 "$BASE_PROPOSAL" --intent-envelope examples/agent-payment-guard/intent_envelopes/intent.replayed.json
 
 [[ -f .proofpath/audit.jsonl ]]
 python3 - <<'PY'
 import json
 from pathlib import Path
 records = [json.loads(x) for x in Path('.proofpath/audit.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
-assert len(records) == 7, len(records)
+assert len(records) == 6, len(records)
+assert records[0]["intent_verified"] is True
 PY
 
 echo "Agent Payment Guard demo check passed."
-
 python3 scripts/verify_audit_log.py .proofpath/audit.jsonl
