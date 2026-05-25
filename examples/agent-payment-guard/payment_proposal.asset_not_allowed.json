@@ -1,0 +1,14 @@
+{
+  "action_type": "agent_payment",
+  "asset": "ETH",
+  "amount": "0.07",
+  "recipient": "market-data-api.example",
+  "approved_recipient": "market-data-api.example",
+  "purpose": "buy_market_data_api_call",
+  "agent_id": "agent_researcher_01",
+  "human_intent_id": "intent_market_research_001",
+  "causal_parent": "task_market_report_001",
+  "budget_scope": "daily_research_budget",
+  "approved_budget": "5.00",
+  "payment_mode": "one_time"
+}

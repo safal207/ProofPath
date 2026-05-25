@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from hashlib import sha256
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -57,8 +58,34 @@ def decide(proposal: Dict[str, Any], policy: Dict[str, Any]) -> Tuple[str, str]:
     return "ACCEPT", "PAYMENT_WITHIN_SCOPE_AND_BUDGET"
 
 
+def canonical_json(payload: Dict[str, Any]) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def compute_record_hash(record: Dict[str, Any]) -> str:
+    payload = dict(record)
+    payload.pop("hash", None)
+    return "sha256:" + sha256(canonical_json(payload).encode("utf-8")).hexdigest()
+
+
+def get_previous_hash(path: Path) -> str:
+    if not path.exists():
+        return "GENESIS"
+
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not lines:
+        return "GENESIS"
+
+    last_record = json.loads(lines[-1])
+    previous_hash = last_record.get("hash")
+    if isinstance(previous_hash, str) and previous_hash:
+        return previous_hash
+    return "GENESIS"
+
+
 def append_audit(path: Path, proposal: Dict[str, Any], decision: str, reason: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    previous_hash = get_previous_hash(path)
     record = {
         "ts": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "surface": "agent-payment-guard",
@@ -70,7 +97,9 @@ def append_audit(path: Path, proposal: Dict[str, Any], decision: str, reason: st
         "approved_budget": proposal.get("approved_budget"),
         "recipient": proposal.get("recipient"),
         "causal_parent": proposal.get("causal_parent"),
+        "previous_hash": previous_hash,
     }
+    record["hash"] = compute_record_hash(record)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, sort_keys=True) + "\n")
 

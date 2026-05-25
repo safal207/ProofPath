@@ -3,21 +3,69 @@
   "$id": "https://proofpath.dev/schemas/payment-action-context.schema.json",
   "title": "ProofPath Payment Action Context",
   "type": "object",
-  "required": ["action_type", "asset", "amount", "recipient", "purpose", "agent_id", "payment_mode"],
+  "required": [
+    "action_type",
+    "asset",
+    "amount",
+    "recipient",
+    "approved_recipient",
+    "purpose",
+    "agent_id",
+    "human_intent_id",
+    "causal_parent",
+    "budget_scope",
+    "approved_budget",
+    "payment_mode"
+  ],
   "properties": {
-    "action_type": {"const": "agent_payment"},
-    "asset": {"type": "string"},
-    "amount": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$"},
-    "recipient": {"type": "string", "minLength": 1},
-    "approved_recipient": {"type": "string"},
-    "purpose": {"type": "string"},
-    "agent_id": {"type": "string"},
-    "human_intent_id": {"type": "string"},
-    "causal_parent": {"type": "string"},
-    "budget_scope": {"type": "string"},
-    "approved_budget": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$"},
-    "payment_mode": {"enum": ["one_time", "recurring"]},
-    "recurring_approval": {"type": ["boolean", "string"]}
+    "action_type": {
+      "const": "agent_payment"
+    },
+    "asset": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "string",
+      "pattern": "^[0-9]+(\\.[0-9]+)?$"
+    },
+    "recipient": {
+      "type": "string",
+      "minLength": 1
+    },
+    "approved_recipient": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "agent_id": {
+      "type": "string"
+    },
+    "human_intent_id": {
+      "type": "string"
+    },
+    "causal_parent": {
+      "type": "string"
+    },
+    "budget_scope": {
+      "type": "string"
+    },
+    "approved_budget": {
+      "type": "string",
+      "pattern": "^[0-9]+(\\.[0-9]+)?$"
+    },
+    "payment_mode": {
+      "enum": [
+        "one_time",
+        "recurring"
+      ]
+    },
+    "recurring_approval": {
+      "type": [
+        "boolean",
+        "string"
+      ]
+    }
   },
   "additionalProperties": true
 }
