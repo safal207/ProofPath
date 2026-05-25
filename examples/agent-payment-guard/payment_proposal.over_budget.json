@@ -1,0 +1,12 @@
+{
+  "action_type": "agent_payment",
+  "asset": "USDC",
+  "amount": "12.50",
+  "recipient": "market-data-api.example",
+  "purpose": "buy_market_data_api_call",
+  "agent_id": "agent_researcher_01",
+  "human_intent_id": "intent_market_research_001",
+  "causal_parent": "task_market_report_001",
+  "approved_budget": "5.00",
+  "payment_mode": "one_time"
+}

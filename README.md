@@ -382,3 +382,5 @@ Early protocol design. Expect breaking changes.
 ## License
 
 MIT
+
+- [Agent Payment Guard demo](examples/agent-payment-guard/README.md)

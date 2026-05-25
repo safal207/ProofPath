@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Payment Action Context",
+  "type": "object",
+  "required": ["action_type", "asset", "amount", "recipient", "payment_mode"],
+  "properties": {
+    "action_type": {"const": "agent_payment"},
+    "asset": {"type": "string"},
+    "amount": {"type": "string"},
+    "recipient": {"type": "string"},
+    "approved_recipient": {"type": "string"},
+    "purpose": {"type": "string"},
+    "agent_id": {"type": "string"},
+    "human_intent_id": {"type": "string"},
+    "causal_parent": {"type": "string"},
+    "budget_scope": {"type": "string"},
+    "approved_budget": {"type": "string"},
+    "payment_mode": {"enum": ["one_time", "recurring"]},
+    "recurring_approval": {"type": "boolean"}
+  }
+}
