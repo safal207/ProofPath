@@ -52,3 +52,6 @@ jobs:
 
       - name: Verify Personal Agent Guard demo
         run: bash examples/personal-agent-guard/run_demo_check.sh
+
+      - name: Verify Agent Payment Guard demo
+        run: bash examples/agent-payment-guard/run_demo_check.sh

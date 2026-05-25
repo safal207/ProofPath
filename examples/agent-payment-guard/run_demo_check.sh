@@ -25,13 +25,17 @@ check_case examples/agent-payment-guard/payment_proposal.over_budget.json BLOCK 
 check_case examples/agent-payment-guard/payment_proposal.missing_intent.json BLOCK MISSING_PAYMENT_INTENT 2
 check_case examples/agent-payment-guard/payment_proposal.recipient_changed.json BLOCK RECIPIENT_MISMATCH 2
 check_case examples/agent-payment-guard/payment_proposal.recurring_without_approval.json HOLD RECURRING_PAYMENT_REQUIRES_APPROVAL 3
+check_case examples/agent-payment-guard/payment_proposal.asset_not_allowed.json BLOCK ASSET_NOT_ALLOWED 2
+check_case examples/agent-payment-guard/payment_proposal.invalid_amount.json BLOCK INVALID_AMOUNT 2
 
 [[ -f .proofpath/audit.jsonl ]]
 python3 - <<'PY'
 import json
 from pathlib import Path
 records = [json.loads(x) for x in Path('.proofpath/audit.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
-assert len(records) == 5, len(records)
+assert len(records) == 7, len(records)
 PY
 
 echo "Agent Payment Guard demo check passed."
+
+python3 scripts/verify_audit_log.py .proofpath/audit.jsonl
