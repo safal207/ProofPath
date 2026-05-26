@@ -28,12 +28,36 @@ check_case examples/agent-payment-guard/payment_proposal.recurring_without_appro
 check_case examples/agent-payment-guard/payment_proposal.asset_not_allowed.json BLOCK ASSET_NOT_ALLOWED 2
 check_case examples/agent-payment-guard/payment_proposal.invalid_amount.json BLOCK INVALID_AMOUNT 2
 
+check_case_with_intent_envelope() {
+  local file="$1" envelope="$2" expected_decision="$3" expected_reason="$4" expected_status="$5"
+  set +e
+  output=$(python3 examples/agent-payment-guard/payment_guard.py "$file" --intent-envelope "$envelope")
+  status=$?
+  set -e
+  [[ "$status" -eq "$expected_status" ]]
+  python3 - "$output" "$expected_decision" "$expected_reason" <<'PY'
+import json, sys
+payload = json.loads(sys.argv[1])
+assert payload["decision"] == sys.argv[2], payload
+assert payload["reason"] == sys.argv[3], payload
+PY
+}
+
+check_case_with_intent_envelope \
+  examples/agent-payment-guard/payment_proposal.valid_micro_payment.json \
+  examples/agent-payment-guard/intent_envelope.missing.json \
+  BLOCK MISSING_INTENT_ENVELOPE 2
+check_case_with_intent_envelope \
+  examples/agent-payment-guard/payment_proposal.valid_micro_payment.json \
+  examples/agent-payment-guard/intent_envelope.malformed.json \
+  BLOCK INVALID_INTENT_SIGNATURE 2
+
 [[ -f .proofpath/audit.jsonl ]]
 python3 - <<'PY'
 import json
 from pathlib import Path
 records = [json.loads(x) for x in Path('.proofpath/audit.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
-assert len(records) == 7, len(records)
+assert len(records) == 9, len(records)
 PY
 
 echo "Agent Payment Guard demo check passed."

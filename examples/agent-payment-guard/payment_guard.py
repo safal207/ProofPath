@@ -8,7 +8,7 @@ from hashlib import sha256
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -83,7 +83,19 @@ def get_previous_hash(path: Path) -> str:
     return "GENESIS"
 
 
-def append_audit(path: Path, proposal: Dict[str, Any], decision: str, reason: str) -> None:
+def append_audit(
+    path: Path,
+    proposal: Dict[str, Any],
+    decision: str,
+    reason: str,
+    *,
+    intent_verified: Optional[bool] = None,
+    intent_envelope_id: Optional[str] = None,
+    intent_signature_alg: Optional[str] = None,
+    intent_expires_at: Optional[str] = None,
+    intent_nonce: Optional[str] = None,
+    intent_load_error: Optional[str] = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     previous_hash = get_previous_hash(path)
     record = {
@@ -97,6 +109,12 @@ def append_audit(path: Path, proposal: Dict[str, Any], decision: str, reason: st
         "approved_budget": proposal.get("approved_budget"),
         "recipient": proposal.get("recipient"),
         "causal_parent": proposal.get("causal_parent"),
+        "intent_verified": intent_verified,
+        "intent_envelope_id": intent_envelope_id,
+        "intent_signature_alg": intent_signature_alg,
+        "intent_expires_at": intent_expires_at,
+        "intent_nonce": intent_nonce,
+        "intent_load_error": intent_load_error,
         "previous_hash": previous_hash,
     }
     record["hash"] = compute_record_hash(record)
@@ -108,6 +126,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("proposal")
     parser.add_argument("--policy")
+    parser.add_argument("--intent-envelope")
     args = parser.parse_args()
 
     proposal_path = Path(args.proposal)
@@ -116,8 +135,60 @@ def main() -> int:
     proposal = load_json(proposal_path)
     policy = load_json(policy_path)
 
+    if args.intent_envelope:
+        intent_envelope_path = Path(args.intent_envelope)
+        if not intent_envelope_path.exists():
+            decision = "BLOCK"
+            reason = "MISSING_INTENT_ENVELOPE"
+            append_audit(
+                Path(".proofpath/audit.jsonl"),
+                proposal,
+                decision,
+                reason,
+                intent_verified=False,
+                intent_envelope_id=None,
+                intent_signature_alg=None,
+                intent_expires_at=None,
+                intent_nonce=None,
+                intent_load_error="missing",
+            )
+            print(json.dumps({"decision": decision, "reason": reason}, separators=(",", ":")))
+            return 2
+        try:
+            envelope = load_json(intent_envelope_path)
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+            decision = "BLOCK"
+            reason = "INVALID_INTENT_SIGNATURE"
+            append_audit(
+                Path(".proofpath/audit.jsonl"),
+                proposal,
+                decision,
+                reason,
+                intent_verified=False,
+                intent_envelope_id=None,
+                intent_signature_alg=None,
+                intent_expires_at=None,
+                intent_nonce=None,
+                intent_load_error="malformed",
+            )
+            print(json.dumps({"decision": decision, "reason": reason}, separators=(",", ":")))
+            return 2
+    else:
+        envelope = {}
+
     decision, reason = decide(proposal, policy)
-    append_audit(Path(".proofpath/audit.jsonl"), proposal, decision, reason)
+    append_audit(
+        Path(".proofpath/audit.jsonl"),
+        proposal,
+        decision,
+        reason,
+        intent_verified=bool(args.intent_envelope),
+        intent_envelope_id=envelope.get("intent_envelope_id"),
+        intent_signature_alg=envelope.get("signature_alg"),
+        intent_expires_at=envelope.get("expires_at"),
+        intent_nonce=envelope.get("nonce"),
+        intent_load_error=None,
+    )
 
     print(json.dumps({"decision": decision, "reason": reason}, separators=(",", ":")))
     return 0 if decision == "ACCEPT" else 2 if decision == "BLOCK" else 3
