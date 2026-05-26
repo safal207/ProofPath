@@ -84,6 +84,17 @@ def nonce_replayed(audit_path: Path, nonce: str) -> bool:
     return False
 
 
+def intent_load_error_meta(load_error: str) -> Dict[str, Any]:
+    return {
+        "intent_verified": False,
+        "intent_envelope_id": None,
+        "intent_signature_alg": None,
+        "intent_expires_at": None,
+        "intent_nonce": None,
+        "intent_load_error": load_error,
+    }
+
+
 def decide(proposal: Dict[str, Any], policy: Dict[str, Any], envelope: Optional[Dict[str, Any]], strict_mode: bool, audit_path: Path) -> Tuple[str, str, Dict[str, Any]]:
     intent_meta: Dict[str, Any] = {
         "intent_verified": False,
@@ -211,19 +222,23 @@ def main() -> int:
 
     proposal = load_json(proposal_path)
     policy = load_json(policy_path)
+    audit_path = Path(".proofpath/audit.jsonl")
     envelope_ref = args.intent_envelope or proposal.get("intent_envelope")
     envelope = None
     if envelope_ref:
         try:
             envelope = load_json(Path(envelope_ref))
         except FileNotFoundError:
-            print("{\"decision\":\"BLOCK\",\"reason\":\"MISSING_INTENT_ENVELOPE\"}")
+            decision, reason = "BLOCK", "MISSING_INTENT_ENVELOPE"
+            append_audit(audit_path, proposal, decision, reason, intent_load_error_meta("missing"))
+            print(json.dumps({"decision": decision, "reason": reason}, separators=(",", ":")))
             return 2
         except (json.JSONDecodeError, OSError, ValueError):
-            print("{\"decision\":\"BLOCK\",\"reason\":\"INVALID_INTENT_SIGNATURE\"}")
+            decision, reason = "BLOCK", "INVALID_INTENT_SIGNATURE"
+            append_audit(audit_path, proposal, decision, reason, intent_load_error_meta("malformed"))
+            print(json.dumps({"decision": decision, "reason": reason}, separators=(",", ":")))
             return 2
 
-    audit_path = Path(".proofpath/audit.jsonl")
     decision, reason, intent_meta = decide(proposal, policy, envelope, args.require_intent_envelope, audit_path)
     append_audit(audit_path, proposal, decision, reason, intent_meta)
 

@@ -49,9 +49,13 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 records = [json.loads(x) for x in Path('.proofpath/audit.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
-assert len(records) == 15, len(records)
+assert len(records) == 17, len(records)
 assert records[0]["intent_verified"] is False
 assert records[7]["intent_verified"] is True
+assert records[-2]["reason"] == "MISSING_INTENT_ENVELOPE"
+assert records[-2]["intent_load_error"] == "missing"
+assert records[-1]["reason"] == "INVALID_INTENT_SIGNATURE"
+assert records[-1]["intent_load_error"] == "malformed"
 PY
 
 echo "Agent Payment Guard demo check passed."
