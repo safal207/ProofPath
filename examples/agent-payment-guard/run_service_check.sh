@@ -39,7 +39,18 @@ curl -fsS -X POST "http://$HOST:$PORT/v1/payment-proposals/evaluate" \
   -d "{\"mode\":\"shadow\",\"proposal\":$BAD_PROPOSAL,\"intent_envelope\":null}" \
   | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["mode"]=="shadow"; assert r["decision"]=="BLOCK"; assert r["execution_allowed"] is True; assert r["would_block"] is True; assert r["audit_hash"].startswith("sha256:")'
 
-curl -fsS "http://$HOST:$PORT/v1/audit/records" | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["count"]==2; assert len(r["records"])==2; assert r["records"][0]["decision"]=="ACCEPT"; assert r["records"][1]["decision"]=="BLOCK"'
+
+HOLD_PROPOSAL=$(cat examples/agent-payment-guard/payment_proposal.recurring_without_approval.json)
+curl -fsS -X POST "http://$HOST:$PORT/v1/payment-proposals/evaluate" \
+  -H 'content-type: application/json' \
+  -d "{\"mode\":\"enforce\",\"proposal\":$HOLD_PROPOSAL,\"intent_envelope\":null}" \
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["mode"]=="enforce"; assert r["decision"]=="HOLD"; assert r["reason"]=="RECURRING_PAYMENT_REQUIRES_APPROVAL"; assert r["execution_allowed"] is False; assert r["would_block"] is True; assert r["audit_hash"].startswith("sha256:")'
+
+curl -fsS -X POST "http://$HOST:$PORT/v1/payment-proposals/evaluate" \
+  -H 'content-type: application/json' \
+  -d "{\"mode\":\"shadow\",\"proposal\":$HOLD_PROPOSAL,\"intent_envelope\":null}" \
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["mode"]=="shadow"; assert r["decision"]=="HOLD"; assert r["reason"]=="RECURRING_PAYMENT_REQUIRES_APPROVAL"; assert r["execution_allowed"] is True; assert r["would_block"] is True; assert r["audit_hash"].startswith("sha256:")'
+curl -fsS "http://$HOST:$PORT/v1/audit/records" | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["count"]==4; assert len(r["records"])==4; decisions=[row["decision"] for row in r["records"]]; assert decisions==["ACCEPT","BLOCK","HOLD","HOLD"]'
 
 python3 scripts/verify_audit_log.py .proofpath/audit.jsonl >/dev/null
 
