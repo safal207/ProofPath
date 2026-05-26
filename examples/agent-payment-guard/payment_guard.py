@@ -50,6 +50,10 @@ def verify_intent_envelope(proposal: Dict[str, Any], envelope: Dict[str, Any], n
         return False, "INTENT_PURPOSE_MISMATCH"
     if proposal.get("causal_parent") != envelope.get("causal_parent"):
         return False, "INTENT_CAUSAL_PARENT_MISMATCH"
+    if proposal.get("human_intent_id") != envelope.get("human_intent_id"):
+        return False, "INTENT_ID_MISMATCH"
+    if proposal.get("payment_mode") != envelope.get("payment_mode"):
+        return False, "INTENT_PAYMENT_MODE_MISMATCH"
     if proposal.get("asset") != envelope.get("allowed_asset"):
         return False, "INTENT_ASSET_MISMATCH"
     if proposal.get("recipient") != envelope.get("allowed_recipient"):
@@ -208,7 +212,16 @@ def main() -> int:
     proposal = load_json(proposal_path)
     policy = load_json(policy_path)
     envelope_ref = args.intent_envelope or proposal.get("intent_envelope")
-    envelope = load_json(Path(envelope_ref)) if envelope_ref else None
+    envelope = None
+    if envelope_ref:
+        try:
+            envelope = load_json(Path(envelope_ref))
+        except FileNotFoundError:
+            print("{\"decision\":\"BLOCK\",\"reason\":\"MISSING_INTENT_ENVELOPE\"}")
+            return 2
+        except (json.JSONDecodeError, OSError, ValueError):
+            print("{\"decision\":\"BLOCK\",\"reason\":\"INVALID_INTENT_SIGNATURE\"}")
+            return 2
 
     audit_path = Path(".proofpath/audit.jsonl")
     decision, reason, intent_meta = decide(proposal, policy, envelope, args.require_intent_envelope, audit_path)
