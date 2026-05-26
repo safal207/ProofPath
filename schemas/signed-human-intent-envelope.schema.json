@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofpath.dev/schemas/signed-human-intent-envelope.schema.json",
+  "title": "Signed Human Intent Envelope v0.1 (Demo)",
+  "type": "object",
+  "required": [
+    "envelope_type","version","human_intent_id","issuer","subject_agent_id","purpose","causal_parent",
+    "allowed_asset","allowed_recipient","max_amount","budget_scope","payment_mode","issued_at","expires_at",
+    "nonce","policy_version","signature_alg","signature"
+  ],
+  "properties": {
+    "envelope_type": {"const": "signed_human_intent"},
+    "version": {"const": "0.1"},
+    "human_intent_id": {"type": "string", "minLength": 1},
+    "issuer": {"type": "string", "minLength": 1},
+    "subject_agent_id": {"type": "string", "minLength": 1},
+    "purpose": {"type": "string", "minLength": 1},
+    "causal_parent": {"type": "string", "minLength": 1},
+    "allowed_asset": {"type": "string", "minLength": 1},
+    "allowed_recipient": {"type": "string", "minLength": 1},
+    "max_amount": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$"},
+    "budget_scope": {"type": "string", "minLength": 1},
+    "payment_mode": {"type": "string", "enum": ["one_time", "recurring"]},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "nonce": {"type": "string", "minLength": 1},
+    "policy_version": {"type": "string", "minLength": 1},
+    "signature_alg": {"const": "demo-sha256-v0"},
+    "signature": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}
