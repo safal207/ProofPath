@@ -103,19 +103,30 @@ echo
 # =====================================================================
 echo "[mock-rail-demo] step 3 — BLOCK: replay same intent envelope"
 set +e
-python3 "$ADAPTER" \
+output=$(python3 "$ADAPTER" \
   --guard-url "$GUARD_URL" \
   --rail-url "$RAIL_URL" \
   --proposal "$VALID_PROPOSAL" \
   --intent-envelope "$VALID_INTENT" \
-  --mode enforce
+  --mode enforce 2>&1)
 status=$?
 set -e
-if [ "$status" -ne 2 ]; then
-  echo "FAIL: expected adapter exit code 2 (BLOCK), got $status" >&2
-  exit 1
-fi
-echo "  adapter correctly exited $status (BLOCK)"
+
+echo "$output"
+
+python3 - "$output" <<'PY'
+import json
+import sys
+
+lines = [line.strip() for line in sys.argv[1].splitlines() if line.strip()]
+payload = json.loads(lines[-1])
+
+assert payload["decision"] == "BLOCK", payload
+assert payload["reason"] == "INTENT_REPLAYED", payload
+assert payload["execution_allowed"] is False, payload
+PY
+
+[[ "$status" -eq 2 ]]
 echo
 
 echo "[mock-rail-demo] step 4 — verifying mock rail was NOT called (still 1 transaction)"
@@ -133,18 +144,29 @@ echo
 # =====================================================================
 echo "[mock-rail-demo] step 5 — HOLD: recurring payment without approval"
 set +e
-python3 "$ADAPTER" \
+output=$(python3 "$ADAPTER" \
   --guard-url "$GUARD_URL" \
   --rail-url "$RAIL_URL" \
   --proposal "$HOLD_PROPOSAL" \
-  --mode enforce
+  --mode enforce 2>&1)
 status=$?
 set -e
-if [ "$status" -ne 2 ]; then
-  echo "FAIL: expected adapter exit code 2 (HOLD), got $status" >&2
-  exit 1
-fi
-echo "  adapter correctly exited $status (HOLD)"
+
+echo "$output"
+
+python3 - "$output" <<'PY'
+import json
+import sys
+
+lines = [line.strip() for line in sys.argv[1].splitlines() if line.strip()]
+payload = json.loads(lines[-1])
+
+assert payload["decision"] == "HOLD", payload
+assert payload["reason"] == "RECURRING_PAYMENT_REQUIRES_APPROVAL", payload
+assert payload["execution_allowed"] is False, payload
+PY
+
+[[ "$status" -eq 2 ]]
 echo
 
 echo "[mock-rail-demo] step 6 — verifying mock rail was NOT called (still 1 transaction)"
