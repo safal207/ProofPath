@@ -17,7 +17,7 @@ python3 examples/agent-payment-guard/payment_guard_service.py \
 python3 examples/agent-payment-guard/payment_guard_service.py --host 127.0.0.1 --port 8787
 ```
 
-CLI flags (`--host`, `--port`, `--policy`, `--audit-path`) override the corresponding config file values when both are provided.
+CLI flags (`--host`, `--port`, `--policy`, `--audit-path`, `--replay-store-path`) override the corresponding config file values when both are provided.
 
 ## Config file reference
 
@@ -29,6 +29,7 @@ CLI flags (`--host`, `--port`, `--policy`, `--audit-path`) override the correspo
   "require_signed_intent": true,
   "policy_path": "examples/agent-payment-guard/payment_policy.json",
   "audit_path": ".proofpath/audit.jsonl",
+  "replay_store_path": ".proofpath/replay-store.json",
   "service": {
     "host": "127.0.0.1",
     "port": 8787
@@ -47,6 +48,7 @@ CLI flags (`--host`, `--port`, `--policy`, `--audit-path`) override the correspo
 | `require_signed_intent` | If `true`, requests without an `intent_envelope` are treated as strict and return `BLOCK / MISSING_INTENT_ENVELOPE`. Merged with per-request strictness; strictest wins. |
 | `policy_path` | Path to the payment policy JSON file. |
 | `audit_path` | Path to the JSONL audit log. |
+| `replay_store_path` | Path to the local JSON replay store used for signed intent nonce replay protection. |
 | `service.host` | Bind address. |
 | `service.port` | Bind port. |
 | `audit.hash_chain` | Enables hash-chained audit records (always on in current implementation). |
@@ -105,6 +107,48 @@ Shadow semantics:
 - `HOLD` / `BLOCK` => `execution_allowed=true`, `would_block=true`
 
 Shadow mode always writes an audit record with actual decision and reason.
+
+## Replay protection
+
+Accepted signed intent envelopes persist their nonce into the local replay store:
+
+```text
+.proofpath/replay-store.json
+```
+
+A second attempt to use the same nonce returns:
+
+```text
+BLOCK / INTENT_REPLAYED
+```
+
+This replay state survives service restart because it is stored separately from process memory. The audit log still records both the original `ACCEPT` decision and the later replay `BLOCK` decision.
+
+## Read replay store diagnostics
+
+```bash
+curl -sS http://127.0.0.1:8787/v1/replay-store | python3 -m json.tool
+```
+
+Example response:
+
+```json
+{
+  "nonces": 1,
+  "entries": {
+    "nonce_market_research_001": {
+      "nonce": "nonce_market_research_001",
+      "human_intent_id": "intent_market_research_001",
+      "agent_id": "agent_researcher_01",
+      "used_at": "2026-05-26T00:00:00Z",
+      "decision_hash": "sha256:...",
+      "status": "used"
+    }
+  }
+}
+```
+
+This endpoint is local demo diagnostics only. It is not an authorization API.
 
 ## Read recent audit records
 
