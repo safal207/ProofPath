@@ -12,6 +12,106 @@ HTTPS proves that a connection is secure. ProofPath proves that an action was au
 
 > HTTPS proves the channel. ProofPath proves the action.
 
+## Agent Payment Guard
+
+> **Model output is a proposal, not authorization.**
+
+ProofPath is an external authorization and evidence layer for AI-agent payments.
+
+It verifies signed human intent before execution and exports tamper-evident evidence for every ACCEPT, HOLD, or BLOCK decision.
+
+```text
+AI agents will need payment rails.
+Payment rails need authorization.
+Authorization needs evidence.
+ProofPath provides that evidence.
+```
+
+**What it does:**
+
+- Requires a signed intent envelope before any payment is executed
+- Enforces policy: asset allow-list, budget cap, recipient scope, recurring approval
+- Persists spent nonces — a replayed envelope is always `BLOCK / INTENT_REPLAYED`
+- Writes every decision to a hash-chained `audit.jsonl` that survives service restart
+- Exports a portable evidence bundle verifiable offline without the live service
+
+**What it does not do:** no real wallet, no token transfer, no custody, no private keys, no SDK, no RPC, no JWS, no EIP-712.
+
+### Architecture
+
+```mermaid
+flowchart TD
+    A(["AI Agent\n(model output = proposal)"])
+    B(["Payment Proposal\nJSON"])
+    C(["ProofPath\nGuard Service\n:8787"])
+    D(["Policy Engine\npayment_policy.json"])
+    E(["Signed Intent Verifier\ndemo-sha256-v0"])
+    F(["Replay Store\n.proofpath/replay-store.json"])
+    G(["Hash-Chained Audit Log\n.proofpath/audit.jsonl"])
+    H(["Evidence Export Bundle\nproofpath-evidence-bundle/"])
+    I(["Mock / Future Payment Rail"])
+    J(["ACCEPT"])
+    K(["BLOCK / HOLD"])
+
+    A -->|proposes| B
+    B -->|POST /v1/payment-proposals/evaluate| C
+    C -->|check asset, budget, recipient, scope| D
+    C -->|verify signature, expiry, nonce| E
+    E -->|nonce lookup| F
+    C -->|append record| G
+    G -->|export script| H
+    C --> J
+    C --> K
+    J -->|execution_allowed=true| I
+    K -->|execution_allowed=false| A
+
+    style J fill:#d4f1d4,stroke:#4a9e4a,color:#1a4a1a
+    style K fill:#f7d4d4,stroke:#9e4a4a,color:#4a1a1a
+    style H fill:#d4e8f7,stroke:#4a7a9e,color:#1a3a4a
+```
+
+Full architecture diagrams: [`docs/architecture.md`](docs/architecture.md)
+
+### Quickstart
+
+```bash
+# install: stdlib only, no dependencies
+
+# run all checks
+bash examples/agent-payment-guard/run_demo_check.sh
+bash examples/agent-payment-guard/run_service_check.sh
+bash examples/agent-payment-guard/run_evidence_export_check.sh
+
+# full end-to-end story: ACCEPT -> replay BLOCK -> export -> verify
+bash examples/agent-payment-guard/run_e2e_evidence_demo.sh
+```
+
+Expected output:
+
+```text
+[e2e] step 1 — valid signed intent: ACCEPT
+  decision: ACCEPT
+  execution_allowed: true
+
+[e2e] step 2 — replay same envelope: BLOCK / INTENT_REPLAYED
+  decision: BLOCK
+  reason: INTENT_REPLAYED
+  execution_allowed: false
+
+[e2e] step 3 — export evidence bundle
+  hash chain: chain valid (2 records)
+  bundle ready: proofpath-evidence-bundle/
+
+[e2e] step 4 — verify bundled audit log
+  audit log: OK (2 records, chain valid)
+
+[e2e] ✓ ProofPath Agent Payment Guard demo complete.
+```
+
+See [`docs/demo-transcript-payment-guard.md`](docs/demo-transcript-payment-guard.md) for full expected output.
+
+---
+
 ## 60-second reviewer summary
 
 **ProofPath is a defensive pre-execution gateway that prevents valid AI-agent/API credentials from becoming unsafe, unaudited, or irreversible actions.**
@@ -20,12 +120,11 @@ ProofPath does **not** replace HTTPS, OAuth, IAM, API keys, or ordinary infrastr
 
 If you arrived here from an already-submitted grant application under an earlier name or framing, start with the [Submitted Application Reviewer Bridge](docs/SUBMITTED_APPLICATION_REVIEWER_BRIDGE.md). To understand how the related repositories fit together, see the [Ecosystem Graph](docs/ECOSYSTEM_GRAPH.md).
 
-### Two ways to use ProofPath v0.1
-
-ProofPath v0.1 now has two practical product surfaces:
+### Three product surfaces
 
 | Surface | Path | What it gives you |
 | --- | --- | --- |
+| Agent Payment Guard | [`examples/agent-payment-guard/`](examples/agent-payment-guard/) | Authorization and evidence layer for AI-agent payments. Signed intent, policy, replay protection, hash-chained audit, portable evidence bundle. |
 | CI evidence gate | [`action.yml`](action.yml), [`docs/GITHUB_ACTION_QUICKSTART.md`](docs/GITHUB_ACTION_QUICKSTART.md) | Turn ProofPath audit logs into CI-verifiable metrics and pass/fail checks. |
 | Personal Agent Guard | [`examples/personal-agent-guard/`](examples/personal-agent-guard/) | Add a local approval boundary and audit log around Claude Code / Codex-style AI coding tools. |
 
@@ -71,7 +170,8 @@ The current prototype demonstrates:
 - hash-chained JSONL audit logs;
 - dangerous-action and real-model-agent demos;
 - reusable GitHub Action evidence gate;
-- local Personal Agent Guard for Claude Code / Codex-style tools.
+- local Personal Agent Guard for Claude Code / Codex-style tools;
+- Agent Payment Guard with signed intent, replay protection, and portable evidence export.
 
 ### ACCEPT vs BLOCK
 
@@ -108,6 +208,10 @@ Reviewers can run the path locally without trusting a hidden service: start with
 - [Audit log verification](docs/audit-log-verification.md)
 - [ProofPath v0.1 landing](docs/LANDING_V0_1.md)
 - [Personal Agent Guard](examples/personal-agent-guard/)
+- [Agent Payment Guard](examples/agent-payment-guard/)
+- [Architecture diagrams](docs/architecture.md)
+- [Agent Payment Guard demo transcript](docs/demo-transcript-payment-guard.md)
+- [Agent Payment Guard service docs](docs/agent-payment-guard-service.md)
 - [Reviewer summary](docs/reviewer-summary.md)
 - [ProofPath v0.1 Product Milestone](docs/RELEASE_V0_1.md)
 - [Evidence Packet v0.1](docs/EVIDENCE_PACKET_V0_1.md)
@@ -342,6 +446,8 @@ Protected API
     v
 Append-only audit log
 ```
+
+See [`docs/architecture.md`](docs/architecture.md) for full Mermaid system diagrams.
 
 ## Planned components
 
