@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-rm -f .proofpath/audit.jsonl
+rm -f .proofpath/audit.jsonl .proofpath/replay-store.json
 
 HOST="127.0.0.1"
 PORT="18787"
@@ -88,9 +88,29 @@ if [ "$HTTP_CODE" != "400" ]; then
 fi
 python3 -c 'import json; r=json.load(open("/tmp/payment_guard_bad_limit.json",encoding="utf-8")); assert "error" in r, f"expected error field in response: {r}"'
 
-# --- audit records (6 total: enforce ACCEPT, shadow BLOCK, enforce HOLD, shadow HOLD, config-mode ACCEPT, require_signed_intent BLOCK) ---
+# === replay-store tests (closes #149) ===
+
+# After the first ACCEPT (test 1), replay-store.json must exist and contain exactly 1 nonce
+curl -fsS "http://$HOST:$PORT/v1/replay-store" \
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["nonces"]==1, f"expected 1 nonce in replay store, got {r[\"nonces\"]}"'
+
+# Replaying the same intent envelope must return BLOCK / INTENT_REPLAYED
+curl -fsS -X POST "http://$HOST:$PORT/v1/payment-proposals/evaluate" \
+  -H 'content-type: application/json' \
+  -d "{\"mode\":\"enforce\",\"proposal\":$VALID_PROPOSAL,\"intent_envelope\":$VALID_INTENT}" \
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["decision"]=="BLOCK", f"expected BLOCK on replay, got {r[\"decision\"]}"; assert r["reason"]=="INTENT_REPLAYED", f"expected INTENT_REPLAYED, got {r[\"reason\"]}"; assert r["execution_allowed"] is False'
+
+# replay-store.json must still contain exactly 1 nonce (replay attempt must not add a new entry)
+curl -fsS "http://$HOST:$PORT/v1/replay-store" \
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["nonces"]==1, f"replay store grew unexpectedly: {r[\"nonces\"]} nonces"'
+
+# restart-survival: verify replay-store.json exists on disk (service restart would reload it)
+python3 -c 'import json, pathlib; p=pathlib.Path(".proofpath/replay-store.json"); data=json.loads(p.read_text()); assert len(data)==1, f"replay-store.json must have 1 entry, got {len(data)}"'
+
+# --- audit records (8 total: enforce ACCEPT, shadow BLOCK, enforce HOLD, shadow HOLD,
+#     config-mode ACCEPT, require_signed_intent BLOCK, replay-store ACCEPT, replay BLOCK) ---
 curl -fsS "http://$HOST:$PORT/v1/audit/records" \
-  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["count"]==6, f"expected 6 audit records, got {r[\"count\"]}"; decisions=[row["decision"] for row in r["records"]]; assert decisions==["ACCEPT","BLOCK","HOLD","HOLD","ACCEPT","BLOCK"], f"unexpected decisions: {decisions}"'
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["count"]==8, f"expected 8 audit records, got {r[\"count\"]}"; decisions=[row["decision"] for row in r["records"]]; assert decisions==["ACCEPT","BLOCK","HOLD","HOLD","ACCEPT","BLOCK","ACCEPT","BLOCK"], f"unexpected decisions: {decisions}"'
 
 # --- hash-chain verification ---
 python3 scripts/verify_audit_log.py .proofpath/audit.jsonl >/dev/null

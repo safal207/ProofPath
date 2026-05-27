@@ -18,6 +18,7 @@ DEFAULT_PORT = 8787
 DEFAULT_MODE = "enforce"
 DEFAULT_AUDIT_DEFAULT_LIMIT = 20
 DEFAULT_AUDIT_MAX_LIMIT = 100
+DEFAULT_REPLAY_STORE_PATH = ".proofpath/replay-store.json"
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +52,10 @@ def load_config(path: Path) -> Dict[str, Any]:
     audit_path = raw.get("audit_path")
     if not isinstance(audit_path, str) or not audit_path:
         _fail("Config 'audit_path' must be a non-empty string")
+
+    replay_store_path = raw.get("replay_store_path", DEFAULT_REPLAY_STORE_PATH)
+    if not isinstance(replay_store_path, str) or not replay_store_path:
+        _fail("Config 'replay_store_path' must be a non-empty string")
 
     service = raw.get("service", {})
     if not isinstance(service, dict):
@@ -87,6 +92,7 @@ def load_config(path: Path) -> Dict[str, Any]:
         "require_signed_intent": require_signed_intent,
         "policy_path": policy_path,
         "audit_path": audit_path,
+        "replay_store_path": replay_store_path,
         "host": host,
         "port": port,
         "audit_default_limit": default_limit,
@@ -172,6 +178,12 @@ class PaymentGuardServiceHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.OK, {"records": records, "count": len(records), "limit": limit})
             return
 
+        if parsed.path == "/v1/replay-store":
+            from payment_guard import load_replay_store
+            store = load_replay_store(self.server.replay_store_path)  # type: ignore[attr-defined]
+            self._send_json(HTTPStatus.OK, {"nonces": len(store), "entries": store})
+            return
+
         self._send_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802
@@ -218,6 +230,7 @@ class PaymentGuardServiceHandler(BaseHTTPRequestHandler):
             envelope=envelope,
             strict_mode=strict_mode,
             audit_path=self.server.audit_path,  # type: ignore[attr-defined]
+            replay_store_path=self.server.replay_store_path,  # type: ignore[attr-defined]
         )
         append_audit(self.server.audit_path, proposal, decision, reason, intent_meta)  # type: ignore[attr-defined]
         audit_hash = get_previous_hash(self.server.audit_path)  # type: ignore[attr-defined]
@@ -286,6 +299,7 @@ def main() -> int:
     port = DEFAULT_PORT
     policy_path = "examples/agent-payment-guard/payment_policy.json"
     audit_path_str = ".proofpath/audit.jsonl"
+    replay_store_path_str = DEFAULT_REPLAY_STORE_PATH
     config_mode = DEFAULT_MODE
     require_signed_intent = False
     audit_default_limit = DEFAULT_AUDIT_DEFAULT_LIMIT
@@ -297,6 +311,7 @@ def main() -> int:
         port = cfg["port"]
         policy_path = cfg["policy_path"]
         audit_path_str = cfg["audit_path"]
+        replay_store_path_str = cfg["replay_store_path"]
         config_mode = cfg["mode"]
         require_signed_intent = cfg["require_signed_intent"]
         audit_default_limit = cfg["audit_default_limit"]
@@ -316,6 +331,7 @@ def main() -> int:
     server = ThreadingHTTPServer((host, port), PaymentGuardServiceHandler)
     server.policy = policy
     server.audit_path = Path(audit_path_str)
+    server.replay_store_path = Path(replay_store_path_str)
     server.config_mode = config_mode
     server.require_signed_intent = require_signed_intent
     server.audit_default_limit = audit_default_limit
@@ -325,6 +341,7 @@ def main() -> int:
     if args.config:
         print(f"  config: {args.config}")
     print(f"  mode: {config_mode} | require_signed_intent: {require_signed_intent}")
+    print(f"  replay_store: {replay_store_path_str}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

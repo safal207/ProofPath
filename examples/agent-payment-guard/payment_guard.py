@@ -72,8 +72,68 @@ def verify_intent_envelope(proposal: Dict[str, Any], envelope: Dict[str, Any], n
     return True, "PAYMENT_WITHIN_SIGNED_INTENT_ENVELOPE"
 
 
-def nonce_replayed(audit_path: Path, nonce: str) -> bool:
-    if not nonce or not audit_path.exists():
+# ---------------------------------------------------------------------------
+# Replay store — explicit nonce persistence, survives service restarts
+# ---------------------------------------------------------------------------
+
+def load_replay_store(path: Path) -> Dict[str, Any]:
+    """Return {nonce: {ts, envelope_id, agent_id}} or empty dict."""
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_replay_store(path: Path, store: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(store, sort_keys=True, indent=2), encoding="utf-8")
+
+
+def record_nonce(
+    replay_store_path: Path,
+    nonce: str,
+    envelope_id: Optional[str],
+    agent_id: Optional[str],
+) -> None:
+    """Persist a spent nonce into replay-store.json."""
+    if not nonce:
+        return
+    store = load_replay_store(replay_store_path)
+    store[nonce] = {
+        "ts": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "envelope_id": envelope_id,
+        "agent_id": agent_id,
+    }
+    save_replay_store(replay_store_path, store)
+
+
+def nonce_replayed(
+    audit_path: Path,
+    nonce: str,
+    replay_store_path: Optional[Path] = None,
+) -> bool:
+    """Check if nonce was already spent.
+
+    Primary: check replay-store.json (O(1) lookup, survives restarts).
+    Fallback: scan audit.jsonl (used when store file is absent — migration path
+    for deployments that predate #149).
+    """
+    if not nonce:
+        return False
+
+    if replay_store_path is not None:
+        store = load_replay_store(replay_store_path)
+        if nonce in store:
+            return True
+        # Store exists but nonce not found — no need to scan audit log
+        if replay_store_path.exists():
+            return False
+
+    # Fallback: audit-log scan (migration path only)
+    if not audit_path.exists():
         return False
     for line in audit_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
@@ -95,7 +155,14 @@ def intent_load_error_meta(load_error: str) -> Dict[str, Any]:
     }
 
 
-def decide(proposal: Dict[str, Any], policy: Dict[str, Any], envelope: Optional[Dict[str, Any]], strict_mode: bool, audit_path: Path) -> Tuple[str, str, Dict[str, Any]]:
+def decide(
+    proposal: Dict[str, Any],
+    policy: Dict[str, Any],
+    envelope: Optional[Dict[str, Any]],
+    strict_mode: bool,
+    audit_path: Path,
+    replay_store_path: Optional[Path] = None,
+) -> Tuple[str, str, Dict[str, Any]]:
     intent_meta: Dict[str, Any] = {
         "intent_verified": False,
         "intent_envelope_id": None,
@@ -155,12 +222,21 @@ def decide(proposal: Dict[str, Any], policy: Dict[str, Any], envelope: Optional[
                 "intent_nonce": envelope.get("nonce"),
             }
         )
-        if nonce_replayed(audit_path, str(envelope.get("nonce", ""))):
+        nonce = str(envelope.get("nonce", ""))
+        if nonce_replayed(audit_path, nonce, replay_store_path):
             return "BLOCK", "INTENT_REPLAYED", intent_meta
         ok, reason = verify_intent_envelope(proposal, envelope, datetime.now(timezone.utc))
         if not ok:
             return "BLOCK", reason, intent_meta
         intent_meta["intent_verified"] = True
+        # Persist nonce immediately after verification succeeds
+        if replay_store_path is not None and nonce:
+            record_nonce(
+                replay_store_path,
+                nonce,
+                envelope_id=envelope.get("human_intent_id"),
+                agent_id=proposal.get("agent_id"),
+            )
         return "ACCEPT", "PAYMENT_WITHIN_SIGNED_INTENT_ENVELOPE", intent_meta
 
     return "ACCEPT", "PAYMENT_WITHIN_SCOPE_AND_BUDGET", intent_meta
@@ -215,6 +291,8 @@ def main() -> int:
     parser.add_argument("--policy")
     parser.add_argument("--intent-envelope")
     parser.add_argument("--require-intent-envelope", action="store_true")
+    parser.add_argument("--replay-store", default=None, metavar="PATH",
+                        help="Path to replay-store.json (default: .proofpath/replay-store.json)")
     args = parser.parse_args()
 
     proposal_path = Path(args.proposal)
@@ -223,6 +301,7 @@ def main() -> int:
     proposal = load_json(proposal_path)
     policy = load_json(policy_path)
     audit_path = Path(".proofpath/audit.jsonl")
+    replay_store_path = Path(args.replay_store) if args.replay_store else Path(".proofpath/replay-store.json")
     envelope_ref = args.intent_envelope or proposal.get("intent_envelope")
     envelope = None
     if envelope_ref:
@@ -239,7 +318,9 @@ def main() -> int:
             print(json.dumps({"decision": decision, "reason": reason}, separators=(",", ":")))
             return 2
 
-    decision, reason, intent_meta = decide(proposal, policy, envelope, args.require_intent_envelope, audit_path)
+    decision, reason, intent_meta = decide(
+        proposal, policy, envelope, args.require_intent_envelope, audit_path, replay_store_path
+    )
     append_audit(audit_path, proposal, decision, reason, intent_meta)
 
     print(json.dumps({"decision": decision, "reason": reason}, separators=(",", ":")))
