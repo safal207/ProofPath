@@ -163,10 +163,94 @@ Behavior:
 
 Records come from `.proofpath/audit.jsonl` and include hash chaining (`previous_hash`, `hash`).
 
+## Evidence export bundle
+
+The evidence export script packages all ProofPath decision artifacts into a
+portable local bundle for offline inspection, auditing, or grant evidence.
+
+### Export
+
+```bash
+python3 scripts/export_payment_guard_evidence.py --out proofpath-evidence-bundle/
+```
+
+Optional path overrides (all have sensible defaults):
+
+```bash
+python3 scripts/export_payment_guard_evidence.py \
+  --out proofpath-evidence-bundle/ \
+  --audit-path .proofpath/audit.jsonl \
+  --replay-store-path .proofpath/replay-store.json \
+  --config examples/agent-payment-guard/payment_guard_service_config.json \
+  --policy examples/agent-payment-guard/payment_policy.json
+```
+
+### Bundle contents
+
+```text
+proofpath-evidence-bundle/
+  audit.jsonl                        — hash-chained decision log
+  replay-store.json                  — spent signed-intent nonces
+  payment_guard_service_config.json  — service configuration snapshot
+  payment_policy.json                — payment policy snapshot
+  verification_report.json           — generated summary (see below)
+```
+
+### Inspect the bundle
+
+Verify hash-chain integrity of the bundled audit log:
+
+```bash
+python3 scripts/verify_audit_log.py proofpath-evidence-bundle/audit.jsonl
+```
+
+Read the verification report:
+
+```bash
+python3 -m json.tool proofpath-evidence-bundle/verification_report.json
+```
+
+Example `verification_report.json`:
+
+```json
+{
+  "bundle_type": "agent-payment-guard-evidence",
+  "generated_at": "2026-05-27T00:00:00Z",
+  "audit_records_count": 8,
+  "replay_store_nonces": 1,
+  "hash_chain_valid": true,
+  "hash_chain_message": "chain valid (8 records)",
+  "source_files": {
+    "audit": ".proofpath/audit.jsonl",
+    "replay_store": ".proofpath/replay-store.json",
+    "config": "examples/agent-payment-guard/payment_guard_service_config.json",
+    "policy": "examples/agent-payment-guard/payment_policy.json"
+  },
+  "copied_files": [
+    "audit.jsonl",
+    "replay-store.json",
+    "payment_guard_service_config.json",
+    "payment_policy.json",
+    "verification_report.json"
+  ]
+}
+```
+
+### Edge cases
+
+| Situation | Behavior |
+|---|---|
+| `audit.jsonl` missing | Hard fail — exits with error |
+| `replay-store.json` missing | Warning printed; exports empty `{}` |
+| Hash chain invalid | Warning printed; `hash_chain_valid: false` in report; export continues |
+| Output directory exists | Files overwritten; extra files left in place |
+
 ## Local validation
 
 ```bash
 bash examples/agent-payment-guard/run_demo_check.sh
 bash examples/agent-payment-guard/run_service_check.sh
-python3 scripts/verify_audit_log.py .proofpath/audit.jsonl
+python3 scripts/export_payment_guard_evidence.py --out proofpath-evidence-bundle/
+python3 scripts/verify_audit_log.py proofpath-evidence-bundle/audit.jsonl
+bash examples/agent-payment-guard/run_evidence_export_check.sh
 ```
