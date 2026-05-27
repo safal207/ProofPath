@@ -1,0 +1,15 @@
+{
+  "mode": "enforce",
+  "require_signed_intent": true,
+  "policy_path": "examples/agent-payment-guard/payment_policy.json",
+  "audit_path": ".proofpath/audit.jsonl",
+  "service": {
+    "host": "127.0.0.1",
+    "port": 8787
+  },
+  "audit": {
+    "hash_chain": true,
+    "recent_records_default_limit": 20,
+    "recent_records_max_limit": 100
+  }
+}
