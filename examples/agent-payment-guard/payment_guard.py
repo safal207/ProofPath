@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 DEMO_SIGNATURE_SECRET = "proofpath-demo-secret-v0"
+DEFAULT_REPLAY_STORE_PATH = Path(".proofpath/replay-store.json")
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -26,6 +27,48 @@ def parse_ts(value: str) -> Optional[datetime]:
         return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
     except Exception:
         return None
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def load_replay_store(path: Path) -> Dict[str, Dict[str, Any]]:
+    if not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return {}
+    return {str(nonce): record for nonce, record in payload.items() if isinstance(record, dict)}
+
+
+def save_replay_store(path: Path, store: Dict[str, Dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(store, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    tmp_path.replace(path)
+
+
+def record_nonce(
+    path: Path,
+    nonce: str,
+    *,
+    human_intent_id: Optional[str],
+    agent_id: Optional[str],
+    decision_hash: Optional[str],
+) -> None:
+    if not nonce:
+        return
+    store = load_replay_store(path)
+    store[nonce] = {
+        "nonce": nonce,
+        "human_intent_id": human_intent_id,
+        "agent_id": agent_id,
+        "used_at": utc_now(),
+        "decision_hash": decision_hash,
+        "status": "used",
+    }
+    save_replay_store(path, store)
 
 
 def verify_intent_envelope(proposal: Dict[str, Any], envelope: Dict[str, Any], now: datetime) -> Tuple[bool, str]:
@@ -72,8 +115,14 @@ def verify_intent_envelope(proposal: Dict[str, Any], envelope: Dict[str, Any], n
     return True, "PAYMENT_WITHIN_SIGNED_INTENT_ENVELOPE"
 
 
-def nonce_replayed(audit_path: Path, nonce: str) -> bool:
-    if not nonce or not audit_path.exists():
+def nonce_replayed(audit_path: Path, nonce: str, replay_store_path: Optional[Path] = None) -> bool:
+    if not nonce:
+        return False
+
+    if replay_store_path is not None and replay_store_path.exists():
+        return nonce in load_replay_store(replay_store_path)
+
+    if not audit_path.exists():
         return False
     for line in audit_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
@@ -95,7 +144,14 @@ def intent_load_error_meta(load_error: str) -> Dict[str, Any]:
     }
 
 
-def decide(proposal: Dict[str, Any], policy: Dict[str, Any], envelope: Optional[Dict[str, Any]], strict_mode: bool, audit_path: Path) -> Tuple[str, str, Dict[str, Any]]:
+def decide(
+    proposal: Dict[str, Any],
+    policy: Dict[str, Any],
+    envelope: Optional[Dict[str, Any]],
+    strict_mode: bool,
+    audit_path: Path,
+    replay_store_path: Optional[Path] = None,
+) -> Tuple[str, str, Dict[str, Any]]:
     intent_meta: Dict[str, Any] = {
         "intent_verified": False,
         "intent_envelope_id": None,
@@ -155,7 +211,7 @@ def decide(proposal: Dict[str, Any], policy: Dict[str, Any], envelope: Optional[
                 "intent_nonce": envelope.get("nonce"),
             }
         )
-        if nonce_replayed(audit_path, str(envelope.get("nonce", ""))):
+        if nonce_replayed(audit_path, str(envelope.get("nonce", "")), replay_store_path):
             return "BLOCK", "INTENT_REPLAYED", intent_meta
         ok, reason = verify_intent_envelope(proposal, envelope, datetime.now(timezone.utc))
         if not ok:
@@ -191,7 +247,7 @@ def append_audit(path: Path, proposal: Dict[str, Any], decision: str, reason: st
     path.parent.mkdir(parents=True, exist_ok=True)
     previous_hash = get_previous_hash(path)
     record = {
-        "ts": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "ts": utc_now(),
         "surface": "agent-payment-guard",
         "decision": decision,
         "reason": reason,
@@ -209,12 +265,34 @@ def append_audit(path: Path, proposal: Dict[str, Any], decision: str, reason: st
         handle.write(json.dumps(record, sort_keys=True) + "\n")
 
 
+def persist_accepted_nonce_if_needed(
+    replay_store_path: Path,
+    proposal: Dict[str, Any],
+    decision: str,
+    intent_meta: Dict[str, Any],
+    decision_hash: str,
+) -> None:
+    if decision != "ACCEPT" or not intent_meta.get("intent_verified"):
+        return
+    nonce = intent_meta.get("intent_nonce")
+    if not isinstance(nonce, str) or not nonce:
+        return
+    record_nonce(
+        replay_store_path,
+        nonce,
+        human_intent_id=intent_meta.get("intent_envelope_id"),
+        agent_id=proposal.get("agent_id"),
+        decision_hash=decision_hash,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("proposal")
     parser.add_argument("--policy")
     parser.add_argument("--intent-envelope")
     parser.add_argument("--require-intent-envelope", action="store_true")
+    parser.add_argument("--replay-store-path", default=str(DEFAULT_REPLAY_STORE_PATH))
     args = parser.parse_args()
 
     proposal_path = Path(args.proposal)
@@ -223,6 +301,7 @@ def main() -> int:
     proposal = load_json(proposal_path)
     policy = load_json(policy_path)
     audit_path = Path(".proofpath/audit.jsonl")
+    replay_store_path = Path(args.replay_store_path)
     envelope_ref = args.intent_envelope or proposal.get("intent_envelope")
     envelope = None
     if envelope_ref:
@@ -239,8 +318,17 @@ def main() -> int:
             print(json.dumps({"decision": decision, "reason": reason}, separators=(",", ":")))
             return 2
 
-    decision, reason, intent_meta = decide(proposal, policy, envelope, args.require_intent_envelope, audit_path)
+    decision, reason, intent_meta = decide(
+        proposal,
+        policy,
+        envelope,
+        args.require_intent_envelope,
+        audit_path,
+        replay_store_path,
+    )
     append_audit(audit_path, proposal, decision, reason, intent_meta)
+    audit_hash = get_previous_hash(audit_path)
+    persist_accepted_nonce_if_needed(replay_store_path, proposal, decision, intent_meta, audit_hash)
 
     print(json.dumps({"decision": decision, "reason": reason}, separators=(",", ":")))
     return 0 if decision == "ACCEPT" else 2 if decision == "BLOCK" else 3

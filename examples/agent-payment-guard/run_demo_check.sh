@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-rm -f .proofpath/audit.jsonl
+rm -f .proofpath/audit.jsonl .proofpath/replay-store.json
 
 check_case() {
   local expected_decision="$1" expected_reason="$2" expected_status="$3"
@@ -45,6 +45,7 @@ check_case BLOCK MISSING_INTENT_ENVELOPE 2 "$BASE_PROPOSAL" --intent-envelope ex
 check_case BLOCK INVALID_INTENT_SIGNATURE 2 "$BASE_PROPOSAL" --intent-envelope examples/agent-payment-guard/intent_envelopes/intent.malformed.json
 
 [[ -f .proofpath/audit.jsonl ]]
+[[ -f .proofpath/replay-store.json ]]
 python3 - <<'PY'
 import json
 from pathlib import Path
@@ -56,6 +57,9 @@ assert records[-2]["reason"] == "MISSING_INTENT_ENVELOPE"
 assert records[-2]["intent_load_error"] == "missing"
 assert records[-1]["reason"] == "INVALID_INTENT_SIGNATURE"
 assert records[-1]["intent_load_error"] == "malformed"
+store = json.loads(Path('.proofpath/replay-store.json').read_text(encoding='utf-8'))
+assert "nonce_market_research_001" in store, store
+assert len(store) == 1, store
 PY
 
 echo "Agent Payment Guard demo check passed."
