@@ -37,6 +37,11 @@ ProofPath provides that evidence.
 
 **What it does not do:** no real wallet, no token transfer, no custody, no private keys, no SDK, no RPC, no JWS, no EIP-712.
 
+External packaging:
+
+- [Agent Payment Guard brief](docs/agent-payment-guard-brief.md)
+- [90-second demo script](docs/agent-payment-guard-90-second-demo.md)
+
 ### Architecture
 
 ```mermaid
@@ -215,6 +220,8 @@ Reviewers can run the path locally without trusting a hidden service: start with
 - [ProofPath v0.1 landing](docs/LANDING_V0_1.md)
 - [Personal Agent Guard](examples/personal-agent-guard/)
 - [Agent Payment Guard](examples/agent-payment-guard/)
+- [Agent Payment Guard brief](docs/agent-payment-guard-brief.md)
+- [Agent Payment Guard 90-second demo](docs/agent-payment-guard-90-second-demo.md)
 - [Architecture diagrams](docs/architecture.md)
 - [Agent Payment Guard demo transcript](docs/demo-transcript-payment-guard.md)
 - [Agent Payment Guard service docs](docs/agent-payment-guard-service.md)
