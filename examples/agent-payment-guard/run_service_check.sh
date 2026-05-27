@@ -114,17 +114,17 @@ curl -fsS -X POST "http://$HOST:$PORT/v1/payment-proposals/evaluate" \
 curl -fsS -X POST "http://$HOST:$PORT/v1/payment-proposals/evaluate" \
   -H 'content-type: application/json' \
   -d "{\"proposal\":$VALID_PROPOSAL,\"intent_envelope\":$VALID_INTENT_CONFIG_MODE}" \
-  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["mode"]=="enforce", f"expected config mode enforce, got {r["mode"]}"; assert r["decision"]=="ACCEPT"; assert r["execution_allowed"] is True'
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["mode"]=="enforce", ("expected config mode enforce", r); assert r["decision"]=="ACCEPT"; assert r["execution_allowed"] is True'
 
 # --- require_signed_intent=true blocks valid proposal without envelope (shadow mode) ---
 curl -fsS -X POST "http://$HOST:$PORT/v1/payment-proposals/evaluate" \
   -H 'content-type: application/json' \
   -d "{\"mode\":\"shadow\",\"proposal\":$VALID_PROPOSAL,\"intent_envelope\":null}" \
-  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["decision"]=="BLOCK", f"expected BLOCK, got {r["decision"]}"; assert r["reason"]=="MISSING_INTENT_ENVELOPE", f"expected MISSING_INTENT_ENVELOPE, got {r["reason"]}"; assert r["execution_allowed"] is True; assert r["would_block"] is True'
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["decision"]=="BLOCK", ("expected BLOCK", r); assert r["reason"]=="MISSING_INTENT_ENVELOPE", ("expected MISSING_INTENT_ENVELOPE", r); assert r["execution_allowed"] is True; assert r["would_block"] is True'
 
 # --- audit limit: limit=999 clamped to max (100 from config) ---
 curl -fsS "http://$HOST:$PORT/v1/audit/records?limit=999" \
-  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["limit"]==100, f"expected limit 100, got {r["limit"]}"'
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["limit"]==100, ("expected limit 100", r)'
 
 # --- audit limit: limit=abc returns 400 with JSON error ---
 HTTP_CODE="$(curl -sS -o /tmp/payment_guard_bad_limit.json -w '%{http_code}' "http://$HOST:$PORT/v1/audit/records?limit=abc")"
@@ -132,7 +132,7 @@ if [ "$HTTP_CODE" != "400" ]; then
   echo "FAIL: expected 400 for limit=abc, got HTTP $HTTP_CODE" >&2
   exit 1
 fi
-python3 -c 'import json; r=json.load(open("/tmp/payment_guard_bad_limit.json",encoding="utf-8")); assert "error" in r, f"expected error field in response: {r}"'
+python3 -c 'import json; r=json.load(open("/tmp/payment_guard_bad_limit.json",encoding="utf-8")); assert "error" in r, ("expected error field", r)'
 
 # --- replay store survives service restart ---
 [[ -f .proofpath/replay-store.json ]]
@@ -141,9 +141,9 @@ start_service
 curl -fsS "http://$HOST:$PORT/v1/replay-store" \
   | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["nonces"]==2, r; assert "nonce_service_accept_001" in r["entries"], r; assert "nonce_service_config_mode_001" in r["entries"], r'
 
-# --- audit records (8 total: ACCEPT, replay BLOCK, BLOCK, HOLD, HOLD, ACCEPT, missing-envelope BLOCK) ---
+# --- audit records (7 total: ACCEPT, replay BLOCK, BLOCK, HOLD, HOLD, ACCEPT, missing-envelope BLOCK) ---
 curl -fsS "http://$HOST:$PORT/v1/audit/records" \
-  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["count"]==7, f"expected 7 audit records, got {r["count"]}"; decisions=[row["decision"] for row in r["records"]]; assert decisions==["ACCEPT","BLOCK","BLOCK","HOLD","HOLD","ACCEPT","BLOCK"], f"unexpected decisions: {decisions}"'
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["count"]==7, ("expected 7 audit records", r); decisions=[row["decision"] for row in r["records"]]; assert decisions==["ACCEPT","BLOCK","BLOCK","HOLD","HOLD","ACCEPT","BLOCK"], ("unexpected decisions", decisions)'
 
 # --- hash-chain verification ---
 python3 scripts/verify_audit_log.py .proofpath/audit.jsonl >/dev/null
