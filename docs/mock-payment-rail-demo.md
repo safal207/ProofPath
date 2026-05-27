@@ -14,6 +14,9 @@ payments — it controls whether execution reaches the payment rail.
 The mock rail has no real payment logic. It is a simulation-only HTTP server
 that appends JSONL transaction records to `.proofpath/mock-rail-transactions.jsonl`.
 
+All execution goes through `payment_guard_to_mock_rail_adapter.py` — the adapter
+is the only component allowed to forward `ACCEPT` decisions to the mock rail.
+
 ## How to run
 
 From the repository root:
@@ -49,7 +52,7 @@ bash examples/agent-payment-guard/run_mock_rail_demo.sh
 [mock-rail-demo] ========================================
 [mock-rail-demo]  SUCCESS SUMMARY
 [mock-rail-demo] ========================================
-[mock-rail-demo]  ACCEPT reached mock rail
+[mock-rail-demo]  ACCEPT reached mock rail via adapter
 [mock-rail-demo]  BLOCK did not reach mock rail
 [mock-rail-demo]  HOLD did not reach mock rail
 [mock-rail-demo]  evidence bundle exported
