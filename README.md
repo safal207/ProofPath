@@ -87,6 +87,9 @@ bash examples/agent-payment-guard/run_evidence_export_check.sh
 
 # full end-to-end story: ACCEPT -> replay BLOCK -> export -> verify
 bash examples/agent-payment-guard/run_e2e_evidence_demo.sh
+
+# mock payment rail: prove ACCEPT reaches the rail; BLOCK/HOLD never execute
+bash examples/agent-payment-guard/run_mock_rail_demo.sh
 ```
 
 Expected output:
@@ -233,6 +236,7 @@ Reviewers can run the path locally without trusting a hidden service: start with
 - [Threat model](specs/threat-model.md)
 - [Model guardrail bypass threat note](docs/threats/model_guardrail_bypass.md)
 - [HTTP action-context profile](specs/proofpath-http-profile-v0.1.md)
+- [Mock payment rail demo](examples/agent-payment-guard/run_mock_rail_demo.sh)
 - [Community experiments](COMMUNITY_EXPERIMENTS.md)
 
 ## Quick demo
@@ -277,6 +281,7 @@ The answer is enforced before the action reaches the protected service and writt
 | CI evidence gate | `python3 scripts/check_audit_metrics.py proofpath-audit.jsonl --max-block-rate 0.5` | Turns audit logs into CI pass/fail evidence. |
 | Personal Agent Guard | `bash examples/personal-agent-guard/run_demo_check.sh` | Local seatbelt for Claude Code / Codex-style tools. |
 | Agent Payment Guard | `bash examples/agent-payment-guard/run_e2e_evidence_demo.sh` | Signed intent, replay protection, hash-chained audit, and portable evidence bundle. |
+| Mock Payment Rail | `bash examples/agent-payment-guard/run_mock_rail_demo.sh` | Proves ACCEPT reaches mock rail; BLOCK/HOLD never execute. |
 
 ## What changed in v0.1
 

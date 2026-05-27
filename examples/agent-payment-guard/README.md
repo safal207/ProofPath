@@ -10,4 +10,7 @@ It does not move funds. It decides whether a proposed payment has declared inten
 
 ```bash
 bash examples/agent-payment-guard/run_demo_check.sh
+
+# mock payment rail demo — proves ACCEPT reaches the rail; BLOCK/HOLD never execute
+bash examples/agent-payment-guard/run_mock_rail_demo.sh
 ```
