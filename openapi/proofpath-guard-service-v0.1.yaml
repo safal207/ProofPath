@@ -1,0 +1,447 @@
+openapi: 3.1.0
+info:
+  title: ProofPath Guard Service API
+  version: "0.1"
+  summary: External authorization and evidence API for AI-agent payment proposals.
+  description: |
+    ProofPath Guard Service evaluates AI-agent payment proposals before execution.
+
+    Core principle: model output is a proposal, not authorization.
+
+    This contract is simulation-only. It does not define real wallet custody,
+    token transfers, RPC calls, payment-provider SDKs, JWS, or EIP-712 signing.
+servers:
+  - url: http://127.0.0.1:8787
+    description: Local ProofPath Guard Service
+tags:
+  - name: Health
+  - name: Evaluation
+  - name: Audit
+  - name: ReplayStore
+paths:
+  /v1/health:
+    get:
+      tags: [Health]
+      summary: Return service health.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              examples:
+                ok:
+                  value:
+                    status: ok
+                    surface: agent-payment-guard-service
+                    version: "0.1"
+  /v1/payment-proposals/evaluate:
+    post:
+      tags: [Evaluation]
+      summary: Evaluate an AI-agent payment proposal before execution.
+      operationId: evaluatePaymentProposal
+      description: |
+        Enforce/shadow semantics:
+        - enforce + ACCEPT -> execution_allowed=true, would_block=false
+        - enforce + HOLD/BLOCK -> execution_allowed=false, would_block=true
+        - shadow + ACCEPT -> execution_allowed=true, would_block=false
+        - shadow + HOLD/BLOCK -> execution_allowed=true, would_block=true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvaluatePaymentProposalRequest"
+            examples:
+              accept:
+                value:
+                  mode: enforce
+                  proposal:
+                    action_type: agent_payment
+                    agent_id: agent_researcher_01
+                    asset: USDC
+                    amount: "0.25"
+                    recipient: market-data-api.example
+                    approved_recipient: market-data-api.example
+                    approved_budget: "5.00"
+                    human_intent_id: intent_market_research_001
+                    causal_parent: task_market_report_001
+                    budget_scope: daily_research_budget
+                    payment_mode: one_time
+                    purpose: buy_market_data_api_call
+                  intent_envelope:
+                    envelope_type: signed_human_intent
+                    version: "0.1"
+                    human_intent_id: intent_market_research_001
+                    subject_agent_id: agent_researcher_01
+                    purpose: buy_market_data_api_call
+                    causal_parent: task_market_report_001
+                    allowed_asset: USDC
+                    max_amount: "5.00"
+                    allowed_recipient: market-data-api.example
+                    budget_scope: daily_research_budget
+                    payment_mode: one_time
+                    nonce: nonce_market_research_001
+                    expires_at: "2027-01-01T00:00:00Z"
+                    signature_alg: demo-sha256-v0
+                    signature: sha256-demo-signature
+      responses:
+        "200":
+          description: Evaluation completed. Decision may be ACCEPT, HOLD, or BLOCK.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationResponse"
+              examples:
+                accept:
+                  value:
+                    mode: enforce
+                    decision: ACCEPT
+                    reason: PAYMENT_WITHIN_SIGNED_INTENT_ENVELOPE
+                    execution_allowed: true
+                    would_block: false
+                    audit_hash: sha256:6eece8a1...
+                replay_block:
+                  value:
+                    mode: enforce
+                    decision: BLOCK
+                    reason: INTENT_REPLAYED
+                    execution_allowed: false
+                    would_block: true
+                    audit_hash: sha256:8ab40471...
+                shadow_block:
+                  value:
+                    mode: shadow
+                    decision: BLOCK
+                    reason: MISSING_INTENT_ENVELOPE
+                    execution_allowed: true
+                    would_block: true
+                    audit_hash: sha256:7ae0d21c...
+        "400":
+          description: Malformed request body or invalid mode.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid_mode:
+                  value:
+                    error: mode must be 'enforce' or 'shadow'
+  /v1/audit/records:
+    get:
+      tags: [Audit]
+      summary: Return recent hash-chained audit records.
+      operationId: getAuditRecords
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: Maximum number of recent records. Values above configured maximum are clamped.
+      responses:
+        "200":
+          description: Recent audit records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditRecordsResponse"
+              examples:
+                recent:
+                  value:
+                    count: 1
+                    limit: 20
+                    records:
+                      - ts: "2026-05-27T00:00:00Z"
+                        surface: agent-payment-guard
+                        decision: ACCEPT
+                        reason: PAYMENT_WITHIN_SIGNED_INTENT_ENVELOPE
+                        agent_id: agent_researcher_01
+                        asset: USDC
+                        amount: "0.25"
+                        approved_budget: "5.00"
+                        recipient: market-data-api.example
+                        causal_parent: task_market_report_001
+                        intent_verified: true
+                        intent_envelope_id: intent_market_research_001
+                        intent_signature_alg: demo-sha256-v0
+                        intent_expires_at: "2027-01-01T00:00:00Z"
+                        intent_nonce: nonce_market_research_001
+                        previous_hash: GENESIS
+                        hash: sha256:6eece8a1...
+        "400":
+          description: Invalid limit parameter.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/replay-store:
+    get:
+      tags: [ReplayStore]
+      summary: Return local diagnostic view of spent signed-intent nonces.
+      operationId: getReplayStore
+      description: Local diagnostics only. Not an authorization API.
+      responses:
+        "200":
+          description: Replay store entries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplayStoreResponse"
+              examples:
+                replay_store:
+                  value:
+                    nonces: 1
+                    entries:
+                      nonce_market_research_001:
+                        nonce: nonce_market_research_001
+                        human_intent_id: intent_market_research_001
+                        agent_id: agent_researcher_01
+                        used_at: "2026-05-27T00:00:00Z"
+                        decision_hash: sha256:6eece8a1...
+                        status: used
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, surface, version]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        surface:
+          type: string
+          enum: [agent-payment-guard-service]
+        version:
+          type: string
+          example: "0.1"
+    EvaluatePaymentProposalRequest:
+      type: object
+      required: [proposal]
+      properties:
+        mode:
+          $ref: "#/components/schemas/EvaluationMode"
+        proposal:
+          $ref: "#/components/schemas/PaymentProposal"
+        intent_envelope:
+          oneOf:
+            - $ref: "#/components/schemas/IntentEnvelope"
+            - type: "null"
+    PaymentProposal:
+      type: object
+      required: [action_type, agent_id, asset, amount, recipient, approved_budget, human_intent_id, causal_parent, budget_scope, payment_mode, purpose]
+      properties:
+        action_type:
+          type: string
+          enum: [agent_payment]
+        agent_id:
+          type: string
+        asset:
+          type: string
+          example: USDC
+        amount:
+          type: string
+          example: "0.25"
+        recipient:
+          type: string
+        approved_recipient:
+          type: string
+        approved_budget:
+          type: string
+          example: "5.00"
+        human_intent_id:
+          type: string
+        causal_parent:
+          type: string
+        budget_scope:
+          type: string
+        payment_mode:
+          type: string
+          enum: [one_time, recurring]
+        purpose:
+          type: string
+        recurring_approval:
+          type: boolean
+    IntentEnvelope:
+      type: object
+      required: [envelope_type, version, human_intent_id, subject_agent_id, purpose, causal_parent, allowed_asset, max_amount, allowed_recipient, budget_scope, payment_mode, nonce, expires_at, signature_alg, signature]
+      properties:
+        envelope_type:
+          type: string
+          enum: [signed_human_intent]
+        version:
+          type: string
+          enum: ["0.1"]
+        human_intent_id:
+          type: string
+        subject_agent_id:
+          type: string
+        purpose:
+          type: string
+        causal_parent:
+          type: string
+        allowed_asset:
+          type: string
+        max_amount:
+          type: string
+        allowed_recipient:
+          type: string
+        budget_scope:
+          type: string
+        payment_mode:
+          type: string
+          enum: [one_time, recurring]
+        nonce:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        signature_alg:
+          type: string
+          enum: [demo-sha256-v0]
+          description: Demo algorithm only; not JWS or EIP-712.
+        signature:
+          type: string
+    EvaluationResponse:
+      type: object
+      required: [mode, decision, reason, execution_allowed, would_block, audit_hash]
+      properties:
+        mode:
+          $ref: "#/components/schemas/EvaluationMode"
+        decision:
+          $ref: "#/components/schemas/Decision"
+        reason:
+          $ref: "#/components/schemas/Reason"
+        execution_allowed:
+          type: boolean
+        would_block:
+          type: boolean
+        audit_hash:
+          type: string
+          pattern: "^sha256:"
+    AuditRecordsResponse:
+      type: object
+      required: [records, count, limit]
+      properties:
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditRecord"
+        count:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+    AuditRecord:
+      type: object
+      required: [ts, surface, decision, reason, previous_hash, hash]
+      properties:
+        ts:
+          type: string
+          format: date-time
+        surface:
+          type: string
+        decision:
+          $ref: "#/components/schemas/Decision"
+        reason:
+          $ref: "#/components/schemas/Reason"
+        agent_id:
+          type: string
+        asset:
+          type: string
+        amount:
+          type: string
+        approved_budget:
+          type: string
+        recipient:
+          type: string
+        causal_parent:
+          type: string
+        intent_verified:
+          type: boolean
+        intent_envelope_id:
+          type: string
+        intent_signature_alg:
+          type: string
+        intent_expires_at:
+          type: string
+        intent_nonce:
+          type: string
+        previous_hash:
+          type: string
+        hash:
+          type: string
+          pattern: "^sha256:"
+    ReplayStoreResponse:
+      type: object
+      required: [nonces, entries]
+      properties:
+        nonces:
+          type: integer
+          minimum: 0
+        entries:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ReplayStoreEntry"
+    ReplayStoreEntry:
+      type: object
+      required: [nonce, used_at, status]
+      properties:
+        nonce:
+          type: string
+        human_intent_id:
+          type: string
+        agent_id:
+          type: string
+        used_at:
+          type: string
+          format: date-time
+        decision_hash:
+          type: string
+          pattern: "^sha256:"
+        status:
+          type: string
+          enum: [used]
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    EvaluationMode:
+      type: string
+      enum: [enforce, shadow]
+    Decision:
+      type: string
+      enum: [ACCEPT, HOLD, BLOCK]
+    Reason:
+      type: string
+      enum:
+        - PAYMENT_WITHIN_SIGNED_INTENT_ENVELOPE
+        - PAYMENT_WITHIN_SCOPE_AND_BUDGET
+        - RECURRING_PAYMENT_REQUIRES_APPROVAL
+        - INVALID_ACTION_TYPE
+        - ASSET_NOT_ALLOWED
+        - INVALID_AMOUNT
+        - INVALID_APPROVED_BUDGET
+        - OVER_BUDGET
+        - MISSING_PAYMENT_INTENT
+        - RECIPIENT_NOT_ALLOWED
+        - RECIPIENT_MISMATCH
+        - MISSING_INTENT_ENVELOPE
+        - INVALID_INTENT_SIGNATURE
+        - INTENT_EXPIRED
+        - INTENT_AGENT_MISMATCH
+        - INTENT_PURPOSE_MISMATCH
+        - INTENT_CAUSAL_PARENT_MISMATCH
+        - INTENT_ID_MISMATCH
+        - INTENT_PAYMENT_MODE_MISMATCH
+        - INTENT_ASSET_MISMATCH
+        - INTENT_RECIPIENT_MISMATCH
+        - INTENT_BUDGET_SCOPE_MISMATCH
+        - INTENT_AMOUNT_EXCEEDED
+        - INTENT_REPLAYED
