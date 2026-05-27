@@ -72,6 +72,9 @@ flowchart TD
 
 Full architecture diagrams: [`docs/architecture.md`](docs/architecture.md)
 
+API contract: [`openapi/proofpath-guard-service-v0.1.yaml`](openapi/proofpath-guard-service-v0.1.yaml)  
+OpenAPI notes: [`docs/openapi.md`](docs/openapi.md)
+
 ### Quickstart
 
 ```bash
@@ -212,6 +215,8 @@ Reviewers can run the path locally without trusting a hidden service: start with
 - [Architecture diagrams](docs/architecture.md)
 - [Agent Payment Guard demo transcript](docs/demo-transcript-payment-guard.md)
 - [Agent Payment Guard service docs](docs/agent-payment-guard-service.md)
+- [ProofPath Guard Service OpenAPI](openapi/proofpath-guard-service-v0.1.yaml)
+- [OpenAPI notes](docs/openapi.md)
 - [Reviewer summary](docs/reviewer-summary.md)
 - [ProofPath v0.1 Product Milestone](docs/RELEASE_V0_1.md)
 - [Evidence Packet v0.1](docs/EVIDENCE_PACKET_V0_1.md)
@@ -238,212 +243,132 @@ Run the one-minute AI agent dangerous action demo:
 python3 examples/upstream/demo_server.py
 cargo run -p proofpath-gateway
 bash examples/agent-dangerous-action/agent_delete_without_approval.sh
-bash examples/agent-dangerous-action/agent_delete_with_approval.sh
-cat proofpath-audit.jsonl
 ```
 
-Demo story:
+Expected result:
 
 ```text
-AI agent attempts irreversible delete without approval
-  -> ProofPath BLOCKS before protected API
-AI agent repeats with explicit human approval
-  -> ProofPath ACCEPTS and forwards
-Every decision
-  -> hash-chained audit trail
+BLOCK IRREVERSIBLE_REQUIRES_HUMAN_APPROVAL
 ```
 
-See:
-
-- `examples/agent-dangerous-action/README.md`
-- `docs/demo-transcript.md`
-- `docs/launch-post.md`
-
-## Personal Agent Guard demo
-
-Run the local AI coding tool guard demo:
+Then verify the audit log:
 
 ```bash
-bash examples/personal-agent-guard/run_demo_check.sh
+python3 scripts/verify_audit_log.py proofpath-audit.jsonl
 ```
 
-Demo story:
+## v0.1 value proposition
+
+ProofPath v0.1 gives AI safety, infra, and platform teams a local, reproducible way to answer:
 
 ```text
-AI coding tool proposes a guarded command
-  -> ProofPath Personal Agent Guard BLOCKS before approval
-User creates a scoped time-limited approval
-  -> the same command is ALLOWed
-Every decision
-  -> local .proofpath/audit.jsonl
+Did this agent action have enough declared intent and causal authorization to execute?
 ```
 
-See:
+The answer is enforced before the action reaches the protected service and written to a tamper-evident audit log that CI can verify.
 
-- `examples/personal-agent-guard/README.md`
-- `examples/personal-agent-guard/demo-transcript.md`
-- `examples/personal-agent-guard/claude-settings.example.json`
-- `examples/personal-agent-guard/codex-config.example.toml`
+## Included runnable examples
 
-## Execution-boundary demo matrix
-
-ProofPath is intentionally demonstrated across multiple high-risk action boundaries. See also: [Internet Action Layer](docs/internet-action-layer.md).
-
-| Demo | Core boundary | Expected decisions |
+| Demo | Command | What it shows |
 | --- | --- | --- |
-| [AI agent dangerous action](examples/agent-dangerous-action/README.md) | Valid agent/API access is not the same as valid irreversible action. | `BLOCK` unsafe action, `ACCEPT` approved action |
-| [Website builder gate](examples/website-builder-gate/README.md) | Valid deploy access is not the same as valid website change. | `ACCEPT` safe edit, `BLOCK` production/destructive changes without approval |
-| [Network and broker gate](examples/network-broker-gate/README.md) | Valid infra access is not the same as valid network or broker action. | `ACCEPT` diagnostic, `BLOCK` high-risk infra changes without approval |
-| [Database migration gate](examples/database-migration-gate/README.md) | Valid DB credentials are not the same as valid schema or data change. | `ACCEPT` inspection, `BLOCK` schema/data changes without approval |
-| [CI/CD deploy gate](examples/cicd-deploy-gate/README.md) | Valid CI credentials are not the same as valid production deployment. | `ACCEPT` preview deploy, `BLOCK` production deploy without approval, `ACCEPT` approved rollback |
-| [Personal Agent Guard](examples/personal-agent-guard/README.md) | Valid local AI-tool access is not the same as valid high-impact command execution. | `BLOCK` before approval, `ALLOW` after scoped time-limited approval |
-| [Agent Payment Guard](examples/agent-payment-guard/README.md) | Valid wallet/API access is not the same as valid causal permission to spend. | `ACCEPT` in-scope payments, `BLOCK` over-budget or off-scope recipient, `HOLD` for recurring without approval |
+| Dangerous irreversible action | `bash examples/agent-dangerous-action/agent_delete_without_approval.sh` | Blocks an irreversible delete request before it reaches the upstream API. |
+| Safe reversible action | `bash examples/agent-dangerous-action/agent_get_status.sh` | Allows a safe status read request. |
+| Real model agent | `python3 examples/real-model-agent/real_model_agent_demo.py --mode safe` / `--mode unsafe` | Shows that even a model-generated request must pass the action boundary. |
+| CI evidence gate | `python3 scripts/check_audit_metrics.py proofpath-audit.jsonl --max-block-rate 0.5` | Turns audit logs into CI pass/fail evidence. |
+| Personal Agent Guard | `bash examples/personal-agent-guard/run_demo_check.sh` | Local seatbelt for Claude Code / Codex-style tools. |
+| Agent Payment Guard | `bash examples/agent-payment-guard/run_e2e_evidence_demo.sh` | Signed intent, replay protection, hash-chained audit, and portable evidence bundle. |
 
-Reviewer pattern:
+## What changed in v0.1
 
-```text
-valid credential
-  != valid action
-  != valid scope
-  != valid reversibility
-  != valid approval
-```
-
-Each demo uses the same execution-boundary structure:
+Earlier ProofPath discussions were mostly protocol- or gateway-oriented. This v0.1 repository now demonstrates a compact product path:
 
 ```text
-agent proposes action
-  -> ProofPath checks declared intent, causal parent, scope, reversibility, and approval
-  -> safe action is forwarded
-  -> high-risk action without approval is blocked
-  -> decision is written to hash-chained audit log
+agent/API action
+  -> ProofPath gateway
+  -> explicit ACCEPT/BLOCK decision
+  -> audit log
+  -> CI-verifiable evidence metrics
 ```
 
-## Join the Lab
+That makes ProofPath easier to review, fund, and deploy incrementally.
 
-ProofPath is open for community experiments.
+## Product milestone v0.1
 
-We are not asking people to only confirm that it works. We want people to run it, break it, critique it, and tell us where the boundary is weak.
-
-Pick an experiment level:
+ProofPath v0.1 is a small but complete developer-facing evidence loop:
 
 ```text
-L0 — Reader feedback: is the idea understandable?
-L1 — Local demo: does the gateway work on your machine?
-L2 — Real model: does the LLM boundary feel clear?
-L3 — Red-team: can you break the model/action boundary?
-L4 — Integration: can ProofPath protect another toy or real system?
-L5 — Protocol critique: are the headers, reasons, and threat model right?
+agent/API action
+  -> pre-execution guard
+  -> ACCEPT/BLOCK decision
+  -> hash-chained audit log
+  -> metrics summary
+  -> CI pass/fail gate
 ```
 
-Start here:
+See [ProofPath v0.1 Product Milestone](docs/RELEASE_V0_1.md) for the full runbook and acceptance checks.
 
-- `COMMUNITY_EXPERIMENTS.md`
-- #14 Reader feedback
-- #15 Local gateway demo
-- #16 Real model agent demo
-- #17 Red-team the model boundary
-- #18 Build an integration
-- #19 Protocol and threat model critique
+## Evidence metrics v0.1
 
-Lab principle:
+ProofPath can turn a hash-chained audit log into CI-verifiable metrics:
 
-> Do not only tell us what works. Tell us where ProofPath breaks, where it is confusing, and where the protocol is too weak.
-
-## Why
-
-Modern systems increasingly allow AI agents, services, and automated workflows to perform critical actions:
-
-- send emails
-- execute payments
-- deploy code
-- modify infrastructure
-- access private data
-- call external APIs
-- trigger irreversible operations
-
-HTTPS secures the transport layer, but it does not answer:
-
-- Why did this action happen?
-- Who or what authorized it?
-- Was there a valid human or system intention?
-- Was the action reversible or irreversible?
-- Can we prove the causal chain after the fact?
-
-ProofPath adds this missing layer.
-
-## Core idea
-
-Every critical request should carry a verifiable action context:
-
-```http
-POST /payments/transfer HTTP/1.1
-Host: api.example.com
-traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
-x-proofpath-intent-id: intent_9f21
-x-proofpath-causal-parent: decision_71ab
-x-proofpath-scope: payments.transfer.once
-x-proofpath-reversibility: irreversible
-x-proofpath-decision: ACCEPT
-signature-input: proofpath=("@method" "@target-uri" "x-proofpath-intent-id" "x-proofpath-causal-parent" "x-proofpath-scope" "x-proofpath-reversibility");created=1778430000;keyid="agent-key-1"
-signature: proofpath=:BASE64_SIGNATURE:
+```bash
+python3 scripts/check_audit_metrics.py proofpath-audit.jsonl --max-block-rate 0.5
 ```
 
-The request is not only checked for identity and transport security. It is checked for causal validity.
-
-## Decision model
-
-A ProofPath-compatible gateway can return:
+Example output:
 
 ```json
 {
-  "decision": "ACCEPT",
-  "intent_id": "intent_9f21",
-  "causal_valid": true,
-  "scope_valid": true,
-  "reversibility": "irreversible",
-  "audit_hash": "sha256:..."
+  "total": 2,
+  "accepted": 1,
+  "blocked": 1,
+  "accept_rate": 0.5,
+  "block_rate": 0.5,
+  "decisions": {
+    "ACCEPT": 1,
+    "BLOCK": 1
+  }
 }
 ```
 
-or:
-
-```json
-{
-  "decision": "BLOCK",
-  "reason": "MISSING_CAUSAL_AUTHORIZATION"
-}
-```
-
-## Project goals
-
-- Define a minimal ProofPath HTTP header profile.
-- Build a Rust gateway for validating ProofPath-aware requests.
-- Support signed request context using HTTP Message Signatures.
-- Integrate with W3C Trace Context where possible.
-- Provide conformance fixtures for valid and invalid request chains.
-- Build tools for inspecting, replaying, and auditing action traces.
-
-## Non-goals
-
-ProofPath does not replace HTTPS, TLS, OAuth, OpenTelemetry, or existing API gateways.
-
-ProofPath complements them by adding causal authorization and verifiable intent.
-
-## Architecture
+This provides a simple release gate:
 
 ```text
-Client / Agent
-    |
-    | HTTPS request + ProofPath headers
-    v
-ProofPath Gateway
-    |
-    | validates intent, causal parent, scope, reversibility, signature
-    v
+if block_rate > allowed_threshold:
+    fail CI
+```
+
+See [Evidence Metrics v0.1](docs/EVIDENCE_METRICS_V0_1.md) for details.
+
+## GitHub Action quickstart
+
+ProofPath can be used as a reusable CI gate:
+
+```yaml
+name: ProofPath Audit Gate
+
+on: [pull_request]
+
+jobs:
+  proofpath-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          audit_log: proofpath-audit.jsonl
+          max_block_rate: "0.5"
+```
+
+See [GitHub Action quickstart](docs/GITHUB_ACTION_QUICKSTART.md) for a copy-paste workflow.
+
+## Components
+
+```text
+ProofPath protocol
+ProofPath gateway
+Policy engine
 Protected API
-    |
-    v
 Append-only audit log
 ```
 
@@ -452,40 +377,19 @@ See [`docs/architecture.md`](docs/architecture.md) for full Mermaid system diagr
 ## Planned components
 
 ```text
-proofpath/
-  specs/
-    proofpath-http-profile-v0.1.md
-    headers.md
-    threat-model.md
-    signature-profile.md
-  crates/
-    proofpath-gateway/
-    proofpath-verifier/
-    proofpath-policy/
-  examples/
-    payments-api/
-    ai-agent-actions/
-    ci-deploy-gate/
-  conformance/
-    valid/
-    invalid/
-  docs/
-    philosophy.md
-    why-https-is-not-enough.md
+ProofPath CLI
+ProofPath SDK
+ProofPath Policy Packs
+ProofPath Dashboard
 ```
-
-## Standards alignment
-
-ProofPath aims to build on existing web infrastructure:
-
-- HTTPS / TLS for secure transport
-- W3C Trace Context for distributed trace propagation
-- HTTP Message Signatures for signing request components
-- OpenTelemetry-style observability for operational traces
 
 ## Status
 
-Early protocol design. Expect breaking changes.
+ProofPath v0.1 is an experimental safety and audit prototype.
+
+It is intended for local demos, grant review, early integration experiments, and safety-oriented design review.
+
+It is not production-ready security infrastructure yet.
 
 ## License
 
