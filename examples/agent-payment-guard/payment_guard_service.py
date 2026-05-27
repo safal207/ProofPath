@@ -207,7 +207,7 @@ class PaymentGuardServiceHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": "intent_envelope must be an object or null"})
             return
 
-        # strict_mode: enforce mode OR config.require_signed_intent (strictest wins)
+        # strict_mode: config.require_signed_intent OR request is enforce mode (strictest wins)
         config_strict: bool = self.server.require_signed_intent  # type: ignore[attr-defined]
         request_strict = mode == "enforce"
         strict_mode = config_strict or request_strict
@@ -274,14 +274,14 @@ def main() -> int:
         metavar="PATH",
         help="Path to JSON config file (recommended)",
     )
-    # Legacy CLI overrides kept for backwards compatibility; config takes precedence
+    # Explicit CLI flags override config values when both are provided
     parser.add_argument("--host", default=None)
     parser.add_argument("--port", type=int, default=None)
     parser.add_argument("--policy", default=None)
     parser.add_argument("--audit-path", default=None)
     args = parser.parse_args()
 
-    # Build effective settings: start from hardcoded defaults, apply config, then CLI overrides
+    # Precedence: hardcoded defaults < config file < explicit CLI flags
     host = DEFAULT_HOST
     port = DEFAULT_PORT
     policy_path = "examples/agent-payment-guard/payment_policy.json"
@@ -302,7 +302,7 @@ def main() -> int:
         audit_default_limit = cfg["audit_default_limit"]
         audit_max_limit = cfg["audit_max_limit"]
 
-    # CLI flags override config if explicitly passed
+    # Explicit CLI flags override config
     if args.host is not None:
         host = args.host
     if args.port is not None:
