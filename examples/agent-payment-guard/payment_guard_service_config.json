@@ -3,6 +3,7 @@
   "require_signed_intent": true,
   "policy_path": "examples/agent-payment-guard/payment_policy.json",
   "audit_path": ".proofpath/audit.jsonl",
+  "replay_store_path": ".proofpath/replay-store.json",
   "service": {
     "host": "127.0.0.1",
     "port": 8787
