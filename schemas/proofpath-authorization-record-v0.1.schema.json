@@ -51,7 +51,12 @@
       "$ref": "#/$defs/sha256Ref"
     },
     "decision": {
-      "enum": ["ACCEPT", "HOLD", "BLOCK", "REJECT"]
+      "enum": [
+        "ACCEPT",
+        "HOLD",
+        "BLOCK",
+        "REJECT"
+      ]
     },
     "reason_codes": {
       "type": "array",
@@ -67,11 +72,18 @@
       "format": "date-time"
     },
     "expires_at": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "format": "date-time"
     },
     "consumption_state": {
-      "enum": ["UNCONSUMED", "CONSUMED", "UNKNOWN"]
+      "enum": [
+        "UNCONSUMED",
+        "CONSUMED",
+        "UNKNOWN"
+      ]
     },
     "continuation_state": {
       "enum": [
@@ -82,11 +94,11 @@
       ]
     },
     "current_state": {
+      "description": "Intrinsic authorization state captured by the exported record. Report-derived states are evaluated separately.",
       "enum": [
         "ACTIVE",
         "PENDING_APPROVAL",
         "EXPIRED",
-        "EXPIRED_AT_REPORT",
         "CONSUMED",
         "BLOCKED",
         "REJECTED",
