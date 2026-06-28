@@ -60,6 +60,11 @@ proofpath_evidence_refs
 claim_boundary
 ```
 
+`current_state` is intrinsic to the exported authorization record. Its portable
+values are `ACTIVE`, `PENDING_APPROVAL`, `EXPIRED`, `CONSUMED`, `BLOCKED`,
+`REJECTED`, and `INVALID`. Report-derived values such as `EXPIRED_AT_REPORT`
+are not serialized into the canonical authorization record.
+
 The fixture wraps each record with canonical bytes and a SHA-256 reference:
 
 ```text
@@ -112,13 +117,12 @@ No downstream observation or honest response can retroactively convert `HOLD`,
 ## Freshness, consumption, and report time
 
 The immutable authorization export preserves `issued_at`, `expires_at`,
-`consumption_state`, `continuation_state`, and the authority state represented
-when the fixture is evaluated.
+`consumption_state`, `continuation_state`, and its intrinsic `current_state`.
 
 Report time is deliberately supplied as separate verifier context rather than
-inserted into the authorization record. This allows a verifier to derive
-`ACTIVE` versus `EXPIRED_AT_REPORT` without changing the canonical bytes or
-reference of the original authorization decision.
+inserted into the authorization record. The verifier derives a separate
+`authority_state_at_report`, which may be `EXPIRED_AT_REPORT`, without changing
+the canonical bytes or reference of the original authorization decision.
 
 A record that later expires may remain historically auditable, but it must not
 be reused as live authority. A consumed record may remain linked to its existing
@@ -132,7 +136,7 @@ independent verifier does not import that exporter. It separately validates:
 - exact context shapes and SHA-256 reference syntax;
 - policy binding consistency;
 - decision, continuation, approval, and consumption combinations;
-- lifecycle state at report time;
+- intrinsic authorization state and report-time authority state;
 - execution eligibility and zero-side-effect expectations;
 - observation timing and authorization joins;
 - response-integrity joins and their derived outcome.
