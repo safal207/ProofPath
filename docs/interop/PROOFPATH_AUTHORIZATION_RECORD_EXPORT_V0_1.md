@@ -24,12 +24,15 @@ faithfully.
 
 - JSON Schema: [`schemas/proofpath-authorization-record-v0.1.schema.json`](../../schemas/proofpath-authorization-record-v0.1.schema.json)
 - Fixture pack: [`conformance/authorization-record-export-v0.1.json`](../../conformance/authorization-record-export-v0.1.json)
-- Exporter/verifier: [`scripts/check_authorization_record_export.py`](../../scripts/check_authorization_record_export.py)
+- Report-time context: [`conformance/authorization-record-report-context-v0.1.json`](../../conformance/authorization-record-report-context-v0.1.json)
+- Deterministic exporter: [`scripts/check_authorization_record_export.py`](../../scripts/check_authorization_record_export.py)
+- Independent semantic verifier: [`scripts/verify_authorization_record_export.py`](../../scripts/verify_authorization_record_export.py)
 
 Run:
 
 ```bash
 python3 scripts/check_authorization_record_export.py
+python3 scripts/verify_authorization_record_export.py
 ```
 
 ## Record shape
@@ -51,6 +54,7 @@ issued_at
 expires_at
 consumption_state
 continuation_state
+current_state
 policy_ref
 proofpath_evidence_refs
 claim_boundary
@@ -105,14 +109,36 @@ A downstream observation must repeat both digests and bind to the exact
 No downstream observation or honest response can retroactively convert `HOLD`,
 `BLOCK`, or `REJECT` into `ACCEPT`.
 
-## Freshness and consumption
+## Freshness, consumption, and report time
 
-The export preserves `issued_at`, `expires_at`, `consumption_state`, and
-`continuation_state`.
+The immutable authorization export preserves `issued_at`, `expires_at`,
+`consumption_state`, `continuation_state`, and the authority state represented
+when the fixture is evaluated.
+
+Report time is deliberately supplied as separate verifier context rather than
+inserted into the authorization record. This allows a verifier to derive
+`ACTIVE` versus `EXPIRED_AT_REPORT` without changing the canonical bytes or
+reference of the original authorization decision.
 
 A record that later expires may remain historically auditable, but it must not
 be reused as live authority. A consumed record may remain linked to its existing
 resolution, but it must not permit a second side effect.
+
+## Independent semantic verification
+
+The deterministic exporter reproduces canonical records and references. The
+independent verifier does not import that exporter. It separately validates:
+
+- exact context shapes and SHA-256 reference syntax;
+- policy binding consistency;
+- decision, continuation, approval, and consumption combinations;
+- lifecycle state at report time;
+- execution eligibility and zero-side-effect expectations;
+- observation timing and authorization joins;
+- response-integrity joins and their derived outcome.
+
+This separation prevents the fixture and exporter from silently agreeing on the
+same semantic mistake.
 
 ## Evidence handoff
 
@@ -140,6 +166,15 @@ claim boundary
 ProofPath evidence bundles may carry those external artifacts by digest and
 schema/profile identifier. Importing them does not mean ProofPath authored their
 semantic verdicts.
+
+For the conformance fixtures, the semantic verifier derives one of:
+
+- `MATCH` — the observation joins to live authority and no supplied integrity
+  record reports failure;
+- `MATCH_WITH_INTEGRITY_FAILURE` — authority and observation join, while the
+  independently attributed response-integrity verdict is not `VERIFIED`;
+- `HISTORICAL_ONLY` — execution occurred within the authorization window, but
+  the report was evaluated after authority expired.
 
 ## Fixture cases
 
