@@ -1,0 +1,14 @@
+{
+  "profile": "org.proofpath.authorization-report-context.v0.1",
+  "cases": {
+    "accepted_with_matching_observation": {
+      "reported_at": "2030-01-01T00:03:00Z"
+    },
+    "accepted_with_contradicted_response": {
+      "reported_at": "2030-01-01T00:03:00Z"
+    },
+    "stale_authorization_honest_report": {
+      "reported_at": "2030-01-01T00:06:00Z"
+    }
+  }
+}

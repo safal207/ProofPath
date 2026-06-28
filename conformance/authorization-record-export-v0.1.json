@@ -1,0 +1,425 @@
+{
+  "fixture_version": "0.1",
+  "revision": "2026-06-29.3",
+  "title": "ProofPath provider-neutral authorization record export fixtures",
+  "canonicalization": "RFC8785-JCS",
+  "hash_algorithm": "sha256",
+  "schema_path": "schemas/proofpath-authorization-record-v0.1.schema.json",
+  "profile": "org.proofpath.authorization-export.v0.1",
+  "cases": [
+    {
+      "case_id": "accepted_reversible",
+      "input": {
+        "transition_id": "transition-accepted_reversible",
+        "subject_id": "agent:payment",
+        "action_context": {
+          "caller_id": "agent:payment",
+          "intent_id": "intent-payment-001",
+          "causal_parent": "user-approved-payment-plan-001",
+          "scope": "payment.transfer",
+          "reversibility": "reversible"
+        },
+        "binding_context": {
+          "request_method": "POST",
+          "request_target": "/v1/payment-proposals/evaluate",
+          "arguments_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_ref": "policy:payment/v1",
+          "recipient_scope": "merchant:coffee-shop",
+          "budget_scope": "daily:USD:50",
+          "approval_ref": null
+        },
+        "decision_context": {
+          "decision": "ACCEPT",
+          "reason_codes": [
+            "POLICY_MATCH",
+            "REVERSIBLE_ACTION"
+          ],
+          "issued_at": "2030-01-01T00:00:00Z",
+          "expires_at": "2030-01-01T00:10:00Z",
+          "consumption_state": "UNCONSUMED",
+          "continuation_state": "NOT_REQUIRED",
+          "current_state": "ACTIVE",
+          "policy_ref": "policy:payment/v1",
+          "proofpath_evidence_refs": [
+            "audit:proofpath/record-001"
+          ]
+        }
+      },
+      "expected": {
+        "execution_allowed": true,
+        "current_state": "ACTIVE",
+        "authority_state_at_report": "ACTIVE",
+        "expected_additional_side_effects": 1,
+        "authorization_ref": "sha256:96e2bdcba680a7a18bf8753531adbb43acad0370bd4f218a420bfc5186765ff7"
+      },
+      "handoff": null
+    },
+    {
+      "case_id": "accepted_irreversible_with_approval",
+      "input": {
+        "transition_id": "transition-accepted_irreversible_with_approval",
+        "subject_id": "agent:payment",
+        "action_context": {
+          "caller_id": "agent:payment",
+          "intent_id": "intent-payment-001",
+          "causal_parent": "user-approved-payment-plan-001",
+          "scope": "payment.transfer",
+          "reversibility": "irreversible"
+        },
+        "binding_context": {
+          "request_method": "POST",
+          "request_target": "/v1/payment-proposals/evaluate",
+          "arguments_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_ref": "policy:payment/v1",
+          "recipient_scope": "merchant:coffee-shop",
+          "budget_scope": "daily:USD:50",
+          "approval_ref": "approval:human:001"
+        },
+        "decision_context": {
+          "decision": "ACCEPT",
+          "reason_codes": [
+            "POLICY_MATCH",
+            "HUMAN_APPROVAL_VERIFIED"
+          ],
+          "issued_at": "2030-01-01T00:00:00Z",
+          "expires_at": "2030-01-01T00:10:00Z",
+          "consumption_state": "UNCONSUMED",
+          "continuation_state": "NOT_REQUIRED",
+          "current_state": "ACTIVE",
+          "policy_ref": "policy:payment/v1",
+          "proofpath_evidence_refs": [
+            "audit:proofpath/record-001"
+          ]
+        }
+      },
+      "expected": {
+        "execution_allowed": true,
+        "current_state": "ACTIVE",
+        "authority_state_at_report": "ACTIVE",
+        "expected_additional_side_effects": 1,
+        "authorization_ref": "sha256:281f23b69fe2d43893e04712593901fed3d71ef217901d3cf8b3216df5a1638e"
+      },
+      "handoff": null
+    },
+    {
+      "case_id": "held_pending_approval",
+      "input": {
+        "transition_id": "transition-held_pending_approval",
+        "subject_id": "agent:payment",
+        "action_context": {
+          "caller_id": "agent:payment",
+          "intent_id": "intent-payment-001",
+          "causal_parent": "user-approved-payment-plan-001",
+          "scope": "payment.transfer",
+          "reversibility": "irreversible"
+        },
+        "binding_context": {
+          "request_method": "POST",
+          "request_target": "/v1/payment-proposals/evaluate",
+          "arguments_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_ref": "policy:payment/v1",
+          "recipient_scope": "merchant:coffee-shop",
+          "budget_scope": "daily:USD:50",
+          "approval_ref": null
+        },
+        "decision_context": {
+          "decision": "HOLD",
+          "reason_codes": [
+            "HUMAN_APPROVAL_REQUIRED"
+          ],
+          "issued_at": "2030-01-01T00:00:00Z",
+          "expires_at": "2030-01-01T00:10:00Z",
+          "consumption_state": "UNCONSUMED",
+          "continuation_state": "AWAITING_APPROVAL",
+          "current_state": "PENDING_APPROVAL",
+          "policy_ref": "policy:payment/v1",
+          "proofpath_evidence_refs": [
+            "audit:proofpath/record-001"
+          ]
+        }
+      },
+      "expected": {
+        "execution_allowed": false,
+        "current_state": "PENDING_APPROVAL",
+        "authority_state_at_report": "PENDING_APPROVAL",
+        "expected_additional_side_effects": 0,
+        "authorization_ref": "sha256:406ee3e4a5c897058999334c3d3490eb2560013fd26002e394e3e634156553b9"
+      },
+      "handoff": null
+    },
+    {
+      "case_id": "blocked_expired_intent",
+      "input": {
+        "transition_id": "transition-blocked_expired_intent",
+        "subject_id": "agent:payment",
+        "action_context": {
+          "caller_id": "agent:payment",
+          "intent_id": "intent-payment-001",
+          "causal_parent": "user-approved-payment-plan-001",
+          "scope": "payment.transfer",
+          "reversibility": "irreversible"
+        },
+        "binding_context": {
+          "request_method": "POST",
+          "request_target": "/v1/payment-proposals/evaluate",
+          "arguments_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_ref": "policy:payment/v1",
+          "recipient_scope": "merchant:coffee-shop",
+          "budget_scope": "daily:USD:50",
+          "approval_ref": "approval:human:001"
+        },
+        "decision_context": {
+          "decision": "BLOCK",
+          "reason_codes": [
+            "INTENT_EXPIRED"
+          ],
+          "issued_at": "2030-01-01T00:00:00Z",
+          "expires_at": "2029-12-31T23:59:59Z",
+          "consumption_state": "UNCONSUMED",
+          "continuation_state": "NOT_REQUIRED",
+          "current_state": "EXPIRED",
+          "policy_ref": "policy:payment/v1",
+          "proofpath_evidence_refs": [
+            "audit:proofpath/record-001"
+          ]
+        }
+      },
+      "expected": {
+        "execution_allowed": false,
+        "current_state": "EXPIRED",
+        "authority_state_at_report": "EXPIRED",
+        "expected_additional_side_effects": 0,
+        "authorization_ref": "sha256:5c66eca9ddea2ee216bb265863e8943ede3602d9c14de804c5c8a3f14701406b"
+      },
+      "handoff": null
+    },
+    {
+      "case_id": "blocked_replayed_consumed_intent",
+      "input": {
+        "transition_id": "transition-blocked_replayed_consumed_intent",
+        "subject_id": "agent:payment",
+        "action_context": {
+          "caller_id": "agent:payment",
+          "intent_id": "intent-payment-001",
+          "causal_parent": "user-approved-payment-plan-001",
+          "scope": "payment.transfer",
+          "reversibility": "irreversible"
+        },
+        "binding_context": {
+          "request_method": "POST",
+          "request_target": "/v1/payment-proposals/evaluate",
+          "arguments_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_ref": "policy:payment/v1",
+          "recipient_scope": "merchant:coffee-shop",
+          "budget_scope": "daily:USD:50",
+          "approval_ref": "approval:human:001"
+        },
+        "decision_context": {
+          "decision": "BLOCK",
+          "reason_codes": [
+            "INTENT_REPLAYED"
+          ],
+          "issued_at": "2030-01-01T00:00:00Z",
+          "expires_at": "2030-01-01T00:10:00Z",
+          "consumption_state": "CONSUMED",
+          "continuation_state": "NOT_REQUIRED",
+          "current_state": "CONSUMED",
+          "policy_ref": "policy:payment/v1",
+          "proofpath_evidence_refs": [
+            "audit:proofpath/record-001"
+          ]
+        }
+      },
+      "expected": {
+        "execution_allowed": false,
+        "current_state": "CONSUMED",
+        "authority_state_at_report": "CONSUMED",
+        "expected_additional_side_effects": 0,
+        "authorization_ref": "sha256:456d7746e5f71059dce1ce7a9be64b8b92962720001227d96bf378a7c3a10a84"
+      },
+      "handoff": null
+    },
+    {
+      "case_id": "accepted_with_matching_observation",
+      "input": {
+        "transition_id": "transition-accepted_with_matching_observation",
+        "subject_id": "agent:payment",
+        "action_context": {
+          "caller_id": "agent:payment",
+          "intent_id": "intent-payment-001",
+          "causal_parent": "user-approved-payment-plan-001",
+          "scope": "payment.transfer",
+          "reversibility": "irreversible"
+        },
+        "binding_context": {
+          "request_method": "POST",
+          "request_target": "/v1/payment-proposals/evaluate",
+          "arguments_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_ref": "policy:payment/v1",
+          "recipient_scope": "merchant:coffee-shop",
+          "budget_scope": "daily:USD:50",
+          "approval_ref": "approval:human:001"
+        },
+        "decision_context": {
+          "decision": "ACCEPT",
+          "reason_codes": [
+            "POLICY_MATCH",
+            "HUMAN_APPROVAL_VERIFIED"
+          ],
+          "issued_at": "2030-01-01T00:00:00Z",
+          "expires_at": "2030-01-01T00:10:00Z",
+          "consumption_state": "UNCONSUMED",
+          "continuation_state": "NOT_REQUIRED",
+          "current_state": "ACTIVE",
+          "policy_ref": "policy:payment/v1",
+          "proofpath_evidence_refs": [
+            "audit:proofpath/record-001"
+          ]
+        }
+      },
+      "expected": {
+        "execution_allowed": true,
+        "current_state": "ACTIVE",
+        "authority_state_at_report": "ACTIVE",
+        "expected_additional_side_effects": 1,
+        "authorization_ref": "sha256:7803d1bb97b82f38db629985e8ee21c4c8547df1b380564bf75411f658e59654"
+      },
+      "handoff": {
+        "observation": {
+          "execution_status": "EXECUTED",
+          "observed_at": "2030-01-01T00:02:00Z",
+          "result_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "issuer": "runtime:mock-payment-rail"
+        },
+        "expected_join": "MATCH"
+      }
+    },
+    {
+      "case_id": "accepted_with_contradicted_response",
+      "input": {
+        "transition_id": "transition-accepted_with_contradicted_response",
+        "subject_id": "agent:payment",
+        "action_context": {
+          "caller_id": "agent:payment",
+          "intent_id": "intent-payment-001",
+          "causal_parent": "user-approved-payment-plan-001",
+          "scope": "payment.transfer",
+          "reversibility": "irreversible"
+        },
+        "binding_context": {
+          "request_method": "POST",
+          "request_target": "/v1/payment-proposals/evaluate",
+          "arguments_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_ref": "policy:payment/v1",
+          "recipient_scope": "merchant:coffee-shop",
+          "budget_scope": "daily:USD:50",
+          "approval_ref": "approval:human:001"
+        },
+        "decision_context": {
+          "decision": "ACCEPT",
+          "reason_codes": [
+            "POLICY_MATCH",
+            "HUMAN_APPROVAL_VERIFIED"
+          ],
+          "issued_at": "2030-01-01T00:00:00Z",
+          "expires_at": "2030-01-01T00:10:00Z",
+          "consumption_state": "UNCONSUMED",
+          "continuation_state": "NOT_REQUIRED",
+          "current_state": "ACTIVE",
+          "policy_ref": "policy:payment/v1",
+          "proofpath_evidence_refs": [
+            "audit:proofpath/record-001"
+          ]
+        }
+      },
+      "expected": {
+        "execution_allowed": true,
+        "current_state": "ACTIVE",
+        "authority_state_at_report": "ACTIVE",
+        "expected_additional_side_effects": 1,
+        "authorization_ref": "sha256:675290b1e2a03013bd99f0114e83e648d5fc3e732071c8ea80f15c94db237706"
+      },
+      "handoff": {
+        "observation": {
+          "execution_status": "EXECUTED",
+          "observed_at": "2030-01-01T00:02:00Z",
+          "result_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "issuer": "runtime:mock-payment-rail"
+        },
+        "expected_join": "MATCH_WITH_INTEGRITY_FAILURE",
+        "response_integrity": {
+          "overall_verdict": "FAILED",
+          "verifier": "ltp:example",
+          "claim_boundary": "External verifier result; ProofPath did not author this semantic verdict."
+        }
+      }
+    },
+    {
+      "case_id": "stale_authorization_honest_report",
+      "input": {
+        "transition_id": "transition-stale_authorization_honest_report",
+        "subject_id": "agent:payment",
+        "action_context": {
+          "caller_id": "agent:payment",
+          "intent_id": "intent-payment-001",
+          "causal_parent": "user-approved-payment-plan-001",
+          "scope": "payment.transfer",
+          "reversibility": "irreversible"
+        },
+        "binding_context": {
+          "request_method": "POST",
+          "request_target": "/v1/payment-proposals/evaluate",
+          "arguments_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "policy_ref": "policy:payment/v1",
+          "recipient_scope": "merchant:coffee-shop",
+          "budget_scope": "daily:USD:50",
+          "approval_ref": "approval:human:001"
+        },
+        "decision_context": {
+          "decision": "ACCEPT",
+          "reason_codes": [
+            "POLICY_MATCH",
+            "HUMAN_APPROVAL_VERIFIED"
+          ],
+          "issued_at": "2030-01-01T00:00:00Z",
+          "expires_at": "2030-01-01T00:05:00Z",
+          "consumption_state": "UNCONSUMED",
+          "continuation_state": "NOT_REQUIRED",
+          "current_state": "ACTIVE",
+          "policy_ref": "policy:payment/v1",
+          "proofpath_evidence_refs": [
+            "audit:proofpath/record-001"
+          ]
+        }
+      },
+      "expected": {
+        "execution_allowed": false,
+        "current_state": "ACTIVE",
+        "authority_state_at_report": "EXPIRED_AT_REPORT",
+        "expected_additional_side_effects": 0,
+        "authorization_ref": "sha256:73a76f8282b1b686d4ecef9fce2e5bcbe4ea3721c531c0c78d000f97f98d127d"
+      },
+      "handoff": {
+        "observation": {
+          "execution_status": "EXECUTED",
+          "observed_at": "2030-01-01T00:04:00Z",
+          "result_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "issuer": "runtime:mock-payment-rail"
+        },
+        "expected_join": "HISTORICAL_ONLY",
+        "response_integrity": {
+          "overall_verdict": "VERIFIED",
+          "verifier": "ltp:example",
+          "claim_boundary": "External verifier result; ProofPath did not author this semantic verdict."
+        }
+      }
+    }
+  ],
+  "invariants": [
+    "Only ACCEPT records with active, fresh, unconsumed authority permit execution.",
+    "HOLD, BLOCK, and REJECT records expect zero additional side effects.",
+    "Observation and response-integrity records remain independently attributed.",
+    "A downstream integrity failure does not rewrite the original authorization decision.",
+    "An honest historical report does not reactivate expired authority."
+  ]
+}
