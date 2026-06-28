@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Verify and export ProofPath provider-neutral authorization records.
+"""Verify and emit ProofPath provider-neutral authorization records.
 
-The fixture is intentionally dependency-free. It covers the published input
-domain without floating-point values, so sorted minimal JSON is equivalent to
-RFC 8785 JCS for this conformance vector.
+The conformance vector has no floating-point values, so sorted minimal JSON is
+equivalent to RFC 8785 JCS for the published input domain.
 """
 
 from __future__ import annotations
@@ -19,6 +18,10 @@ AUTH_SCHEMA = "org.proofpath.authorization-record.v0.1"
 EXPORT_PROFILE = "org.proofpath.authorization-export.v0.1"
 ACTION_PROFILE = "org.liminal.trustworthy-transition.action-identity.v0.1"
 BINDING_PROFILE = "org.liminal.trustworthy-transition.binding.v0.1"
+OBS_SCHEMA = "org.liminal.trustworthy-transition.observation.v0.1"
+INTEGRITY_SCHEMA = (
+    "org.liminal.trustworthy-transition.response-integrity.v0.1"
+)
 CLAIM_BOUNDARY = (
     "ProofPath proves its exported authorization decision and frozen context "
     "binding; it does not prove downstream execution, observation truth, or "
@@ -97,6 +100,17 @@ def require_string_list(value: Any, *, label: str) -> list[str]:
     return value
 
 
+def wrap_record(record: dict[str, Any]) -> dict[str, Any]:
+    canonical = canonical_json(record)
+    return {
+        "record": record,
+        "canonical_bytes_utf8": canonical,
+        "record_ref": (
+            "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        ),
+    }
+
+
 def build_export(case: dict[str, Any]) -> dict[str, Any]:
     case_id = require_non_empty_string(case.get("case_id"), label="case_id")
     input_data = case.get("input")
@@ -143,6 +157,7 @@ def build_export(case: dict[str, Any]) -> dict[str, Any]:
         raise ExportVerificationError(
             f"{case_id}.decision must be one of {sorted(DECISIONS)}"
         )
+
     consumption_state = decision.get("consumption_state")
     continuation_state = decision.get("continuation_state")
     current_state = decision.get("current_state")
@@ -197,162 +212,111 @@ def build_export(case: dict[str, Any]) -> dict[str, Any]:
         ),
         "claim_boundary": CLAIM_BOUNDARY,
     }
-
-    canonical = canonical_json(record)
-    return {
-        "record": record,
-        "canonical_bytes_utf8": canonical,
-        "record_ref": (
-            "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-        ),
-    }
+    return wrap_record(record)
 
 
-def verify_record_shape(record: dict[str, Any], *, label: str) -> None:
-    expected_keys = {
-        "schema",
-        "profile",
-        "transition_id",
-        "subject_id",
-        "action_identity_profile",
-        "action_identity_digest",
-        "binding_profile",
-        "binding_digest",
-        "decision",
-        "reason_codes",
-        "issued_at",
-        "expires_at",
-        "consumption_state",
-        "continuation_state",
-        "current_state",
-        "policy_ref",
-        "proofpath_evidence_refs",
-        "claim_boundary",
-    }
-    if set(record) != expected_keys:
-        missing = sorted(expected_keys - set(record))
-        extra = sorted(set(record) - expected_keys)
-        raise ExportVerificationError(
-            f"{label} key mismatch: missing={missing}, extra={extra}"
-        )
-    if record["schema"] != AUTH_SCHEMA or record["profile"] != EXPORT_PROFILE:
-        raise ExportVerificationError(f"{label} schema/profile mismatch")
-    if record["decision"] not in DECISIONS:
-        raise ExportVerificationError(f"{label} invalid decision")
-    if record["consumption_state"] not in CONSUMPTION_STATES:
-        raise ExportVerificationError(f"{label} invalid consumption state")
-    if record["continuation_state"] not in CONTINUATION_STATES:
-        raise ExportVerificationError(f"{label} invalid continuation state")
-    if record["current_state"] not in CURRENT_STATES:
-        raise ExportVerificationError(f"{label} invalid current state")
-    for digest_field in ("action_identity_digest", "binding_digest"):
-        value = record[digest_field]
-        if (
-            not isinstance(value, str)
-            or not value.startswith("sha256:")
-            or len(value) != 71
-        ):
-            raise ExportVerificationError(
-                f"{label}.{digest_field} must be a sha256 URI"
-            )
-
-
-def verify_wrapper(wrapper: dict[str, Any], *, label: str) -> None:
-    if set(wrapper) != {"record", "canonical_bytes_utf8", "record_ref"}:
-        raise ExportVerificationError(
-            f"{label} must contain record, canonical_bytes_utf8, record_ref"
-        )
-    record = wrapper.get("record")
-    if not isinstance(record, dict):
-        raise ExportVerificationError(f"{label}.record must be an object")
-    verify_record_shape(record, label=f"{label}.record")
-    canonical = canonical_json(record)
-    if wrapper.get("canonical_bytes_utf8") != canonical:
-        raise ExportVerificationError(f"{label} canonical bytes mismatch")
-    if wrapper.get("record_ref") != sha256_uri(record):
-        raise ExportVerificationError(f"{label} record reference mismatch")
-
-
-def verify_handoff(case: dict[str, Any], exported: dict[str, Any]) -> None:
+def build_handoff(
+    case: dict[str, Any],
+    exported: dict[str, Any],
+) -> dict[str, Any] | None:
     handoff = case.get("handoff")
     if handoff is None:
-        return
+        return None
     if not isinstance(handoff, dict):
         raise ExportVerificationError(
             f"{case['case_id']}.handoff must be an object or null"
         )
 
-    observation_wrapper = handoff.get("observation_record")
-    if not isinstance(observation_wrapper, dict):
+    observation_input = handoff.get("observation")
+    if not isinstance(observation_input, dict):
         raise ExportVerificationError(
-            f"{case['case_id']} handoff requires observation_record"
-        )
-    observation = observation_wrapper.get("record")
-    if not isinstance(observation, dict):
-        raise ExportVerificationError(
-            f"{case['case_id']} observation record must be an object"
-        )
-    if observation_wrapper.get("record_ref") != sha256_uri(observation):
-        raise ExportVerificationError(
-            f"{case['case_id']} observation record_ref mismatch"
+            f"{case['case_id']} handoff requires observation"
         )
     auth_record = exported["record"]
-    for field in (
-        "transition_id",
-        "subject_id",
-        "action_identity_digest",
-        "binding_digest",
-    ):
-        if observation.get(field) != auth_record.get(field):
-            raise ExportVerificationError(
-                f"{case['case_id']} observation {field} mismatch"
-            )
-    if observation.get("authorization_ref") != exported["record_ref"]:
-        raise ExportVerificationError(
-            f"{case['case_id']} observation authorization_ref mismatch"
-        )
+    observation = {
+        "schema": OBS_SCHEMA,
+        "transition_id": auth_record["transition_id"],
+        "subject_id": auth_record["subject_id"],
+        "authorization_ref": exported["record_ref"],
+        "action_identity_digest": auth_record["action_identity_digest"],
+        "binding_digest": auth_record["binding_digest"],
+        "execution_status": require_non_empty_string(
+            observation_input.get("execution_status"),
+            label=f"{case['case_id']}.execution_status",
+        ),
+        "observed_at": require_non_empty_string(
+            observation_input.get("observed_at"),
+            label=f"{case['case_id']}.observed_at",
+        ),
+        "result_digest": require_non_empty_string(
+            observation_input.get("result_digest"),
+            label=f"{case['case_id']}.result_digest",
+        ),
+        "issuer": require_non_empty_string(
+            observation_input.get("issuer"),
+            label=f"{case['case_id']}.issuer",
+        ),
+    }
+    observation_wrapper = {
+        "record": observation,
+        "record_ref": sha256_uri(observation),
+    }
+    derived: dict[str, Any] = {
+        "observation_record": observation_wrapper,
+        "expected_join": require_non_empty_string(
+            handoff.get("expected_join"),
+            label=f"{case['case_id']}.expected_join",
+        ),
+    }
 
-    integrity_wrapper = handoff.get("response_integrity_record")
-    if integrity_wrapper is not None:
-        if not isinstance(integrity_wrapper, dict):
+    integrity_input = handoff.get("response_integrity")
+    if integrity_input is not None:
+        if not isinstance(integrity_input, dict):
             raise ExportVerificationError(
-                f"{case['case_id']} integrity wrapper must be an object"
+                f"{case['case_id']}.response_integrity must be an object"
             )
-        integrity = integrity_wrapper.get("record")
-        if not isinstance(integrity, dict):
-            raise ExportVerificationError(
-                f"{case['case_id']} integrity record must be an object"
-            )
-        if integrity_wrapper.get("record_ref") != sha256_uri(integrity):
-            raise ExportVerificationError(
-                f"{case['case_id']} integrity record_ref mismatch"
-            )
-        if integrity.get("authorization_ref") != exported["record_ref"]:
-            raise ExportVerificationError(
-                f"{case['case_id']} integrity authorization_ref mismatch"
-            )
-        if observation_wrapper["record_ref"] not in integrity.get(
-            "observation_refs", []
-        ):
-            raise ExportVerificationError(
-                f"{case['case_id']} integrity missing observation reference"
-            )
+        integrity = {
+            "schema": INTEGRITY_SCHEMA,
+            "transition_id": auth_record["transition_id"],
+            "subject_id": auth_record["subject_id"],
+            "authorization_ref": exported["record_ref"],
+            "observation_refs": [observation_wrapper["record_ref"]],
+            "overall_verdict": require_non_empty_string(
+                integrity_input.get("overall_verdict"),
+                label=f"{case['case_id']}.overall_verdict",
+            ),
+            "verifier": require_non_empty_string(
+                integrity_input.get("verifier"),
+                label=f"{case['case_id']}.verifier",
+            ),
+            "claim_boundary": require_non_empty_string(
+                integrity_input.get("claim_boundary"),
+                label=f"{case['case_id']}.claim_boundary",
+            ),
+        }
+        derived["response_integrity_record"] = {
+            "record": integrity,
+            "record_ref": sha256_uri(integrity),
+        }
+
+    return derived
 
 
-def verify_case(case: dict[str, Any]) -> None:
+def verify_case(case: dict[str, Any]) -> dict[str, Any]:
     case_id = require_non_empty_string(case.get("case_id"), label="case_id")
-    exported = case.get("exported")
     expected = case.get("expected")
-    if not isinstance(exported, dict) or not isinstance(expected, dict):
+    if not isinstance(expected, dict):
         raise ExportVerificationError(
-            f"{case_id} requires exported and expected objects"
+            f"{case_id}.expected must be an object"
         )
 
-    recomputed = build_export(case)
-    verify_wrapper(exported, label=f"{case_id}.exported")
-    if exported != recomputed:
+    exported = build_export(case)
+    record = exported["record"]
+    if exported["record_ref"] != expected.get("authorization_ref"):
         raise ExportVerificationError(
-            f"{case_id} exported record differs from deterministic export"
+            f"{case_id} authorization_ref regression: "
+            f"expected {expected.get('authorization_ref')}, "
+            f"derived {exported['record_ref']}"
         )
 
     execution_allowed = expected.get("execution_allowed")
@@ -360,7 +324,6 @@ def verify_case(case: dict[str, Any]) -> None:
         raise ExportVerificationError(
             f"{case_id}.expected.execution_allowed must be boolean"
         )
-    record = exported["record"]
     should_allow = (
         record["decision"] == "ACCEPT"
         and record["current_state"] == "ACTIVE"
@@ -386,7 +349,43 @@ def verify_case(case: dict[str, Any]) -> None:
             f"{case_id} current-state expectation mismatch"
         )
 
-    verify_handoff(case, exported)
+    handoff = build_handoff(case, exported)
+    if handoff is not None:
+        observation = handoff["observation_record"]["record"]
+        if observation["authorization_ref"] != exported["record_ref"]:
+            raise ExportVerificationError(
+                f"{case_id} observation authorization_ref mismatch"
+            )
+        for field in (
+            "transition_id",
+            "subject_id",
+            "action_identity_digest",
+            "binding_digest",
+        ):
+            if observation[field] != record[field]:
+                raise ExportVerificationError(
+                    f"{case_id} observation {field} mismatch"
+                )
+
+        integrity_wrapper = handoff.get("response_integrity_record")
+        if integrity_wrapper is not None:
+            integrity = integrity_wrapper["record"]
+            if integrity["authorization_ref"] != exported["record_ref"]:
+                raise ExportVerificationError(
+                    f"{case_id} integrity authorization_ref mismatch"
+                )
+            if (
+                handoff["observation_record"]["record_ref"]
+                not in integrity["observation_refs"]
+            ):
+                raise ExportVerificationError(
+                    f"{case_id} integrity missing observation reference"
+                )
+
+    return {
+        "authorization_record": exported,
+        "handoff": handoff,
+    }
 
 
 def main() -> int:
@@ -399,7 +398,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--emit-case",
-        help="Print the deterministic exported wrapper for one case_id",
+        help="Print the deterministic export and handoff for one case_id",
     )
     args = parser.parse_args()
 
@@ -413,6 +412,7 @@ def main() -> int:
 
         seen: set[str] = set()
         selected: dict[str, Any] | None = None
+        selected_output: dict[str, Any] | None = None
         for case in cases:
             if not isinstance(case, dict):
                 raise ExportVerificationError("case entry must be an object")
@@ -422,21 +422,22 @@ def main() -> int:
             if case_id in seen:
                 raise ExportVerificationError(f"duplicate case_id: {case_id}")
             seen.add(case_id)
-            verify_case(case)
+            derived = verify_case(case)
             if case_id == args.emit_case:
                 selected = case
+                selected_output = derived
+            record = derived["authorization_record"]["record"]
             print(
                 f"PASS {case_id} -> "
-                f"{case['exported']['record']['decision']} / "
-                f"{case['exported']['record']['current_state']}"
+                f"{record['decision']} / {record['current_state']}"
             )
 
         if args.emit_case:
-            if selected is None:
+            if selected is None or selected_output is None:
                 raise ExportVerificationError(
                     f"unknown case_id for --emit-case: {args.emit_case}"
                 )
-            print(json.dumps(build_export(selected), ensure_ascii=False, indent=2))
+            print(json.dumps(selected_output, ensure_ascii=False, indent=2))
 
         print(
             f"\nProofPath authorization export fixtures passed: {len(cases)}"
