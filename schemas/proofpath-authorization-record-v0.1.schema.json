@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofpath.example/schemas/proofpath-authorization-record-v0.1.schema.json",
+  "title": "ProofPath Provider-Neutral Authorization Record v0.1",
+  "type": "object",
+  "required": [
+    "schema",
+    "profile",
+    "transition_id",
+    "subject_id",
+    "action_identity_profile",
+    "action_identity_digest",
+    "binding_profile",
+    "binding_digest",
+    "decision",
+    "reason_codes",
+    "issued_at",
+    "expires_at",
+    "consumption_state",
+    "continuation_state",
+    "current_state",
+    "policy_ref",
+    "proofpath_evidence_refs",
+    "claim_boundary"
+  ],
+  "properties": {
+    "schema": {
+      "const": "org.proofpath.authorization-record.v0.1"
+    },
+    "profile": {
+      "const": "org.proofpath.authorization-export.v0.1"
+    },
+    "transition_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subject_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "action_identity_profile": {
+      "const": "org.liminal.trustworthy-transition.action-identity.v0.1"
+    },
+    "action_identity_digest": {
+      "$ref": "#/$defs/sha256Ref"
+    },
+    "binding_profile": {
+      "const": "org.liminal.trustworthy-transition.binding.v0.1"
+    },
+    "binding_digest": {
+      "$ref": "#/$defs/sha256Ref"
+    },
+    "decision": {
+      "enum": ["ACCEPT", "HOLD", "BLOCK", "REJECT"]
+    },
+    "reason_codes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "consumption_state": {
+      "enum": ["UNCONSUMED", "CONSUMED", "UNKNOWN"]
+    },
+    "continuation_state": {
+      "enum": [
+        "NOT_REQUIRED",
+        "AWAITING_APPROVAL",
+        "REQUIRES_REVALIDATION",
+        "RESOLVED"
+      ]
+    },
+    "current_state": {
+      "enum": [
+        "ACTIVE",
+        "PENDING_APPROVAL",
+        "EXPIRED",
+        "EXPIRED_AT_REPORT",
+        "CONSUMED",
+        "BLOCKED",
+        "REJECTED",
+        "INVALID"
+      ]
+    },
+    "policy_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proofpath_evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "claim_boundary": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256Ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}
