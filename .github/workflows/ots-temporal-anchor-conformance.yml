@@ -1,0 +1,37 @@
+name: OTS temporal-anchor conformance
+
+on:
+  pull_request:
+    paths:
+      - "scripts/verify_ots_anchor.py"
+      - "scripts/check_ots_anchor_vectors.py"
+      - "conformance/guardrail-decision-v1/ots/**"
+      - "docs/OTS_TEMPORAL_ANCHOR_PROFILE.md"
+      - ".github/workflows/ots-temporal-anchor-conformance.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/verify_ots_anchor.py"
+      - "scripts/check_ots_anchor_vectors.py"
+      - "conformance/guardrail-decision-v1/ots/**"
+      - "docs/OTS_TEMPORAL_ANCHOR_PROFILE.md"
+      - ".github/workflows/ots-temporal-anchor-conformance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run OTS parser vectors
+        run: |
+          python3 scripts/check_ots_anchor_vectors.py \
+            conformance/guardrail-decision-v1/ots/manifest.json
