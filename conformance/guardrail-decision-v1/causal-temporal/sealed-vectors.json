@@ -1,170 +1,108 @@
 {
-  "schema": "proofpath.causal-temporal-sealed-vectors.v0.1",
+  "schema": "proofpath.causal-temporal-sealed-vectors.v0.2",
   "require_seal": true,
+  "base_trace": {
+    "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "events": [
+      {
+        "seq": 0,
+        "parent_event_id": null,
+        "event_type": "COMMIT_SOURCE_HASH",
+        "state_before": {"origin":"UNCOMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},
+        "state_after": {"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},
+        "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence_ref": "evidence:source-hash",
+        "observed_at": "2026-07-22T04:00:00Z",
+        "event_id": "sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962"
+      },
+      {
+        "seq": 1,
+        "parent_event_id": "sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962",
+        "event_type": "VERIFY_SOURCE_SNAPSHOT",
+        "state_before": {"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},
+        "state_after": {"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},
+        "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence_ref": "evidence:snapshot",
+        "observed_at": "2026-07-22T04:01:00Z",
+        "event_id": "sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0"
+      },
+      {
+        "seq": 2,
+        "parent_event_id": "sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0",
+        "event_type": "CHECK_SOURCE_FRESH",
+        "state_before": {"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},
+        "state_after": {"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},
+        "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence_ref": "evidence:live-fetch",
+        "observed_at": "2026-07-22T04:02:00Z",
+        "event_id": "sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065"
+      },
+      {
+        "seq": 3,
+        "parent_event_id": "sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065",
+        "event_type": "SUBMIT_OTS",
+        "state_before": {"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},
+        "state_after": {"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},
+        "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence_ref": "evidence:ots-proof-pending",
+        "observed_at": "2026-07-22T04:03:00Z",
+        "event_id": "sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18"
+      },
+      {
+        "seq": 4,
+        "parent_event_id": "sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18",
+        "event_type": "VERIFY_OTS_SUCCESS",
+        "state_before": {"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},
+        "state_after": {"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"ANCHORED"},
+        "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence_ref": "evidence:ots-verification",
+        "observed_at": "2026-07-22T05:00:00Z",
+        "temporal_bound": {"kind":"not_later_than","bitcoin_block_height":900001,"attested_before":"2026-07-22T04:55:00Z"},
+        "event_id": "sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8"
+      }
+    ],
+    "seal": {
+      "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "total_events": 5,
+      "terminal_event_id": "sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8",
+      "sealed_at": "2026-07-22T05:01:00Z",
+      "seal_id": "sha256:cc765068061e280cf3ae88fef87b655d48ed2a8ee9523daa18cccb446780d5d5"
+    }
+  },
   "cases": [
     {
       "name": "valid-sealed-trace",
-      "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "events": [
-        {
-          "seq": 0,
-          "parent_event_id": null,
-          "event_type": "COMMIT_SOURCE_HASH",
-          "state_before": {"origin":"UNCOMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},
-          "state_after": {"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},
-          "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "evidence_ref": "evidence:source-hash",
-          "observed_at": "2026-07-22T04:00:00Z",
-          "event_id": "sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962"
-        },
-        {
-          "seq": 1,
-          "parent_event_id": "sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962",
-          "event_type": "VERIFY_SOURCE_SNAPSHOT",
-          "state_before": {"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},
-          "state_after": {"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},
-          "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "evidence_ref": "evidence:snapshot",
-          "observed_at": "2026-07-22T04:01:00Z",
-          "event_id": "sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0"
-        },
-        {
-          "seq": 2,
-          "parent_event_id": "sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0",
-          "event_type": "CHECK_SOURCE_FRESH",
-          "state_before": {"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},
-          "state_after": {"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},
-          "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "evidence_ref": "evidence:live-fetch",
-          "observed_at": "2026-07-22T04:02:00Z",
-          "event_id": "sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065"
-        },
-        {
-          "seq": 3,
-          "parent_event_id": "sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065",
-          "event_type": "SUBMIT_OTS",
-          "state_before": {"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},
-          "state_after": {"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},
-          "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "evidence_ref": "evidence:ots-proof-pending",
-          "observed_at": "2026-07-22T04:03:00Z",
-          "event_id": "sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18"
-        },
-        {
-          "seq": 4,
-          "parent_event_id": "sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18",
-          "event_type": "VERIFY_OTS_SUCCESS",
-          "state_before": {"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},
-          "state_after": {"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"ANCHORED"},
-          "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "evidence_ref": "evidence:ots-verification",
-          "observed_at": "2026-07-22T05:00:00Z",
-          "temporal_bound": {"kind":"not_later_than","bitcoin_block_height":900001,"attested_before":"2026-07-22T04:55:00Z"},
-          "event_id": "sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8"
-        }
-      ],
-      "seal": {
-        "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "total_events": 5,
-        "terminal_event_id": "sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8",
-        "sealed_at": "2026-07-22T05:01:00Z",
-        "seal_id": "sha256:cc765068061e280cf3ae88fef87b655d48ed2a8ee9523daa18cccb446780d5d5"
-      },
       "expected": {"ok":true,"error":null,"event_count":5}
     },
     {
       "name": "reject-dropped-tail-against-seal",
-      "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "events": [
-        {
-          "seq": 0,"parent_event_id":null,"event_type":"COMMIT_SOURCE_HASH","state_before":{"origin":"UNCOMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:source-hash","observed_at":"2026-07-22T04:00:00Z","event_id":"sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962"
-        },
-        {
-          "seq": 1,"parent_event_id":"sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962","event_type":"VERIFY_SOURCE_SNAPSHOT","state_before":{"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:snapshot","observed_at":"2026-07-22T04:01:00Z","event_id":"sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0"
-        },
-        {
-          "seq": 2,"parent_event_id":"sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0","event_type":"CHECK_SOURCE_FRESH","state_before":{"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:live-fetch","observed_at":"2026-07-22T04:02:00Z","event_id":"sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065"
-        },
-        {
-          "seq": 3,"parent_event_id":"sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065","event_type":"SUBMIT_OTS","state_before":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:ots-proof-pending","observed_at":"2026-07-22T04:03:00Z","event_id":"sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18"
-        }
-      ],
-      "seal": {
-        "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "total_events": 5,
-        "terminal_event_id": "sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8",
-        "sealed_at": "2026-07-22T05:01:00Z",
-        "seal_id": "sha256:cc765068061e280cf3ae88fef87b655d48ed2a8ee9523daa18cccb446780d5d5"
-      },
+      "mutations": [{"op":"truncate_events","count":4}],
       "expected": {"ok":false,"error":"TRACE_TOTAL_MISMATCH"}
     },
     {
       "name": "reject-missing-trace-seal",
-      "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "events": [
-        {"seq":0,"parent_event_id":null,"event_type":"COMMIT_SOURCE_HASH","state_before":{"origin":"UNCOMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:source-hash","observed_at":"2026-07-22T04:00:00Z","event_id":"sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962"},
-        {"seq":1,"parent_event_id":"sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962","event_type":"VERIFY_SOURCE_SNAPSHOT","state_before":{"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:snapshot","observed_at":"2026-07-22T04:01:00Z","event_id":"sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0"},
-        {"seq":2,"parent_event_id":"sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0","event_type":"CHECK_SOURCE_FRESH","state_before":{"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:live-fetch","observed_at":"2026-07-22T04:02:00Z","event_id":"sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065"},
-        {"seq":3,"parent_event_id":"sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065","event_type":"SUBMIT_OTS","state_before":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:ots-proof-pending","observed_at":"2026-07-22T04:03:00Z","event_id":"sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18"},
-        {"seq":4,"parent_event_id":"sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18","event_type":"VERIFY_OTS_SUCCESS","state_before":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"ANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:ots-verification","observed_at":"2026-07-22T05:00:00Z","temporal_bound":{"kind":"not_later_than","bitcoin_block_height":900001,"attested_before":"2026-07-22T04:55:00Z"},"event_id":"sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8"}
-      ],
+      "mutations": [{"op":"delete","path":"seal"}],
       "expected": {"ok":false,"error":"TRACE_SEAL_MISSING"}
     },
     {
       "name": "reject-tampered-seal-id",
-      "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "events": [
-        {"seq":0,"parent_event_id":null,"event_type":"COMMIT_SOURCE_HASH","state_before":{"origin":"UNCOMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:source-hash","observed_at":"2026-07-22T04:00:00Z","event_id":"sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962"},
-        {"seq":1,"parent_event_id":"sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962","event_type":"VERIFY_SOURCE_SNAPSHOT","state_before":{"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:snapshot","observed_at":"2026-07-22T04:01:00Z","event_id":"sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0"},
-        {"seq":2,"parent_event_id":"sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0","event_type":"CHECK_SOURCE_FRESH","state_before":{"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:live-fetch","observed_at":"2026-07-22T04:02:00Z","event_id":"sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065"},
-        {"seq":3,"parent_event_id":"sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065","event_type":"SUBMIT_OTS","state_before":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:ots-proof-pending","observed_at":"2026-07-22T04:03:00Z","event_id":"sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18"},
-        {"seq":4,"parent_event_id":"sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18","event_type":"VERIFY_OTS_SUCCESS","state_before":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"ANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:ots-verification","observed_at":"2026-07-22T05:00:00Z","temporal_bound":{"kind":"not_later_than","bitcoin_block_height":900001,"attested_before":"2026-07-22T04:55:00Z"},"event_id":"sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8"}
-      ],
-      "seal": {
-        "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "total_events": 5,
-        "terminal_event_id": "sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8",
-        "sealed_at": "2026-07-22T05:01:00Z",
-        "seal_id": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-      },
+      "mutations": [{"op":"set","path":"seal.seal_id","value":"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}],
       "expected": {"ok":false,"error":"TRACE_SEAL_ID_MISMATCH"}
     },
     {
       "name": "reject-terminal-event-mismatch",
-      "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "events": [
-        {"seq":0,"parent_event_id":null,"event_type":"COMMIT_SOURCE_HASH","state_before":{"origin":"UNCOMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:source-hash","observed_at":"2026-07-22T04:00:00Z","event_id":"sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962"},
-        {"seq":1,"parent_event_id":"sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962","event_type":"VERIFY_SOURCE_SNAPSHOT","state_before":{"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:snapshot","observed_at":"2026-07-22T04:01:00Z","event_id":"sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0"},
-        {"seq":2,"parent_event_id":"sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0","event_type":"CHECK_SOURCE_FRESH","state_before":{"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:live-fetch","observed_at":"2026-07-22T04:02:00Z","event_id":"sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065"},
-        {"seq":3,"parent_event_id":"sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065","event_type":"SUBMIT_OTS","state_before":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:ots-proof-pending","observed_at":"2026-07-22T04:03:00Z","event_id":"sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18"},
-        {"seq":4,"parent_event_id":"sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18","event_type":"VERIFY_OTS_SUCCESS","state_before":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"ANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:ots-verification","observed_at":"2026-07-22T05:00:00Z","temporal_bound":{"kind":"not_later_than","bitcoin_block_height":900001,"attested_before":"2026-07-22T04:55:00Z"},"event_id":"sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8"}
+      "mutations": [
+        {"op":"set","path":"seal.terminal_event_id","value":"sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"},
+        {"op":"recompute_seal_id"}
       ],
-      "seal": {
-        "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "total_events": 5,
-        "terminal_event_id": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        "sealed_at": "2026-07-22T05:01:00Z",
-        "seal_id": "sha256:9b9589c627097265e4b5781cf882274866f9e2d0092a8119ff9d540116b3bb4d"
-      },
       "expected": {"ok":false,"error":"TRACE_TERMINAL_EVENT_MISMATCH"}
     },
     {
       "name": "reject-sealed-at-regression",
-      "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "events": [
-        {"seq":0,"parent_event_id":null,"event_type":"COMMIT_SOURCE_HASH","state_before":{"origin":"UNCOMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:source-hash","observed_at":"2026-07-22T04:00:00Z","event_id":"sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962"},
-        {"seq":1,"parent_event_id":"sha256:829330b6c5b60e3774d6c55fe174092ae5ba0406198e93ff8efc17d77fc73962","event_type":"VERIFY_SOURCE_SNAPSHOT","state_before":{"origin":"COMMITTED","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:snapshot","observed_at":"2026-07-22T04:01:00Z","event_id":"sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0"},
-        {"seq":2,"parent_event_id":"sha256:f7325b13c1b69f4482ff2f743210e33a3d2c50e6f83fa4993a3a2b764cb680e0","event_type":"CHECK_SOURCE_FRESH","state_before":{"origin":"REPRODUCIBLE","freshness":"UNKNOWN","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:live-fetch","observed_at":"2026-07-22T04:02:00Z","event_id":"sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065"},
-        {"seq":3,"parent_event_id":"sha256:cd424af268762cc38b46a9b3bc14ebe51a8c615082847bae9100620c15525065","event_type":"SUBMIT_OTS","state_before":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"UNANCHORED"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:ots-proof-pending","observed_at":"2026-07-22T04:03:00Z","event_id":"sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18"},
-        {"seq":4,"parent_event_id":"sha256:5110d0131c3fe5eea49865ea467ed229c48f75763c5e50c1c6776db6d5cb7a18","event_type":"VERIFY_OTS_SUCCESS","state_before":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"PENDING"},"state_after":{"origin":"REPRODUCIBLE","freshness":"FRESH","temporal":"ANCHORED"},"subject_hash":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence_ref":"evidence:ots-verification","observed_at":"2026-07-22T05:00:00Z","temporal_bound":{"kind":"not_later_than","bitcoin_block_height":900001,"attested_before":"2026-07-22T04:55:00Z"},"event_id":"sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8"}
+      "mutations": [
+        {"op":"set","path":"seal.sealed_at","value":"2026-07-22T04:59:00Z"},
+        {"op":"recompute_seal_id"}
       ],
-      "seal": {
-        "subject_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "total_events": 5,
-        "terminal_event_id": "sha256:d2db1fff41daa5b2656e72d0be097963d23085347059287b7fc2a43a5d58c8e8",
-        "sealed_at": "2026-07-22T04:59:00Z",
-        "seal_id": "sha256:46cd731531de9f9dfa8799e06bad9a6816f7f7db6592a5188ab04ac6bf9e932f"
-      },
       "expected": {"ok":false,"error":"SEALED_AT_REGRESSION"}
     }
   ]
