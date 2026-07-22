@@ -1,0 +1,157 @@
+{
+  "schema": "proofpath.causal-temporal-graph.v0.1",
+  "canonicalization": "utf8-json-sort-keys-no-whitespace-v0.1",
+  "axes": {
+    "origin": {
+      "initial": "UNCOMMITTED",
+      "states": [
+        "UNCOMMITTED",
+        "COMMITTED",
+        "REPRODUCIBLE",
+        "INVALID"
+      ]
+    },
+    "freshness": {
+      "initial": "UNKNOWN",
+      "states": [
+        "UNKNOWN",
+        "FRESH",
+        "STALE"
+      ]
+    },
+    "temporal": {
+      "initial": "UNANCHORED",
+      "states": [
+        "UNANCHORED",
+        "PENDING",
+        "ANCHORED",
+        "UNAVAILABLE",
+        "INVALID"
+      ]
+    }
+  },
+  "transitions": [
+    {
+      "event_type": "COMMIT_SOURCE_HASH",
+      "axis": "origin",
+      "from": [
+        "UNCOMMITTED"
+      ],
+      "to": "COMMITTED",
+      "evidence_required": true
+    },
+    {
+      "event_type": "VERIFY_SOURCE_SNAPSHOT",
+      "axis": "origin",
+      "from": [
+        "COMMITTED"
+      ],
+      "to": "REPRODUCIBLE",
+      "evidence_required": true
+    },
+    {
+      "event_type": "INVALIDATE_SOURCE_ORIGIN",
+      "axis": "origin",
+      "from": [
+        "UNCOMMITTED",
+        "COMMITTED",
+        "REPRODUCIBLE"
+      ],
+      "to": "INVALID",
+      "evidence_required": true
+    },
+    {
+      "event_type": "CHECK_SOURCE_FRESH",
+      "axis": "freshness",
+      "from": [
+        "UNKNOWN",
+        "FRESH",
+        "STALE"
+      ],
+      "to": "FRESH",
+      "evidence_required": true
+    },
+    {
+      "event_type": "CHECK_SOURCE_STALE",
+      "axis": "freshness",
+      "from": [
+        "UNKNOWN",
+        "FRESH",
+        "STALE"
+      ],
+      "to": "STALE",
+      "evidence_required": true
+    },
+    {
+      "event_type": "SUBMIT_OTS",
+      "axis": "temporal",
+      "from": [
+        "UNANCHORED",
+        "UNAVAILABLE"
+      ],
+      "to": "PENDING",
+      "evidence_required": true
+    },
+    {
+      "event_type": "VERIFY_OTS_PENDING",
+      "axis": "temporal",
+      "from": [
+        "UNANCHORED",
+        "PENDING",
+        "UNAVAILABLE"
+      ],
+      "to": "PENDING",
+      "evidence_required": true
+    },
+    {
+      "event_type": "VERIFY_OTS_SUCCESS",
+      "axis": "temporal",
+      "from": [
+        "UNANCHORED",
+        "PENDING",
+        "UNAVAILABLE"
+      ],
+      "to": "ANCHORED",
+      "evidence_required": true,
+      "required_fields": [
+        "temporal_bound.bitcoin_block_height",
+        "temporal_bound.attested_before"
+      ]
+    },
+    {
+      "event_type": "REVERIFY_OTS_SUCCESS",
+      "axis": "temporal",
+      "from": [
+        "ANCHORED"
+      ],
+      "to": "ANCHORED",
+      "evidence_required": true,
+      "required_fields": [
+        "temporal_bound.bitcoin_block_height",
+        "temporal_bound.attested_before"
+      ]
+    },
+    {
+      "event_type": "VERIFY_OTS_UNAVAILABLE",
+      "axis": "temporal",
+      "from": [
+        "UNANCHORED",
+        "PENDING",
+        "UNAVAILABLE"
+      ],
+      "to": "UNAVAILABLE",
+      "evidence_required": true
+    },
+    {
+      "event_type": "VERIFY_OTS_INVALID",
+      "axis": "temporal",
+      "from": [
+        "UNANCHORED",
+        "PENDING",
+        "UNAVAILABLE"
+      ],
+      "to": "INVALID",
+      "evidence_required": true
+    }
+  ]
+}
