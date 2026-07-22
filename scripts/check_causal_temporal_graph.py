@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import re
@@ -32,6 +33,55 @@ def recompute_event_id(event: dict[str, Any]) -> str:
 def recompute_seal_id(seal: dict[str, Any]) -> str:
     preimage = {key: value for key, value in seal.items() if key != "seal_id"}
     return "sha256:" + hashlib.sha256(canonical_bytes(preimage)).hexdigest()
+
+
+def _path_parts(path: str) -> list[str | int]:
+    return [int(part) if part.isdigit() else part for part in path.split(".")]
+
+
+def _resolve_parent(root: Any, path: str) -> tuple[Any, str | int]:
+    parts = _path_parts(path)
+    if not parts:
+        raise ValueError("empty mutation path")
+    current = root
+    for part in parts[:-1]:
+        current = current[part]
+    return current, parts[-1]
+
+
+def materialize_case(vectors: dict[str, Any], case: dict[str, Any]) -> dict[str, Any]:
+    if "events" in case:
+        return case
+    if "base_trace" not in vectors:
+        raise ValueError(f"case {case.get('name')} has no events and no base_trace")
+
+    materialized = copy.deepcopy(vectors["base_trace"])
+    materialized["name"] = case["name"]
+    materialized["expected"] = case["expected"]
+
+    for mutation in case.get("mutations", []):
+        op = mutation["op"]
+        if op == "set":
+            parent, key = _resolve_parent(materialized, mutation["path"])
+            parent[key] = copy.deepcopy(mutation["value"])
+        elif op == "delete":
+            parent, key = _resolve_parent(materialized, mutation["path"])
+            del parent[key]
+        elif op == "append_event":
+            materialized["events"].append(copy.deepcopy(mutation["value"]))
+        elif op == "truncate_events":
+            materialized["events"] = materialized["events"][: int(mutation["count"])]
+        elif op == "recompute_event_id":
+            index = int(mutation["index"])
+            materialized["events"][index]["event_id"] = recompute_event_id(
+                materialized["events"][index]
+            )
+        elif op == "recompute_seal_id":
+            materialized["seal"]["seal_id"] = recompute_seal_id(materialized["seal"])
+        else:
+            raise ValueError(f"unknown mutation op: {op}")
+
+    return materialized
 
 
 def parse_time(value: str) -> datetime:
@@ -104,13 +154,10 @@ def verify_trace(
 
     events = case["events"]
     for index, event in enumerate(events):
-        seq = event.get("seq")
-        if seq != index:
+        if event.get("seq") != index:
             return fail("SEQUENCE_GAP_OR_DUPLICATE", index)
-
         if event.get("parent_event_id") != previous_id:
             return fail("PARENT_EVENT_MISMATCH", index)
-
         if event.get("subject_hash") != subject_hash:
             return fail("SUBJECT_HASH_DRIFT", index)
 
@@ -134,25 +181,21 @@ def verify_trace(
         for axis, spec in axes.items():
             if before[axis] not in spec["states"] or after[axis] not in spec["states"]:
                 return fail("UNKNOWN_STATE", index)
-
         if before != current:
             return fail("STATE_BEFORE_MISMATCH", index)
 
         transition = transitions.get(event.get("event_type"))
         if transition is None:
             return fail("UNDECLARED_TRANSITION", index)
-
         axis = transition["axis"]
         if before[axis] not in transition["from"] or after[axis] != transition["to"]:
             return fail("ILLEGAL_AXIS_TRANSITION", index)
-
         for untouched_axis in expected_axes - {axis}:
             if before[untouched_axis] != after[untouched_axis]:
                 return fail("UNDECLARED_AXIS_MUTATION", index)
 
         if transition.get("evidence_required") and not event.get("evidence_ref"):
             return fail("MISSING_TRANSITION_EVIDENCE", index)
-
         for required_path in transition.get("required_fields", []):
             try:
                 required_value = get_dotted(event, required_path)
@@ -168,7 +211,6 @@ def verify_trace(
     seal = case.get("seal")
     if require_seal and seal is None:
         return fail("TRACE_SEAL_MISSING")
-
     if seal is not None:
         if not isinstance(seal, dict):
             return fail("INVALID_TRACE_SEAL")
@@ -207,7 +249,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     validate_graph(graph)
 
     failures = 0
-    for case in vectors["cases"]:
+    for case_spec in vectors["cases"]:
+        case = materialize_case(vectors, case_spec)
         actual = verify_trace(
             graph,
             case,
