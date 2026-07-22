@@ -1,0 +1,186 @@
+{
+  "schema": "proofpath.guardrail-provenance-v0.1",
+  "cases": [
+    {
+      "name": "hash-only-is-committed-not-reproducible",
+      "decision": {
+        "knowledge_source_ref": "https://example.invalid/policy/v1",
+        "source_content_hash": "sha256:d88d2e8f5ecca2babdb8f5af5a2bd56f879167ea1b013f2459ed22ea0e6f7808"
+      },
+      "expected": {
+        "proof_level": "COMMITTED",
+        "signals": [],
+        "errors": []
+      }
+    },
+    {
+      "name": "snapshot-closes-historical-reproduction",
+      "decision": {
+        "knowledge_source_ref": "https://example.invalid/policy/v1",
+        "source_content_hash": "sha256:d88d2e8f5ecca2babdb8f5af5a2bd56f879167ea1b013f2459ed22ea0e6f7808",
+        "source_snapshot_ref": "fixtures/static-source.txt",
+        "retrieval_profile": {
+          "method": "GET",
+          "resolved_url": "https://example.invalid/policy/v1",
+          "status": 200,
+          "representation": "response-body-decompressed"
+        }
+      },
+      "expected": {
+        "proof_level": "REPRODUCIBLE",
+        "signals": [],
+        "errors": []
+      }
+    },
+    {
+      "name": "matching-current-source-is-fresh",
+      "decision": {
+        "knowledge_source_ref": "https://example.invalid/policy/v1",
+        "source_content_hash": "sha256:d88d2e8f5ecca2babdb8f5af5a2bd56f879167ea1b013f2459ed22ea0e6f7808",
+        "source_snapshot_ref": "fixtures/static-source.txt",
+        "current_content_ref": "fixtures/live-same.txt",
+        "retrieval_profile": {
+          "method": "GET",
+          "resolved_url": "https://example.invalid/policy/v1",
+          "status": 200,
+          "representation": "response-body-decompressed"
+        }
+      },
+      "expected": {
+        "proof_level": "FRESH",
+        "signals": [],
+        "errors": []
+      }
+    },
+    {
+      "name": "changed-current-source-is-stale-but-history-remains-reproducible",
+      "decision": {
+        "knowledge_source_ref": "https://example.invalid/policy/v1",
+        "source_content_hash": "sha256:d88d2e8f5ecca2babdb8f5af5a2bd56f879167ea1b013f2459ed22ea0e6f7808",
+        "source_snapshot_ref": "fixtures/static-source.txt",
+        "current_content_ref": "fixtures/live-changed.txt",
+        "retrieval_profile": {
+          "method": "GET",
+          "resolved_url": "https://example.invalid/policy/v1",
+          "status": 200,
+          "representation": "response-body-decompressed"
+        }
+      },
+      "expected": {
+        "proof_level": "REPRODUCIBLE",
+        "signals": ["SOURCE_STALE"],
+        "errors": []
+      }
+    },
+    {
+      "name": "tampered-snapshot-fails-closed",
+      "decision": {
+        "knowledge_source_ref": "https://example.invalid/policy/v1",
+        "source_content_hash": "sha256:d88d2e8f5ecca2babdb8f5af5a2bd56f879167ea1b013f2459ed22ea0e6f7808",
+        "source_snapshot_ref": "fixtures/live-changed.txt",
+        "retrieval_profile": {
+          "method": "GET",
+          "resolved_url": "https://example.invalid/policy/v1",
+          "status": 200,
+          "representation": "response-body-decompressed"
+        }
+      },
+      "expected": {
+        "proof_level": "INVALID",
+        "signals": [],
+        "errors": ["SNAPSHOT_HASH_MISMATCH"]
+      }
+    },
+    {
+      "name": "missing-snapshot-fails-closed",
+      "decision": {
+        "knowledge_source_ref": "https://example.invalid/policy/v1",
+        "source_content_hash": "sha256:d88d2e8f5ecca2babdb8f5af5a2bd56f879167ea1b013f2459ed22ea0e6f7808",
+        "source_snapshot_ref": "fixtures/does-not-exist.txt",
+        "retrieval_profile": {
+          "method": "GET",
+          "resolved_url": "https://example.invalid/policy/v1",
+          "status": 200,
+          "representation": "response-body-decompressed"
+        }
+      },
+      "expected": {
+        "proof_level": "INVALID",
+        "signals": [],
+        "errors": ["SNAPSHOT_NOT_FOUND"]
+      }
+    },
+    {
+      "name": "ambiguous-representation-fails-closed",
+      "decision": {
+        "knowledge_source_ref": "https://example.invalid/policy/v1",
+        "source_content_hash": "sha256:d88d2e8f5ecca2babdb8f5af5a2bd56f879167ea1b013f2459ed22ea0e6f7808",
+        "source_snapshot_ref": "fixtures/static-source.txt",
+        "retrieval_profile": {
+          "method": "GET",
+          "resolved_url": "https://example.invalid/policy/v1",
+          "status": 200,
+          "representation": "whatever-curl-returned"
+        }
+      },
+      "expected": {
+        "proof_level": "INVALID",
+        "signals": [],
+        "errors": ["UNSUPPORTED_REPRESENTATION"]
+      }
+    },
+    {
+      "name": "issued-at-without-anchor-does-not-prove-precedence",
+      "decision": {
+        "knowledge_source_ref": "https://example.invalid/policy/v1",
+        "source_content_hash": "sha256:d88d2e8f5ecca2babdb8f5af5a2bd56f879167ea1b013f2459ed22ea0e6f7808",
+        "source_snapshot_ref": "fixtures/static-source.txt",
+        "issued_at": "2026-07-21T00:00:00Z",
+        "retrieval_profile": {
+          "method": "GET",
+          "resolved_url": "https://example.invalid/policy/v1",
+          "status": 200,
+          "representation": "response-body-decompressed"
+        }
+      },
+      "expected": {
+        "proof_level": "REPRODUCIBLE",
+        "signals": ["TEMPORAL_PRECEDENCE_UNPROVEN"],
+        "errors": []
+      }
+    },
+    {
+      "name": "declared-anchor-is-not-treated-as-verified",
+      "decision": {
+        "knowledge_source_ref": "https://example.invalid/policy/v1",
+        "source_content_hash": "sha256:d88d2e8f5ecca2babdb8f5af5a2bd56f879167ea1b013f2459ed22ea0e6f7808",
+        "source_snapshot_ref": "fixtures/static-source.txt",
+        "issued_at": "2026-07-21T00:00:00Z",
+        "temporal_anchor_ref": "https://example.invalid/ledger/entry/ots",
+        "retrieval_profile": {
+          "method": "GET",
+          "resolved_url": "https://example.invalid/policy/v1",
+          "status": 200,
+          "representation": "response-body-decompressed"
+        }
+      },
+      "expected": {
+        "proof_level": "REPRODUCIBLE",
+        "signals": ["EXTERNAL_ANCHOR_UNVERIFIED"],
+        "errors": []
+      }
+    },
+    {
+      "name": "malformed-hash-fails-closed",
+      "decision": {
+        "knowledge_source_ref": "https://example.invalid/policy/v1",
+        "source_content_hash": "sha256:not-a-real-digest"
+      },
+      "expected": {
+        "proof_level": "INVALID",
+        "signals": [],
+        "errors": ["INVALID_SOURCE_HASH"]
+      }
+    }
+  ]
+}
