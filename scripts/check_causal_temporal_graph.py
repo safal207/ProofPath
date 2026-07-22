@@ -29,6 +29,11 @@ def recompute_event_id(event: dict[str, Any]) -> str:
     return "sha256:" + hashlib.sha256(canonical_bytes(preimage)).hexdigest()
 
 
+def recompute_seal_id(seal: dict[str, Any]) -> str:
+    preimage = {key: value for key, value in seal.items() if key != "seal_id"}
+    return "sha256:" + hashlib.sha256(canonical_bytes(preimage)).hexdigest()
+
+
 def parse_time(value: str) -> datetime:
     if value.endswith("Z"):
         value = value[:-1] + "+00:00"
@@ -80,7 +85,12 @@ def fail(code: str, seq: int | None = None) -> dict[str, Any]:
     return result
 
 
-def verify_trace(graph: dict[str, Any], case: dict[str, Any]) -> dict[str, Any]:
+def verify_trace(
+    graph: dict[str, Any],
+    case: dict[str, Any],
+    *,
+    require_seal: bool = False,
+) -> dict[str, Any]:
     transitions = {item["event_type"]: item for item in graph["transitions"]}
     axes = graph["axes"]
     expected_axes = set(axes)
@@ -155,6 +165,28 @@ def verify_trace(graph: dict[str, Any], case: dict[str, Any]) -> dict[str, Any]:
         previous_id = event_id
         previous_time = observed_at
 
+    seal = case.get("seal")
+    if require_seal and seal is None:
+        return fail("TRACE_SEAL_MISSING")
+
+    if seal is not None:
+        if not isinstance(seal, dict):
+            return fail("INVALID_TRACE_SEAL")
+        if seal.get("seal_id") != recompute_seal_id(seal):
+            return fail("TRACE_SEAL_ID_MISMATCH")
+        if seal.get("subject_hash") != subject_hash:
+            return fail("TRACE_SEAL_SUBJECT_MISMATCH")
+        if seal.get("total_events") != len(events):
+            return fail("TRACE_TOTAL_MISMATCH")
+        if seal.get("terminal_event_id") != previous_id:
+            return fail("TRACE_TERMINAL_EVENT_MISMATCH")
+        try:
+            sealed_at = parse_time(seal["sealed_at"])
+        except (KeyError, TypeError, ValueError):
+            return fail("INVALID_SEALED_AT")
+        if previous_time is not None and sealed_at < previous_time:
+            return fail("SEALED_AT_REGRESSION")
+
     return {
         "ok": True,
         "error": None,
@@ -176,7 +208,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     failures = 0
     for case in vectors["cases"]:
-        actual = verify_trace(graph, case)
+        actual = verify_trace(
+            graph,
+            case,
+            require_seal=bool(vectors.get("require_seal", False)),
+        )
         expected = case["expected"]
         projection = {key: actual.get(key) for key in expected}
         if projection != expected:
