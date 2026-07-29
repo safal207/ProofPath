@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -20,6 +21,7 @@ from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional
 
 JsonObject = dict[str, Any]
 NETWORK_ACTIONS = {"network_send", "send", "http_post", "upload"}
+_SAFE_ID = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
 def utc_now() -> str:
@@ -152,7 +154,7 @@ class NonceStore:
 
     def consume(self, nonce: Optional[str], proposal_digest: str) -> None:
         if not nonce:
-            return
+            raise RuntimeError("nonce required")
         values = self._load()
         if nonce in values:
             raise RuntimeError("nonce already consumed")
@@ -211,6 +213,7 @@ def proposal_from_nooa_span(
             value = attrs.get(name)
             if value is not None:
                 return value
+        for name in names:
             if name in defaults:
                 return defaults[name]
         return default
@@ -243,6 +246,13 @@ def _optional_text(value: Any) -> Optional[str]:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _safe_bundle_component(value: str) -> str:
+    candidate = _SAFE_ID.sub("_", value).lstrip(".")[:120]
+    while ".." in candidate:
+        candidate = candidate.replace("..", "_")
+    return candidate or "unknown"
 
 
 def _cml_action(action: str) -> str:
@@ -280,11 +290,14 @@ class ProofPathNOOAGuard:
         if proposal.scope not in self.policy.allowed_scopes:
             reasons.append("INVALID_SCOPE")
             decision = "BLOCK"
-        if self.nonces.consumed(proposal.nonce):
+        if not proposal.nonce:
+            reasons.append("MISSING_NONCE")
+            decision = "BLOCK"
+        elif self.nonces.consumed(proposal.nonce):
             reasons.append("INTENT_REPLAYED")
             decision = "BLOCK"
 
-        is_network = proposal.action.lower() in NETWORK_ACTIONS
+        is_network = proposal.scope == "network.send" or proposal.action.lower() in NETWORK_ACTIONS
         destination_allowed = bool(
             proposal.destination and proposal.destination.lower() in self.policy.network_allowlist
         )
@@ -336,15 +349,15 @@ class ProofPathNOOAGuard:
         side_effect_executed = False
 
         if decision.execution_allowed:
-            # Consume authority before invoking the side effect so a retry cannot
-            # reuse the same nonce after authorization has succeeded.
-            self.nonces.consume(proposal.nonce, decision.proposal_digest)
             started_at = utc_now()
-            side_effect_executed = True
             try:
+                # Consume authority before invoking the side effect so a retry cannot
+                # reuse the same nonce after authorization has succeeded.
+                self.nonces.consume(proposal.nonce, decision.proposal_digest)
+                side_effect_executed = True
                 result = executor()
                 status = "SUCCEEDED"
-            except Exception as exc:  # evidence must survive executor failure
+            except Exception as exc:  # evidence must survive executor/nonce failure
                 status = "FAILED"
                 error_type = type(exc).__name__
                 result = {"error": str(exc)}
@@ -384,7 +397,8 @@ class ProofPathNOOAGuard:
         observation_record: Mapping[str, Any],
     ) -> Path:
         bundle_id = str(observation_record["record_hash"])[7:19]
-        bundle = self.evidence_root / f"{proposal.span_id}-{decision.decision.lower()}-{bundle_id}"
+        safe_span_id = _safe_bundle_component(proposal.span_id)
+        bundle = self.evidence_root / f"{safe_span_id}-{decision.decision.lower()}-{bundle_id}"
         evidence = bundle / "evidence"
         evidence.mkdir(parents=True, exist_ok=True)
 
