@@ -54,9 +54,10 @@ Generated evidence is written under:
 ```text
 .proofpath/nooa-liminal-demo/
 ├── benchmark-summary.json
-└── bundles/<span-id>/
+└── bundles/<span-id>-<decision>/
     ├── authorization.json
     ├── cml-trace.jsonl
+    ├── cml-findings.json
     ├── ltp-trace.jsonl
     ├── liminaldb-ledger.jsonl
     ├── manifest.json
@@ -97,6 +98,7 @@ class ExternalActions:
             scope="network.send",
             target="/v1/reports",
             destination="api.example.test",
+            approval_ref="human_approval:ticket-42",
             nonce="nonce-send-1",
         )
         guarded = guard.execute(proposal, lambda: self._real_send(payload))
@@ -136,6 +138,7 @@ proposal = proposal_from_nooa_span(
         "intent_id": "intent-send-report",
         "parent_cause": "approved-task-123",
         "target": "/v1/reports",
+        "approval_ref": "human_approval:ticket-42",
         "nonce": "nonce-send-1",
     },
 )
