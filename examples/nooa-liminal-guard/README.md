@@ -8,7 +8,7 @@ NOOA capability or exported span
 ProofPath pre-execution decision
   ACCEPT / HOLD / BLOCK
         ↓ ACCEPT only
-sandboxed side effect
+guarded side effect
         ↓
 CML causal records and findings
 LTP replay-oriented transition trace
@@ -20,9 +20,9 @@ Ibex-style manifest and bundle verification
 
 - a stable wrapper around high-impact Python capabilities;
 - a format-tolerant mapper for exported parent/child NOOA spans;
-- declared-intent, causal-parent, scope, reversibility, approval, destination, and replay checks;
-- fail-closed blocking of secret-bearing egress to a destination outside the allow-list;
-- `CML-AUDIT-R3-SECRET_NET_MISSING_CHAIN` evidence for that pattern;
+- declared-intent, causal-parent, mandatory-nonce, scope, reversibility, approval, destination, and replay checks;
+- fail-closed blocking of secret-bearing network scope to a destination outside the allow-list;
+- `CML-AUDIT-R3-SECRET_NET_MISSING_CHAIN` compatible evidence for that pattern;
 - no side-effect execution after `HOLD` or `BLOCK`;
 - hash-linked authorization and observation records;
 - CML JSONL, LTP JSONL, durable-ledger JSONL, evidence roles, manifest, and offline verification;
@@ -54,7 +54,7 @@ Generated evidence is written under:
 ```text
 .proofpath/nooa-liminal-demo/
 ├── benchmark-summary.json
-└── bundles/<span-id>-<decision>-<ledger-hash>/
+└── bundles/<safe-span-id>-<decision>-<ledger-hash>/
     ├── authorization.json
     ├── cml-trace.jsonl
     ├── cml-findings.json
@@ -110,7 +110,7 @@ class ExternalActions:
         return guarded.result
 
     def _real_send(self, payload: dict) -> dict:
-        # Keep the actual network implementation inside the OS sandbox.
+        # Keep the actual network implementation inside an OS sandbox.
         return {"accepted": True}
 ```
 
@@ -118,7 +118,7 @@ A NOOA agent can hold an `ExternalActions` object as typed state and call its gu
 
 ## Map exported NOOA spans
 
-NOOA publicly guarantees parent-child tracing, but this integration does not bind itself to a private database schema. The adapter accepts common export names:
+NOOA publicly guarantees parent-child tracing, but this integration does not bind itself to a private database schema. The adapter accepts common export names and prioritizes all real span/attribute aliases before consulting defaults:
 
 ```python
 from nooa_liminal_guard import proposal_from_nooa_span
@@ -154,9 +154,12 @@ Build:
 docker build -t proofpath-nooa-guard examples/nooa-liminal-guard
 ```
 
-Run the synthetic demo with network disabled and a read-only root filesystem:
+Create writable host mounts for the container's non-root UID, then run the synthetic demo with network disabled and a read-only root filesystem:
 
 ```bash
+mkdir -p .proofpath/container-evidence .proofpath/container-state
+sudo chown -R 10001:10001 .proofpath/container-evidence .proofpath/container-state
+
 docker run --rm \
   --network none \
   --read-only \
@@ -177,6 +180,7 @@ This integration proves that the included fixtures:
 - are decided before the synthetic side effect;
 - never execute after `HOLD` or `BLOCK`;
 - produce reproducible evidence bundles;
-- detect replay and the modeled secret-egress pattern.
+- detect replay and the modeled secret-egress pattern;
+- reject missing nonces and unsafe bundle path identifiers.
 
 It does not claim a completed independent security audit, universal detection, compatibility with every future NOOA trace schema, or sandbox certification.
