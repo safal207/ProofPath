@@ -33,7 +33,8 @@ jobs:
       - name: Verify ZIP and checksum
         run: |
           unzip -t dist/agent-action-safety-chain.zip
-          sha256sum --check dist/agent-action-safety-chain.zip.sha256
+          cd dist
+          sha256sum --check agent-action-safety-chain.zip.sha256
       - name: Upload validated skill package
         uses: actions/upload-artifact@v4
         with:
