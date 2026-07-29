@@ -54,7 +54,7 @@ Generated evidence is written under:
 ```text
 .proofpath/nooa-liminal-demo/
 ├── benchmark-summary.json
-└── bundles/<span-id>-<decision>/
+└── bundles/<span-id>-<decision>-<ledger-hash>/
     ├── authorization.json
     ├── cml-trace.jsonl
     ├── cml-findings.json
