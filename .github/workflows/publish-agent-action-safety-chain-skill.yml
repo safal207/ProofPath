@@ -1,0 +1,80 @@
+name: Agent Action Safety Chain Skill
+
+on:
+  pull_request:
+    paths:
+      - "skills/agent-action-safety-chain/**"
+      - "scripts/build_agent_action_safety_chain_skill.py"
+      - ".github/workflows/publish-agent-action-safety-chain-skill.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "skills/agent-action-safety-chain/**"
+      - "scripts/build_agent_action_safety_chain_skill.py"
+      - ".github/workflows/publish-agent-action-safety-chain-skill.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate and build deterministic skill ZIP
+        run: python3 scripts/build_agent_action_safety_chain_skill.py
+      - name: Verify ZIP and checksum
+        run: |
+          unzip -t dist/agent-action-safety-chain.zip
+          cd dist
+          sha256sum --check agent-action-safety-chain.zip.sha256
+      - name: Upload validated skill package
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-action-safety-chain-skill
+          path: |
+            dist/agent-action-safety-chain.zip
+            dist/agent-action-safety-chain.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-release:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: validate-package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build release files
+        run: python3 scripts/build_agent_action_safety_chain_skill.py
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: agent-action-safety-chain-v1.0.0
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              dist/agent-action-safety-chain.zip \
+              dist/agent-action-safety-chain.zip.sha256 \
+              --clobber
+          else
+            gh release create "$TAG" \
+              dist/agent-action-safety-chain.zip \
+              dist/agent-action-safety-chain.zip.sha256 \
+              --title "Agent Action Safety Chain Skill v1.0.0" \
+              --notes "Installable ChatGPT skill for defensive AI-agent action auditing, guarded execution, causal traces, replay protection, evidence bundles, CI validation, and merge readiness. See skills/agent-action-safety-chain/README_RU.md for mobile installation and usage."
+          fi
