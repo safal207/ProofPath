@@ -37,7 +37,7 @@ A side effect is callable only when all applicable conditions hold:
 3. scope is allowed by policy;
 4. nonce has not already been consumed;
 5. secret-bearing network output targets an allowed destination;
-6. irreversible or configured high-trust actions carry human approval.
+6. network, irreversible, or configured high-trust actions carry human approval.
 
 The nonce is consumed before the executor is invoked. This prevents a successful authorization from being reused after the side effect begins.
 
@@ -63,11 +63,14 @@ Each action bundle contains:
 - `evidence/action.json` — normalized NOOA/action identity;
 - `evidence/result.json` — observed execution result or non-execution;
 - `evidence/verification.json` — decision and ledger binding;
-- `cml-trace.jsonl` — causal lineage and findings;
+- `cml-trace.jsonl` — CML-loadable causal records with integer nanosecond timestamps and complete actor envelopes;
+- `cml-findings.json` — explicit CML audit findings kept separate from causal records;
 - `ltp-trace.jsonl` — replay-oriented path;
 - `liminaldb-ledger.jsonl` — current durable ledger snapshot;
 - `manifest.json` — exact file sizes and SHA-256 digests;
 - `bundle-verification.json` — local independent verification result.
+
+Accepted and replay-blocked decisions for the same span are stored in separate `<span-id>-<decision>` bundle directories so later evidence cannot overwrite earlier evidence.
 
 ## Current non-claims
 
@@ -83,7 +86,8 @@ Each action bundle contains:
 - safe fixture reaches the executor;
 - held and blocked fixtures never reach the executor;
 - secret egress emits the expected CML finding;
-- a consumed nonce is blocked;
+- a consumed nonce is blocked without overwriting the accepted evidence;
 - missing lineage is blocked;
+- CML exports satisfy the current `CausalRecord` envelope shape;
 - every case produces a valid manifest-bound evidence bundle;
 - CI reproduces the unit tests and benchmark summary.
