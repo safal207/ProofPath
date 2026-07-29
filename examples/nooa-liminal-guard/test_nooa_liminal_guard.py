@@ -136,6 +136,78 @@ class GuardTests(unittest.TestCase):
             for key in ("id", "action", "object", "permitted_by", "parent_cause"):
                 self.assertIn(key, row)
 
+    def test_missing_nonce_is_blocked(self) -> None:
+        proposal = ActionProposal(
+            trace_id="trace-no-nonce",
+            span_id="span-no-nonce",
+            parent_span_id="root",
+            agent="TestAgent",
+            method="read_public",
+            intent_id="intent-no-nonce",
+            parent_cause="task-no-nonce",
+            action="read",
+            scope="fs.read",
+            target="README.md",
+        )
+        result = self.guard.execute(proposal, lambda: {"bad": True})
+        self.assertEqual(result.decision.decision, "BLOCK")
+        self.assertIn("MISSING_NONCE", result.decision.reason_codes)
+        self.assertFalse(result.observation.side_effect_executed)
+
+    def test_real_alias_beats_primary_default(self) -> None:
+        proposal = proposal_from_nooa_span(
+            {"id": "span-alias", "resource": "/actual", "name": "read"},
+            defaults={
+                "target": "/default",
+                "intent_id": "intent-alias",
+                "parent_cause": "task-alias",
+                "scope": "fs.read",
+                "nonce": "nonce-alias",
+            },
+        )
+        self.assertEqual(proposal.target, "/actual")
+
+    def test_network_scope_triggers_secret_egress_check(self) -> None:
+        proposal = ActionProposal(
+            trace_id="trace-scope-egress",
+            span_id="span-scope-egress",
+            parent_span_id="secret-read",
+            agent="TestAgent",
+            method="send_report",
+            intent_id="intent-scope-egress",
+            parent_cause="task-scope-egress",
+            action="send_report",
+            scope="network.send",
+            target="/upload",
+            contains_secret=True,
+            destination="untrusted.example",
+            approval_ref="human_approval:ticket-99",
+            nonce="nonce-scope-egress",
+        )
+        result = self.guard.execute(proposal, lambda: {"bad": True})
+        self.assertEqual(result.decision.decision, "BLOCK")
+        self.assertIn("SECRET_EGRESS_DENIED", result.decision.reason_codes)
+        self.assertFalse(result.observation.side_effect_executed)
+
+    def test_span_id_cannot_escape_evidence_root(self) -> None:
+        proposal = ActionProposal(
+            trace_id="trace-path",
+            span_id="../../outside",
+            parent_span_id="root",
+            agent="TestAgent",
+            method="read_public",
+            intent_id="intent-path",
+            parent_cause="task-path",
+            action="read",
+            scope="fs.read",
+            target="README.md",
+            nonce="nonce-path",
+        )
+        result = self.guard.execute(proposal, lambda: {"ok": True})
+        root = self.guard.evidence_root.resolve()
+        self.assertTrue(result.evidence_dir.resolve().is_relative_to(root))
+        self.assertNotIn("..", result.evidence_dir.name)
+
     def test_bundle_tamper_is_detected(self) -> None:
         result = self.guard.execute(self.safe("nonce-tamper"), lambda: {"ok": True})
         action = result.evidence_dir / "evidence" / "action.json"
