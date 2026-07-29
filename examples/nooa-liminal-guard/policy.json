@@ -17,6 +17,7 @@
     "push_main"
   ],
   "approval_required_scopes": [
+    "network.send",
     "repo.write",
     "system.delete"
   ]
