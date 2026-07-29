@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Action Proposal",
+  "type": "object",
+  "required": [
+    "trace_id",
+    "span_id",
+    "agent",
+    "method",
+    "intent_id",
+    "parent_cause",
+    "action",
+    "scope",
+    "target",
+    "reversibility",
+    "nonce"
+  ],
+  "properties": {
+    "trace_id": {"type": "string", "minLength": 1},
+    "span_id": {"type": "string", "minLength": 1},
+    "parent_span_id": {"type": ["string", "null"]},
+    "agent": {"type": "string", "minLength": 1},
+    "method": {"type": "string", "minLength": 1},
+    "intent_id": {"type": "string", "minLength": 1},
+    "parent_cause": {"type": "string", "minLength": 1},
+    "action": {"type": "string", "minLength": 1},
+    "scope": {"type": "string", "minLength": 1},
+    "target": {"type": "string", "minLength": 1},
+    "reversibility": {"enum": ["reversible", "irreversible", "unknown"]},
+    "approval_ref": {"type": ["string", "null"]},
+    "nonce": {"type": "string", "minLength": 1},
+    "contains_secret": {"type": "boolean", "default": false},
+    "destination": {"type": ["string", "null"]},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": true
+}
