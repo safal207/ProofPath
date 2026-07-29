@@ -70,7 +70,7 @@ Each action bundle contains:
 - `manifest.json` — exact file sizes and SHA-256 digests;
 - `bundle-verification.json` — local independent verification result.
 
-Accepted and replay-blocked decisions for the same span are stored in separate `<span-id>-<decision>` bundle directories so later evidence cannot overwrite earlier evidence.
+Every attempt is stored in a separate `<span-id>-<decision>-<ledger-hash>` bundle directory, so accepted, held, blocked, and replay attempts cannot overwrite one another.
 
 ## Current non-claims
 
