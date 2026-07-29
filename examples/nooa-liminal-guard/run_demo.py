@@ -70,6 +70,8 @@ def main() -> int:
         results.append(row)
 
     # Reuse the already consumed safe-read nonce to prove replay prevention.
+    # The evidence exporter adds a ledger-hash suffix, so this attempt cannot
+    # overwrite the original accepted bundle even though the span ID is reused.
     replay_case = scenarios[0]
     replay_proposal = proposal_from_dict(replay_case["proposal"])
     replay = guard.execute(replay_proposal, lambda: executed.append("replay-should-not-run"))
@@ -111,7 +113,12 @@ def main() -> int:
     write_json(output / "benchmark-summary.json", summary)
 
     print(json.dumps(summary, indent=2, sort_keys=True))
-    all_ok = all(row["matched"] and row["bundle_valid"] for row in results)
+    all_ok = all(
+        row["matched"]
+        and row["bundle_valid"]
+        and row.get("finding_matched", True)
+        for row in results
+    )
     no_blocked_side_effect = all(
         row["side_effect_executed"] == (row["actual_decision"] == "ACCEPT") for row in results
     )
