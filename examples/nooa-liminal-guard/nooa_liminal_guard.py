@@ -19,10 +19,16 @@ from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional
 
 
 JsonObject = dict[str, Any]
+NETWORK_ACTIONS = {"network_send", "send", "http_post", "upload"}
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def iso_to_ns(value: str) -> int:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return int(parsed.timestamp() * 1_000_000_000)
 
 
 def canonical_bytes(value: Any) -> bytes:
@@ -183,12 +189,14 @@ class HashLedger:
         return record
 
 
-def proposal_from_nooa_span(span: Mapping[str, Any], *, defaults: Optional[Mapping[str, Any]] = None) -> ActionProposal:
+def proposal_from_nooa_span(
+    span: Mapping[str, Any], *, defaults: Optional[Mapping[str, Any]] = None
+) -> ActionProposal:
     """Map an exported NOOA-style span into a ProofPath proposal.
 
-    NOOA's public promise is parent-child tracing, not a frozen external JSON
-    schema. This adapter therefore accepts common top-level and ``attributes``
-    names while requiring security-critical fields to be supplied explicitly.
+    NOOA publicly promises parent-child tracing rather than a frozen external
+    JSON schema. The adapter accepts common top-level and ``attributes`` aliases
+    while requiring security-critical intent values to be supplied explicitly.
     """
 
     defaults = dict(defaults or {})
@@ -237,6 +245,19 @@ def _optional_text(value: Any) -> Optional[str]:
     return text or None
 
 
+def _cml_action(action: str) -> str:
+    normalized = action.lower()
+    if normalized in NETWORK_ACTIONS:
+        return "send"
+    if normalized in {"read", "open"}:
+        return "read"
+    if normalized in {"write", "delete", "deploy", "payment", "push_main"}:
+        return "write"
+    if normalized in {"connect", "exec"}:
+        return normalized
+    return "exec"
+
+
 class ProofPathNOOAGuard:
     def __init__(self, policy: Policy, state_dir: Path, evidence_root: Path) -> None:
         self.policy = policy
@@ -263,7 +284,7 @@ class ProofPathNOOAGuard:
             reasons.append("INTENT_REPLAYED")
             decision = "BLOCK"
 
-        is_network = proposal.action in {"network_send", "send", "http_post", "upload"}
+        is_network = proposal.action.lower() in NETWORK_ACTIONS
         destination_allowed = bool(
             proposal.destination and proposal.destination.lower() in self.policy.network_allowlist
         )
@@ -275,7 +296,8 @@ class ProofPathNOOAGuard:
                     "code": "CML-AUDIT-R3-SECRET_NET_MISSING_CHAIN",
                     "severity": "FAIL",
                     "record_id": proposal.span_id,
-                    "message": "Secret-bearing network egress lacks an allowed destination and valid causal chain.",
+                    "source": "proofpath_guard",
+                    "message": "Secret-bearing network egress lacks an allowed destination and valid authority chain.",
                 }
             )
 
@@ -291,11 +313,10 @@ class ProofPathNOOAGuard:
         if not reasons:
             reasons.append("POLICY_MATCH")
 
-        allowed = decision == "ACCEPT"
         return GuardDecision(
             decision=decision,
             reason_codes=tuple(reasons),
-            execution_allowed=allowed,
+            execution_allowed=decision == "ACCEPT",
             proposal_digest=proposal.digest(),
             decided_at=utc_now(),
             cml_findings=tuple(findings),
@@ -315,8 +336,8 @@ class ProofPathNOOAGuard:
         side_effect_executed = False
 
         if decision.execution_allowed:
-            # Consume authority before invoking the side effect so a concurrent
-            # retry cannot reuse the same nonce after authorization succeeds.
+            # Consume authority before invoking the side effect so a retry cannot
+            # reuse the same nonce after authorization has succeeded.
             self.nonces.consume(proposal.nonce, decision.proposal_digest)
             started_at = utc_now()
             side_effect_executed = True
@@ -344,8 +365,15 @@ class ProofPathNOOAGuard:
                 "observation": observation.to_dict(),
             },
         )
-        evidence_dir = self._export_evidence(proposal, decision, observation, result, observation_record)
-        return GuardedResult(decision=decision, observation=observation, result=result, evidence_dir=evidence_dir)
+        evidence_dir = self._export_evidence(
+            proposal, decision, observation, result, observation_record
+        )
+        return GuardedResult(
+            decision=decision,
+            observation=observation,
+            result=result,
+            evidence_dir=evidence_dir,
+        )
 
     def _export_evidence(
         self,
@@ -355,7 +383,8 @@ class ProofPathNOOAGuard:
         result: Any,
         observation_record: Mapping[str, Any],
     ) -> Path:
-        bundle = self.evidence_root / proposal.span_id
+        bundle_id = str(observation_record["record_hash"])[7:19]
+        bundle = self.evidence_root / f"{proposal.span_id}-{decision.decision.lower()}-{bundle_id}"
         evidence = bundle / "evidence"
         evidence.mkdir(parents=True, exist_ok=True)
 
@@ -376,77 +405,88 @@ class ProofPathNOOAGuard:
             "destination": proposal.destination,
             "proposal_digest": decision.proposal_digest,
         }
+        result_record = {"observation": observation.to_dict(), "result": result}
         verification_record = {
             "decision": decision.to_dict(),
             "ledger_record_hash": observation_record["record_hash"],
             "claim_boundary": "policy decision and local evidence only; not sandbox certification",
         }
-        result_record = {"observation": observation.to_dict(), "result": result}
 
         write_json(evidence / "intent.json", intent_record)
         write_json(evidence / "action.json", action_record)
         write_json(evidence / "result.json", result_record)
         write_json(evidence / "verification.json", verification_record)
         write_json(bundle / "authorization.json", decision.to_dict())
+        write_jsonl(bundle / "cml-trace.jsonl", self._cml_rows(proposal, decision, observation))
+        write_json(bundle / "cml-findings.json", list(decision.cml_findings))
+        write_jsonl(bundle / "ltp-trace.jsonl", self._ltp_rows(proposal, decision, observation))
+        atomic_write(
+            bundle / "liminaldb-ledger.jsonl",
+            self.ledger.path.read_text(encoding="utf-8"),
+        )
 
-        cml_rows = self._cml_rows(proposal, decision, observation)
-        ltp_rows = self._ltp_rows(proposal, decision, observation)
-        write_jsonl(bundle / "cml-trace.jsonl", cml_rows)
-        write_jsonl(bundle / "ltp-trace.jsonl", ltp_rows)
-        # Copy the current durable ledger head into the bundle, preserving the
-        # local runtime ledger separately under state_dir.
-        atomic_write(bundle / "liminaldb-ledger.jsonl", self.ledger.path.read_text(encoding="utf-8"))
-
-        manifest = build_manifest(bundle)
-        write_json(bundle / "manifest.json", manifest)
-        verification = verify_bundle(bundle)
-        write_json(bundle / "bundle-verification.json", verification)
+        write_json(bundle / "manifest.json", build_manifest(bundle))
+        write_json(bundle / "bundle-verification.json", verify_bundle(bundle))
         return bundle
 
     @staticmethod
     def _cml_rows(
-        proposal: ActionProposal, decision: GuardDecision, observation: ExecutionObservation
+        proposal: ActionProposal,
+        decision: GuardDecision,
+        observation: ExecutionObservation,
     ) -> list[JsonObject]:
         root_id = proposal.parent_cause or f"gap:{proposal.span_id}"
-        rows: list[JsonObject] = [
+        decided_ns = iso_to_ns(decision.decided_at)
+        completed_ns = iso_to_ns(observation.completed_at)
+        return [
             {
                 "id": root_id,
-                "timestamp": decision.decided_at,
-                "actor": {"comm": "human_or_policy_authority"},
-                "action": "authorize_intent" if proposal.parent_cause else "observed_gap",
-                "object": {"intent_id": proposal.intent_id, "scope": proposal.scope},
-                "permitted_by": proposal.approval_ref or "declared_intent",
+                "timestamp": decided_ns,
+                "actor": {"pid": 100, "uid": 1000, "comm": "human_or_policy_authority"},
+                "action": "write",
+                "object": {
+                    "record_type": "authorization" if proposal.parent_cause else "observed_gap",
+                    "intent_id": proposal.intent_id,
+                    "scope": proposal.scope,
+                    "approval_ref": proposal.approval_ref,
+                },
+                "permitted_by": (
+                    "root_event:declared_authority"
+                    if proposal.parent_cause
+                    else "root_event:observed_gap"
+                ),
                 "parent_cause": None,
             },
             {
                 "id": proposal.span_id,
-                "timestamp": decision.decided_at,
-                "actor": {"comm": proposal.agent},
-                "action": proposal.action,
+                "timestamp": decided_ns + 1,
+                "actor": {"pid": 200, "uid": 1000, "ppid": 100, "comm": proposal.agent},
+                "action": _cml_action(proposal.action),
                 "object": {
+                    "original_action": proposal.action,
                     "target": proposal.target,
                     "destination": proposal.destination,
                     "contains_secret": proposal.contains_secret,
                 },
-                "permitted_by": decision.decision,
+                "permitted_by": proposal.approval_ref or f"proofpath:{decision.decision.lower()}",
                 "parent_cause": proposal.parent_cause,
             },
             {
                 "id": f"observation:{proposal.span_id}",
-                "timestamp": observation.completed_at,
-                "actor": {"comm": "proofpath_guard"},
-                "action": "observe_result",
-                "object": observation.to_dict(),
+                "timestamp": max(completed_ns, decided_ns + 2),
+                "actor": {"pid": 300, "uid": 1000, "ppid": 200, "comm": "proofpath_guard"},
+                "action": "write",
+                "object": {"observation": observation.to_dict()},
                 "permitted_by": "proofpath_observation",
                 "parent_cause": proposal.span_id,
             },
         ]
-        rows.extend({"type": "finding", **finding} for finding in decision.cml_findings)
-        return rows
 
     @staticmethod
     def _ltp_rows(
-        proposal: ActionProposal, decision: GuardDecision, observation: ExecutionObservation
+        proposal: ActionProposal,
+        decision: GuardDecision,
+        observation: ExecutionObservation,
     ) -> list[JsonObject]:
         return [
             {
@@ -484,7 +524,13 @@ def build_manifest(bundle: Path) -> JsonObject:
         if relative in excluded:
             continue
         material = path.read_bytes()
-        files.append({"path": relative, "size": len(material), "sha256": hashlib.sha256(material).hexdigest()})
+        files.append(
+            {
+                "path": relative,
+                "size": len(material),
+                "sha256": hashlib.sha256(material).hexdigest(),
+            }
+        )
     return {
         "profile": "org.proofpath.nooa-liminal-evidence.v0.1",
         "created_at": utc_now(),
@@ -496,6 +542,7 @@ def verify_bundle(bundle: Path) -> JsonObject:
     manifest_path = bundle / "manifest.json"
     if not manifest_path.exists():
         return {"valid": False, "errors": ["manifest missing"]}
+
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     errors: list[str] = []
     expected = {item["path"]: item for item in manifest.get("files", [])}
@@ -505,15 +552,16 @@ def verify_bundle(bundle: Path) -> JsonObject:
         for path in bundle.rglob("*")
         if path.is_file() and path.relative_to(bundle).as_posix() not in allowed_meta
     }
+
     for name in sorted(set(expected) - set(actual)):
         errors.append(f"missing:{name}")
     for name in sorted(set(actual) - set(expected)):
         errors.append(f"unlisted:{name}")
     for name in sorted(set(expected) & set(actual)):
         material = actual[name].read_bytes()
-        digest = hashlib.sha256(material).hexdigest()
-        if digest != expected[name].get("sha256"):
+        if hashlib.sha256(material).hexdigest() != expected[name].get("sha256"):
             errors.append(f"digest:{name}")
         if len(material) != expected[name].get("size"):
             errors.append(f"size:{name}")
+
     return {"valid": not errors, "errors": errors, "verified_at": utc_now()}
