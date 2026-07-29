@@ -1,0 +1,38 @@
+name: NOOA Liminal Guard
+
+on:
+  pull_request:
+    paths:
+      - "examples/nooa-liminal-guard/**"
+      - "docs/integrations/NOOA_LIMINAL_GUARD.md"
+      - ".github/workflows/nooa-liminal-guard.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "examples/nooa-liminal-guard/**"
+      - "docs/integrations/NOOA_LIMINAL_GUARD.md"
+      - ".github/workflows/nooa-liminal-guard.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run guard tests and complete evidence chain
+        run: bash examples/nooa-liminal-guard/run_demo_check.sh
+      - name: Upload synthetic evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nooa-liminal-evidence
+          path: .proofpath/nooa-liminal-demo
+          if-no-files-found: error
+          retention-days: 14

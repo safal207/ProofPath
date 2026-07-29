@@ -1,0 +1,24 @@
+{
+  "default_decision": "BLOCK",
+  "allowed_scopes": [
+    "fs.read",
+    "network.send",
+    "repo.write",
+    "system.delete"
+  ],
+  "network_allowlist": [
+    "api.example.test",
+    "localhost"
+  ],
+  "irreversible_actions": [
+    "delete",
+    "deploy",
+    "payment",
+    "push_main"
+  ],
+  "approval_required_scopes": [
+    "network.send",
+    "repo.write",
+    "system.delete"
+  ]
+}
