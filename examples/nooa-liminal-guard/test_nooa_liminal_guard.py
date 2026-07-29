@@ -117,6 +117,24 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(second.decision.decision, "BLOCK")
         self.assertIn("INTENT_REPLAYED", second.decision.reason_codes)
         self.assertFalse(second.observation.side_effect_executed)
+        self.assertNotEqual(first.evidence_dir, second.evidence_dir)
+        self.assertTrue(first.evidence_dir.exists())
+        self.assertTrue(second.evidence_dir.exists())
+
+    def test_cml_export_is_loadable_shape(self) -> None:
+        result = self.guard.execute(self.safe("nonce-cml"), lambda: {"ok": True})
+        rows = [
+            json.loads(line)
+            for line in (result.evidence_dir / "cml-trace.jsonl").read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        self.assertEqual(len(rows), 3)
+        for row in rows:
+            self.assertIsInstance(row["timestamp"], int)
+            self.assertIn("pid", row["actor"])
+            self.assertIn("uid", row["actor"])
+            for key in ("id", "action", "object", "permitted_by", "parent_cause"):
+                self.assertIn(key, row)
 
     def test_bundle_tamper_is_detected(self) -> None:
         result = self.guard.execute(self.safe("nonce-tamper"), lambda: {"ok": True})
