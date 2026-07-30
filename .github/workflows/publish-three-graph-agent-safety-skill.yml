@@ -1,0 +1,93 @@
+name: Three-Graph Agent Safety Skill
+
+on:
+  pull_request:
+    paths:
+      - "skills/three-graph-agent-safety/**"
+      - "scripts/build_three_graph_agent_safety_skill.py"
+      - "skills/README.md"
+      - ".github/workflows/publish-three-graph-agent-safety-skill.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "skills/three-graph-agent-safety/**"
+      - "scripts/build_three_graph_agent_safety_skill.py"
+      - "skills/README.md"
+      - ".github/workflows/publish-three-graph-agent-safety-skill.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate and build deterministic skill ZIP
+        run: python3 scripts/build_three_graph_agent_safety_skill.py
+      - name: Verify ZIP and checksum
+        run: |
+          unzip -t dist/three-graph-agent-safety.zip
+          cd dist
+          sha256sum --check three-graph-agent-safety.zip.sha256
+      - name: Validate JSON Schema syntax
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("skills/three-graph-agent-safety/assets/three-graph-bundle.schema.json")
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          assert payload["$schema"].endswith("2020-12/schema")
+          assert payload["properties"]["profile"]["const"] == "org.proofpath.three-graph-agent-safety"
+          print("PASS: three-graph schema is valid JSON")
+          PY
+      - name: Upload validated skill package
+        uses: actions/upload-artifact@v4
+        with:
+          name: three-graph-agent-safety-skill
+          path: |
+            dist/three-graph-agent-safety.zip
+            dist/three-graph-agent-safety.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-release:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: validate-package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build release files
+        run: python3 scripts/build_three_graph_agent_safety_skill.py
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: three-graph-agent-safety-v1.0.0
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              dist/three-graph-agent-safety.zip \
+              dist/three-graph-agent-safety.zip.sha256 \
+              --clobber
+          else
+            gh release create "$TAG" \
+              dist/three-graph-agent-safety.zip \
+              dist/three-graph-agent-safety.zip.sha256 \
+              --title "Three-Graph Agent Safety Skill v1.0.0" \
+              --notes "Installable ChatGPT skill that separates agent ideas, current user intent, and independently observed facts; detects graph mismatches; handles timeout and recovery safely; and produces machine-readable evidence. See skills/three-graph-agent-safety/README_RU.md."
+          fi
