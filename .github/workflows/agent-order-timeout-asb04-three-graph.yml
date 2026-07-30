@@ -1,0 +1,79 @@
+name: Agent Order Timeout ASB-04 Three Graph
+
+on:
+  pull_request:
+    paths:
+      - "examples/order-timeout-three-graph/**"
+      - "scripts/finalize_asb04_three_graph_evidence.py"
+      - ".github/workflows/agent-order-timeout-asb04-three-graph.yml"
+  push:
+    branches: [main]
+    paths:
+      - "examples/order-timeout-three-graph/**"
+      - "scripts/finalize_asb04_three_graph_evidence.py"
+      - ".github/workflows/agent-order-timeout-asb04-three-graph.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  timeout-three-graph-reconciliation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CML_AGENT_SAFETY_REF: aa1cdccd42d5c1779d9c19a824bb74fcf50ca0bf
+    steps:
+      - name: Checkout ProofPath
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout pinned CML verifier
+        uses: actions/checkout@v4
+        with:
+          repository: safal207/Causal-Memory-Layer
+          ref: ${{ env.CML_AGENT_SAFETY_REF }}
+          path: .cml-verifier
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned CML runtime dependencies
+        run: python -m pip install --disable-pip-version-check ./.cml-verifier
+      - name: Validate scripts
+        run: |
+          python -m py_compile \
+            examples/order-timeout-three-graph/three_graph_asb04_demo.py \
+            scripts/finalize_asb04_three_graph_evidence.py \
+            .cml-verifier/scripts/run_agent_safety_benchmark.py
+          bash -n examples/order-timeout-three-graph/run_three_graph_verified_demo.sh
+          bash -n examples/order-timeout-three-graph/run_cml_asb04_three_graph_check.sh
+      - name: Run forbidden causal paths
+        run: |
+          if python3 examples/order-timeout-three-graph/three_graph_asb04_demo.py \
+            --runtime .proofpath/asb04-negative-blind-retry \
+            --unsafe-mode blind-retry; then
+            echo "blind retry unexpectedly aligned" >&2
+            exit 1
+          fi
+          if python3 examples/order-timeout-three-graph/three_graph_asb04_demo.py \
+            --runtime .proofpath/asb04-negative-new-key \
+            --unsafe-mode new-idempotency-key; then
+            echo "new idempotency key unexpectedly aligned" >&2
+            exit 1
+          fi
+      - name: Run ASB-04 three graphs through pinned CML scorer
+        env:
+          CML_ROOT: .cml-verifier
+          CML_EXPECTED_COMMIT: ${{ env.CML_AGENT_SAFETY_REF }}
+        run: bash examples/order-timeout-three-graph/run_cml_asb04_three_graph_check.sh
+      - name: Verify evidence checksums
+        run: |
+          cd proofpath-asb04-three-graph-evidence-bundle
+          sha256sum --check SHA256SUMS
+      - name: Upload scored three-graph evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-asb04-three-graph-${{ github.sha }}
+          path: proofpath-asb04-three-graph-evidence-bundle/
+          if-no-files-found: error
+          retention-days: 14
