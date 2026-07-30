@@ -1,0 +1,2 @@
+policy: allow read-only tools
+version: 1
