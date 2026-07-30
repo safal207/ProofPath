@@ -1,0 +1,10 @@
+{
+  "currency": "EUR",
+  "effective_at": "2030-01-01T00:00:00Z",
+  "limit_kind": "daily_transfer_limit",
+  "maximum_limit": 1000,
+  "policy_id": "policy:account-transfer-limit:001",
+  "policy_revision": 4,
+  "profile": "org.proofpath.business-limit-policy",
+  "version": "0.1.0"
+}
