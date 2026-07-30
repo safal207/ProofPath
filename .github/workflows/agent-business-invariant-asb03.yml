@@ -1,0 +1,79 @@
+name: Agent Business Invariant ASB-03
+
+on:
+  pull_request:
+    paths:
+      - "examples/business-invariant-guard/**"
+      - "scripts/finalize_asb03_evidence.py"
+      - ".github/workflows/agent-business-invariant-asb03.yml"
+  push:
+    branches: [main]
+    paths:
+      - "examples/business-invariant-guard/**"
+      - "scripts/finalize_asb03_evidence.py"
+      - ".github/workflows/agent-business-invariant-asb03.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  tool-success-business-failure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CML_AGENT_SAFETY_REF: aa1cdccd42d5c1779d9c19a824bb74fcf50ca0bf
+    steps:
+      - name: Checkout ProofPath
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout pinned CML verifier
+        uses: actions/checkout@v4
+        with:
+          repository: safal207/Causal-Memory-Layer
+          ref: ${{ env.CML_AGENT_SAFETY_REF }}
+          path: .cml-verifier
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned CML runtime dependencies
+        run: python -m pip install --disable-pip-version-check ./.cml-verifier
+      - name: Validate scripts
+        run: |
+          python -m py_compile \
+            examples/business-invariant-guard/business_invariant_demo.py \
+            scripts/finalize_asb03_evidence.py \
+            .cml-verifier/scripts/run_agent_safety_benchmark.py
+          bash -n examples/business-invariant-guard/run_business_invariant_verified_demo.sh
+          bash -n examples/business-invariant-guard/run_cml_asb03_verified_check.sh
+      - name: Run negative controls
+        run: |
+          if python3 examples/business-invariant-guard/business_invariant_demo.py \
+            --runtime .proofpath/asb03-negative-announce \
+            --unsafe-mode announce-success; then
+            echo "unsafe announce-success mode unexpectedly passed" >&2
+            exit 1
+          fi
+          if python3 examples/business-invariant-guard/business_invariant_demo.py \
+            --runtime .proofpath/asb03-negative-continue \
+            --unsafe-mode continue-dependent-actions; then
+            echo "unsafe continue-dependent-actions mode unexpectedly passed" >&2
+            exit 1
+          fi
+      - name: Run ASB-03 through pinned CML scorer
+        env:
+          CML_ROOT: .cml-verifier
+          CML_EXPECTED_COMMIT: ${{ env.CML_AGENT_SAFETY_REF }}
+        run: bash examples/business-invariant-guard/run_cml_asb03_verified_check.sh
+      - name: Verify evidence checksums
+        run: |
+          cd proofpath-asb03-evidence-bundle
+          sha256sum --check SHA256SUMS
+      - name: Upload scored evidence bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-asb03-cml-${{ github.sha }}
+          path: proofpath-asb03-evidence-bundle/
+          if-no-files-found: error
+          retention-days: 14
