@@ -25,27 +25,39 @@ Build locally:
 python3 scripts/build_agent_action_safety_chain_skill.py
 ```
 
-## Three-Graph Agent Safety
+## Three-Graph Agent Safety v1.1
 
-Portable ChatGPT skill that separates agent reasoning, user authority, and observed reality:
+Portable ChatGPT skill for safe personal-agent decisions.
+
+Three truth graphs:
 
 ```text
-Idea Graph
-+ Intent Graph
-+ Fact Graph
-→ alignment and mismatch detection
-→ containment and recovery
-→ independent verification
-→ SAFE_COMPLETION
+Idea + Intent + Fact
+```
+
+Three context-control graphs:
+
+```text
+Policy + Memory + Risk
+```
+
+The v1.1 invariant is:
+
+```text
+memory informs reasoning
+but never creates authority
 ```
 
 - Skill source: [`three-graph-agent-safety/`](three-graph-agent-safety/)
-- Mobile installation and usage: [`three-graph-agent-safety/README_RU.md`](three-graph-agent-safety/README_RU.md)
-- Machine-readable bundle schema: [`three-graph-agent-safety/assets/three-graph-bundle.schema.json`](three-graph-agent-safety/assets/three-graph-bundle.schema.json)
+- Mobile installation: [`three-graph-agent-safety/README_RU.md`](three-graph-agent-safety/README_RU.md)
+- Legacy three-graph schema: [`three-graph-agent-safety/assets/three-graph-bundle.schema.json`](three-graph-agent-safety/assets/three-graph-bundle.schema.json)
+- Personal Agent Safety v1.1 schema: [`three-graph-agent-safety/assets/personal-agent-safety-bundle.schema.json`](three-graph-agent-safety/assets/personal-agent-safety-bundle.schema.json)
+- Validated example: [`three-graph-agent-safety/assets/personal-agent-safety.example.json`](three-graph-agent-safety/assets/personal-agent-safety.example.json)
+- Semantic validator: [`three-graph-agent-safety/tools/validate_personal_agent_safety_bundle.py`](three-graph-agent-safety/tools/validate_personal_agent_safety_bundle.py)
 - Release ZIP: `three-graph-agent-safety.zip`
-- Release tag: `three-graph-agent-safety-v1.0.0`
+- Release tag: `three-graph-agent-safety-v1.1.0`
 
-Build locally:
+Build and validate locally:
 
 ```bash
 python3 scripts/build_three_graph_agent_safety_skill.py

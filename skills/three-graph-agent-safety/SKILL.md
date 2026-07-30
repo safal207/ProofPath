@@ -1,239 +1,172 @@
 ---
 name: three-graph-agent-safety
-description: Separates an AI agent's idea, the user's authorized intent, and independently observed facts into three causal graphs. Use when a user asks to analyze, design, audit, test, or implement high-impact agent actions, retries, timeouts, stale observations, approval drift, tool-success/business-failure cases, evidence bundles, or safe recovery. Detects Idea–Intent–Fact mismatches and forbids treating assumptions, permissions, or UNKNOWN outcomes as verified success.
+description: Separates agent ideas, current user intent, and independently observed facts, then evaluates versioned policy, provenance-aware memory, and explicit risk as separate causal graphs. Use for high-impact agent actions, personal-agent memory, approvals, retries, timeouts, recovery, evidence bundles, repository implementation, and CI validation. Prevents memory, policy, model reasoning, tool status, or UNKNOWN outcomes from becoming invented authority or verified success.
 license: MIT
-compatibility: Works in chat from pasted scenarios and files; best with repository, tool, API, audit-log, or GitHub access. Repository writes and merges require explicit user authorization.
+compatibility: Works in chat and with repositories, APIs, policies, memory records, audit logs, and GitHub. External communication, payments, publication, irreversible writes, merge, and release require explicit current authorization.
 metadata:
   author: safal207
-  version: "1.0.0"
+  version: "1.1.0"
   source-project: ProofPath
 ---
 
-# Three-Graph Agent Safety
+# Three-Graph Agent Safety v1.1
 
-Analyze every high-impact agent action through three separate causal graphs:
+Model high-impact agent work with three truth graphs and three context-control graphs.
 
 ```text
-Idea Graph   — what the agent believes should happen and why
-Intent Graph — what the user actually authorized, including scope and limits
-Fact Graph   — what independently observable evidence proves happened
+Truth:
+Idea Graph   — proposal, assumptions, strategy, expected result
+Intent Graph — current user authority, scope, constraints, validity
+Fact Graph   — independently evidenced events and states
+
+Controls:
+Policy Graph — versioned external rules
+Memory Graph — retrieved prior context with provenance and freshness
+Risk Graph   — hazards, uncertainty, mitigations, residual risk
 ```
 
-## Core invariant
+## Non-substitution invariant
 
 ```text
 Idea ≠ Intent ≠ Fact
+Memory ≠ Intent
+Policy allow ≠ user consent
+Risk estimate ≠ Fact
+UNKNOWN ≠ SUCCESS
 ```
 
-Never promote:
-
-- an idea into authority;
-- authority into proof of execution;
-- a tool response into a business result;
-- missing evidence into success;
-- `UNKNOWN` into either `SUCCESS` or a fresh authorization.
-
-Safe completion requires:
+Memory may personalize reasoning. It may not create, expand, renew, or transfer authority.
 
 ```text
-IDEA_ALIGNED
-+ INTENT_AUTHORIZED
+IDEA_INTENT_ALIGNED
++ INTENT_CURRENT
++ POLICY_ALLOWED
++ MEMORY_PROVENANCED
++ RISK_ACCEPTABLE
+= ACCEPT
+
+ACCEPT
 + FACT_INDEPENDENTLY_VERIFIED
++ FINAL_INVARIANT_MATCHES_INTENT
 = SAFE_COMPLETION
 ```
 
-## Activate this skill when
+## Activate when
 
-Use this skill when the user asks to:
+Use for personal AI agents, remembered preferences, external messages, payments, purchases, publication, deletion, code changes, retries, timeout-after-dispatch, stale reads, approval drift, idempotency, policy checks, risk gates, evidence bundles, CI, and repository changes.
 
-- draw or build Idea, Intent, and Fact graphs;
-- diagnose why an agent action, API call, payment, deletion, message, code change, or workflow became unsafe;
-- handle timeout-after-dispatch, stale reads, retries, idempotency, duplicate effects, approval revocation, or partial failure;
-- distinguish model reasoning from user authority and real-world state;
-- audit tool success against business invariants;
-- design containment, recovery, and independent verification;
-- create machine-readable traces, evidence bundles, tests, CI checks, or repository changes;
-- compare a planned action with what was allowed and what actually happened.
-
-Do not activate for ordinary brainstorming with no meaningful action, authority, or factual-verification boundary.
+Do not activate for ordinary brainstorming with no action, authority, memory, risk, or factual-verification boundary.
 
 ## Operating modes
 
-Infer the narrowest sufficient mode:
-
-1. **Explain** — describe the three graphs in plain language.
-2. **Model** — produce graph nodes, edges, invariants, mismatches, and recovery.
-3. **Audit** — inspect supplied evidence without writing.
-4. **Implement** — modify code or create repository artifacts only when explicitly requested.
-5. **Validate** — run tests, CI, evidence checks, and review analysis.
-6. **Merge** — merge only under explicit authorization.
-
-Never silently expand read-only work into writes.
+1. Explain — plain-language model.
+2. Model — graph nodes, edges, links, mismatches, decision.
+3. Audit — inspect evidence without writes.
+4. Implement — write only when explicitly requested.
+5. Validate — tests, CI, evidence, review.
+6. Merge / Release — only under explicit authorization.
 
 ## Required workflow
 
-### 1. Resolve the action boundary
+### 1. Resolve the boundary
 
-Identify:
+Identify actor, goal, proposed action, target, side effect, authority source, scope, constraints, execution boundary, system of record, policy source/revision, memory sources/retrieval time, risk dimensions, recovery, and final proof.
 
-```text
-actor
-requested goal
-proposed action
-target
-side effect
-authority source
-scope
-constraints
-execution boundary
-authoritative system of record
-possible recovery
-required final proof
-```
+### 2. Idea Graph
 
-Use connected repository or tool data to resolve ambiguity before asking the user.
+Include problem, goal, strategy, assumptions, alternatives, safe/unsafe branches, expected outcome, and required verification. Label assumptions and memory influences. Idea never authorizes or proves.
 
-### 2. Build the Idea Graph
+### 3. Intent Graph
 
-The Idea Graph represents reasoning and strategy, not permission or truth.
+Include `intent_id`, principal, target, scope, constraints, maximum effect, validity, approval revision, replay/idempotency binding, revocation, allowed recovery, forbidden actions, and authority evidence.
 
-Minimum nodes:
+Historical approval is not current authority. Memory is never authority. Policy may narrow Intent but cannot silently broaden it. Timeout does not expand scope. `HOLD` and `BLOCK` execute no protected side effect.
+
+### 4. Policy Graph
+
+Bind every rule to policy ID, issuer, revision, validity, condition, effect, precedence, and evidence.
 
 ```text
-problem
-goal
-proposed strategy
-risk
-safe branch
-unsafe branch
-expected outcome
-required verification
+ALLOW | DENY | CONSTRAIN | REQUIRE_APPROVAL
 ```
 
-Every strategy node must answer:
+A permissive policy plus missing Intent still yields `HOLD` or `BLOCK`. Unknown high-impact policy state fails closed.
 
-- Why is this action expected to help?
-- Which assumptions does it depend on?
-- What could make the assumption stale or false?
-- What observation would confirm or reject it?
+### 5. Memory Graph
 
-Label assumptions explicitly. An assumption is never a Fact node.
-
-### 3. Build the Intent Graph
-
-The Intent Graph represents current authority.
-
-Minimum fields:
+Every node requires claim, source/reference, recorded/retrieved time, subject, scope, purpose, confidence, freshness, conflict state, evidence, and:
 
 ```text
-intent_id
-intent_code
-principal
-target
-scope
-constraints
-maximum effect
-validity window
-approval revision
-idempotency or replay binding
-revocation state
-allowed recovery
-forbidden actions
+authority_effect = none
 ```
 
-Rules:
+Memory may inform tone, reversible options, terminology, or which resource to inspect. It may not authorize sending, paying, deleting, purchasing, publishing, sharing, merging, releasing, or changing recipient, target, or scope. Current explicit Intent overrides memory. Stale, conflicted, inferred, superseded, or irrelevant memory cannot be the sole basis for a high-impact decision.
 
-- Authority must come from the user, policy, approval record, or trusted application layer.
-- Historical approval is evidence of past authority, not proof of current authority.
-- Timeout, tool error, or agent uncertainty does not expand scope.
-- A new idempotency key, recipient, target, amount, or destructive scope requires authority unless the original contract explicitly permits it.
-- Revoked or expired authority blocks dispatch.
-- `HOLD` and `BLOCK` must not cause the protected side effect.
+### 6. Risk Graph
 
-### 4. Build the Fact Graph
+Include hazard, affected asset/person, causal path, likelihood, impact, detectability, reversibility, uncertainty, mitigation, residual likelihood/impact/tier, and escalation threshold. Unknown risk is not low. Critical residual risk means `BLOCK` or escalation; high normally means `HOLD`.
 
-The Fact Graph contains only observed events and evidence-backed state.
+### 7. Fact Graph
 
-Minimum node fields:
+Use only observed, evidence-backed events and states. Every material Fact node needs timestamp/order, source, evidence references, before/after state, causal parent, and confidence. Tool success, Memory, Policy, or Intent is not proof of a business result.
+
+### 8. Align graphs
+
+Create explicit links:
 
 ```text
-node_id
-event_or_state
-observed_at
-source
-evidence_refs
-state_before
-state_after
-causal_parent
-confidence
+Idea → Intent
+Intent → Policy
+Memory → Idea
+Memory → Intent comparison
+Risk → proposed action
+Risk → containment/recovery
+Intent → Fact
+Idea expectation → Fact
+Policy decision → execution boundary
 ```
 
-Valid evidence may include:
-
-- request and response records;
-- server, queue, ledger, database, or audit logs;
-- authoritative readback;
-- stable transaction or operation identifiers;
-- approval revisions;
-- checksums and manifests;
-- independent verifier output.
-
-Statements such as “probably succeeded”, “the tool returned 200”, or “the agent intended to do it” are not final business facts.
-
-### 5. Align the graphs
-
-Create explicit mappings:
+Detect at least:
 
 ```text
-idea node → intent node
-intent node → fact node
-idea expectation → observed result
+IDEA_INTENT_MISMATCH
+INTENT_FACT_MISMATCH
+IDEA_FACT_MISMATCH
+POLICY_INTENT_CONFLICT
+POLICY_REVISION_STALE
+MEMORY_AUTHORITY_LEAK
+MEMORY_STALE
+MEMORY_CONFLICT
+MEMORY_SCOPE_EXCEEDED
+RISK_UNDERSTATED
+RISK_UNKNOWN_ACCEPTED
+AUTHORITY_STALE
+FACT_MISSING
+UNKNOWN_PROMOTED_TO_SUCCESS
+SCOPE_EXPANDED_DURING_RECOVERY
+DUPLICATE_SIDE_EFFECT
+TOOL_SUCCESS_BUSINESS_FAILURE
+SECONDARY_HARM_RISK
 ```
 
-Evaluate at least:
+A missing link is not alignment.
 
-- `IDEA_INTENT_MISMATCH`
-- `INTENT_FACT_MISMATCH`
-- `IDEA_FACT_MISMATCH`
-- `AUTHORITY_STALE`
-- `FACT_MISSING`
-- `UNKNOWN_PROMOTED_TO_SUCCESS`
-- `SCOPE_EXPANDED_DURING_RECOVERY`
-- `DUPLICATE_SIDE_EFFECT`
-- `TOOL_SUCCESS_BUSINESS_FAILURE`
+### 9. Decide
 
-A missing mapping is not alignment.
+```text
+current Intent
+→ mandatory Policy
+→ Risk gate
+→ ACCEPT / HOLD / BLOCK
+```
 
-### 6. Choose the decision
+Memory is absent from authority precedence. After dispatch use `UNKNOWN`, `DIVERGED`, or `VERIFIED`. Never use final `SUCCESS` unless equivalent to `VERIFIED`.
 
-Use these meanings:
+### 10. Contain and recover
 
-- `ACCEPT` — action is authorized and safe to dispatch now.
-- `HOLD` — more authority, fresh state, or evidence is required.
-- `BLOCK` — action is unauthorized, replayed, out of scope, or unsafe.
-- `UNKNOWN` — execution outcome cannot yet be established.
-- `DIVERGED` — observed state violates intent or the expected invariant.
-- `VERIFIED` — authoritative evidence proves the required final state.
+On divergence: stop retries and dependent actions, preserve evidence, identify agent-created effects, preserve unrelated effects, evaluate secondary harm, choose minimum targeted containment, stay within current Intent and Policy, and independently read final state.
 
-Do not use `SUCCESS` as a final verdict unless it is equivalent to `VERIFIED`.
-
-### 7. Contain before recovering
-
-When Fact diverges from Intent:
-
-1. stop retries and dependent actions;
-2. preserve evidence;
-3. identify effects created by this agent action;
-4. avoid touching unrelated external effects;
-5. select the minimum targeted containment;
-6. confirm recovery remains inside the original Intent Graph;
-7. independently read the final state.
-
-Containment must not create a larger secondary harm.
-
-### 8. Treat timeout correctly
-
-After dispatch timeout:
+### 11. Timeout protocol
 
 ```text
 transport_state = TIMEOUT
@@ -241,112 +174,44 @@ business_state = UNKNOWN
 execution_state = POSSIBLY_COMMITTED
 ```
 
-Required chain:
+Pause retry, query authoritative state with original lineage/idempotency binding, reconcile existing effect, retry only after proven absence and fresh Intent/Policy/Risk checks, then independently verify.
 
-```text
-pause retry
-→ query authoritative state using original lineage/idempotency binding
-→ reconcile existing effect
-→ retry only if absence is proven and original authority still permits it
-→ independently verify final invariant
-```
+Forbidden: `blind_retry`, `new_idempotency_key`, `announce_success_without_readback`, `use_memory_as_retry_authority`, `downgrade_unknown_risk_to_low`.
 
-Forbidden:
+### 12. Machine-readable output
 
-```text
-blind_retry
-new_idempotency_key
-announce_success_without_readback
-create_new_intent_to_hide_uncertainty
-```
+Legacy contract: `assets/three-graph-bundle.schema.json`.
 
-### 9. Produce machine-readable output
+Personal Agent Safety v1.1 contract: `assets/personal-agent-safety-bundle.schema.json`.
 
-When useful, emit a bundle conforming to `assets/three-graph-bundle.schema.json` with:
+The v1.1 bundle contains six graphs, links, mismatches, memory use, policy evaluation, risk assessment, decision, containment, recovery, verification, and evidence manifest.
 
-```text
-idea_graph
-intent_graph
-fact_graph
-alignment
-mismatches
-decision
-containment
-recovery
-verification
-evidence_manifest
-```
+### 13. Negative controls
 
-Keep producer-authored claims separate from raw evidence and independent verifier results.
+Test memory-as-authority, stale memory, stale policy, critical/unknown risk accepted, blind retry, new idempotency key, premature success, stale approval, business-invariant failure, recovery outside scope, duplicate effect, broken graph/evidence, and tampered checksum.
 
-### 10. Test negative causal paths
+### 14. Completion checks
 
-At minimum test the unsafe branch relevant to the scenario. Common controls:
+Verify graphs are acyclic, endpoints exist, Fact nodes have evidence, Memory has provenance and no authority, current Intent is explicit, Policy revision/precedence is explicit, residual Risk is acceptable, recovery stays within Intent and Policy, final invariant is independently verified, and tests/CI/reviews/merge/release status are reported honestly.
 
-- blind retry after unknown outcome;
-- retry with a new idempotency key;
-- success announcement before authoritative readback;
-- dispatch using stale or revoked approval;
-- tool/API success while business invariant is false;
-- recovery outside original scope;
-- duplicate effect;
-- unrelated effect removed during containment;
-- missing evidence references;
-- graph cycle or broken edge;
-- tampered evidence or checksum.
-
-Negative tests must be synthetic and defensive.
-
-### 11. Validate completion
-
-Before declaring completion, verify:
-
-- all three graphs exist and are acyclic;
-- every edge endpoint exists;
-- each Fact node has evidence;
-- every high-impact action maps to current authority;
-- no forbidden action appears in the Fact Graph;
-- recovery remains within Intent;
-- final state is independently read;
-- the final invariant matches the user's intent;
-- open risks and non-claims are stated honestly.
-
-## Chat output contract
-
-For ordinary chat, use this compact order:
+## Chat output order
 
 ```text
 1. Idea Graph
 2. Intent Graph
-3. Fact Graph
-4. Mismatches
-5. Decision
-6. Containment / Recovery
-7. Independent verification
-8. Next safe action
-```
-
-For repository implementation, also include:
-
-```text
-branch / PR
-files changed
-tests and CI
-evidence bundle
-benchmark result
-merge status
-remaining risk
+3. Policy Graph
+4. Memory Graph
+5. Risk Graph
+6. Fact Graph
+7. Mismatches
+8. Decision
+9. Containment / Recovery
+10. Independent verification
+11. Next safe action
 ```
 
 ## Hard boundaries
 
-- Defensive use only.
-- Do not invent authority, observations, logs, test results, or CI status.
-- Do not treat model prose as signed user intent.
-- Do not claim independent verification when the same producer merely restated its own output.
-- Do not perform irreversible writes without authorization.
-- Do not merge without explicit authorization.
-- Do not use real secrets, real destructive targets, or offensive payloads in fixtures.
-- Do not claim production certification or universal safety from synthetic scenarios.
+Defensive use only. Never invent authority, policy, memory, facts, logs, tests, or CI. Never perform external communication, payment, purchase, publication, sharing, irreversible writes, merge, or release without explicit current authorization. Synthetic tests do not prove production certification.
 
-See [architecture](references/ARCHITECTURE.md), [mismatch catalog](references/MISMATCH_CATALOG.md), and [completion checklist](references/COMPLETION_CHECKLIST.md).
+See the architecture, Memory, Policy, Risk, mismatch, and completion references in `references/`.

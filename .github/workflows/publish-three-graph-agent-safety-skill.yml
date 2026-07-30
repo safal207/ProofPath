@@ -37,21 +37,31 @@ jobs:
           unzip -t dist/three-graph-agent-safety.zip
           cd dist
           sha256sum --check three-graph-agent-safety.zip.sha256
+      - name: Compile and run semantic validator
+        run: |
+          python3 -m py_compile \
+            skills/three-graph-agent-safety/tools/validate_personal_agent_safety_bundle.py \
+            scripts/build_three_graph_agent_safety_skill.py
+          python3 skills/three-graph-agent-safety/tools/validate_personal_agent_safety_bundle.py \
+            skills/three-graph-agent-safety/assets/personal-agent-safety.example.json \
+            --self-test
       - name: Validate JSON Schema syntax
         run: |
           python3 - <<'PY'
           import json
           from pathlib import Path
-          path = Path("skills/three-graph-agent-safety/assets/three-graph-bundle.schema.json")
-          payload = json.loads(path.read_text(encoding="utf-8"))
-          assert payload["$schema"].endswith("2020-12/schema")
-          assert payload["properties"]["profile"]["const"] == "org.proofpath.three-graph-agent-safety"
-          print("PASS: three-graph schema is valid JSON")
+          root = Path("skills/three-graph-agent-safety/assets")
+          legacy = json.loads((root / "three-graph-bundle.schema.json").read_text())
+          personal = json.loads((root / "personal-agent-safety-bundle.schema.json").read_text())
+          assert legacy["properties"]["profile"]["const"] == "org.proofpath.three-graph-agent-safety"
+          assert personal["properties"]["profile"]["const"] == "org.proofpath.personal-agent-safety"
+          assert personal["properties"]["version"]["const"] == "1.1.0"
+          print("PASS: both schemas are valid JSON")
           PY
       - name: Upload validated skill package
         uses: actions/upload-artifact@v4
         with:
-          name: three-graph-agent-safety-skill
+          name: three-graph-agent-safety-skill-v1.1.0
           path: |
             dist/three-graph-agent-safety.zip
             dist/three-graph-agent-safety.zip.sha256
@@ -76,7 +86,7 @@ jobs:
       - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: three-graph-agent-safety-v1.0.0
+          TAG: three-graph-agent-safety-v1.1.0
         run: |
           set -euo pipefail
           if gh release view "$TAG" >/dev/null 2>&1; then
@@ -88,6 +98,6 @@ jobs:
             gh release create "$TAG" \
               dist/three-graph-agent-safety.zip \
               dist/three-graph-agent-safety.zip.sha256 \
-              --title "Three-Graph Agent Safety Skill v1.0.0" \
-              --notes "Installable ChatGPT skill that separates agent ideas, current user intent, and independently observed facts; detects graph mismatches; handles timeout and recovery safely; and produces machine-readable evidence. See skills/three-graph-agent-safety/README_RU.md."
+              --title "Three-Graph Agent Safety Skill v1.1.0" \
+              --notes "Personal Agent Safety update: preserves Idea, Intent, and Fact truth graphs and adds versioned Policy, provenance-aware Memory, and explicit Risk graphs. Includes a machine-readable v1.1 bundle, semantic validator, negative controls, and Russian installation guide."
           fi
