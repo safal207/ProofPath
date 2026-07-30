@@ -1,0 +1,10 @@
+flowchart LR
+    P[Signed principal intent] --> A[Agent proposal]
+    A --> G[ProofPath authority and causal checks]
+    G --> E[Mock executor receipt]
+    E --> O[Observed result]
+    O --> W[Witness statement]
+    W --> V[Offline PoCI verifier]
+    V -->|valid chain| OK[ACCEPT report]
+    O -->|result digest changed| V
+    V -->|integrity conflict| BAD[CHALLENGE report]
