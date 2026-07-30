@@ -1,0 +1,14 @@
+{
+  "profile": "org.proofpath.synthetic-order-request",
+  "version": "0.1.0",
+  "request_id": "request:create-order:001",
+  "intent": {
+    "intent_id": "intent:create-order-once:001",
+    "code": "CREATE_ORDER_ONCE",
+    "constraints": ["idempotency_key_required"]
+  },
+  "customer_id": "customer-001",
+  "item_id": "item-001",
+  "quantity": 1,
+  "idempotency_key": "order-key-001"
+}
