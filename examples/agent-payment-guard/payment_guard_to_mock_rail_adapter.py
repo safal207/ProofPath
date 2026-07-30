@@ -16,10 +16,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -64,10 +64,13 @@ def main() -> int:
     if guard_resp["execution_allowed"] is True and guard_resp["decision"] == "ACCEPT":
         rail_url = f"{args.rail_url.rstrip('/')}/v1/mock-rail/execute"
         rail_body = {
+            "origin": "agent",
             "agent_id": proposal.get("agent_id"),
             "asset": proposal.get("asset"),
             "amount": proposal.get("amount"),
             "recipient": proposal.get("recipient"),
+            "intent_id": proposal.get("human_intent_id"),
+            "causal_parent": proposal.get("causal_parent"),
             "proofpath_decision": guard_resp["decision"],
             "proofpath_audit_hash": guard_resp["audit_hash"],
         }

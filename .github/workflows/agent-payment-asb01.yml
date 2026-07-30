@@ -1,0 +1,39 @@
+name: Agent Payment ASB-01
+
+on:
+  pull_request:
+    paths:
+      - "examples/agent-payment-guard/**"
+      - "scripts/export_payment_guard_evidence.py"
+      - ".github/workflows/agent-payment-asb01.yml"
+  push:
+    branches: [main]
+    paths:
+      - "examples/agent-payment-guard/**"
+      - "scripts/export_payment_guard_evidence.py"
+      - ".github/workflows/agent-payment-asb01.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  stale-observation-race:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate scripts
+        run: |
+          python -m py_compile \
+            examples/agent-payment-guard/mock_payment_rail.py \
+            examples/agent-payment-guard/payment_guard_to_mock_rail_adapter.py
+          bash -n examples/agent-payment-guard/run_stale_observation_race_demo.sh
+      - name: Run payment guard regression demo
+        run: bash examples/agent-payment-guard/run_demo_check.sh
+      - name: Run execution-boundary demo
+        run: bash examples/agent-payment-guard/run_mock_rail_demo.sh
+      - name: Run ASB-01 stale-observation race
+        run: bash examples/agent-payment-guard/run_stale_observation_race_demo.sh
