@@ -58,6 +58,7 @@ jobs:
       - name: Run ASB-02 through pinned CML scorer
         env:
           CML_ROOT: .cml-verifier
+          CML_EXPECTED_COMMIT: ${{ env.CML_AGENT_SAFETY_REF }}
         run: bash examples/authorization-revocation-guard/run_cml_asb02_verified_check.sh
       - name: Verify evidence checksums
         run: |
