@@ -1,0 +1,10 @@
+{
+  "account_id": "account:demo-business-limit:001",
+  "currency": "EUR",
+  "limit": 500,
+  "limit_kind": "daily_transfer_limit",
+  "profile": "org.proofpath.authoritative-account-limit",
+  "state_version": 12,
+  "updated_at": "2030-01-01T00:00:00Z",
+  "version": "0.1.0"
+}
