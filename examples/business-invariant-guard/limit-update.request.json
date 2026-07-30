@@ -1,0 +1,19 @@
+{
+  "account_id": "account:demo-business-limit:001",
+  "currency": "EUR",
+  "dependent_action": "schedule_transfer:transfer-demo-001",
+  "intent": {
+    "code": "UPDATE_LIMIT_WITHIN_POLICY",
+    "constraints": [
+      "limit_at_or_below_policy_max"
+    ]
+  },
+  "limit_kind": "daily_transfer_limit",
+  "policy_id": "policy:account-transfer-limit:001",
+  "policy_revision": 4,
+  "profile": "org.proofpath.limit-update-request",
+  "request_id": "request:update-limit:001",
+  "requested_at": "2030-01-01T00:00:10Z",
+  "requested_limit": 900,
+  "version": "0.1.0"
+}
