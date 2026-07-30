@@ -1,0 +1,93 @@
+{
+  "schema": "proofpath.ots-anchor-conformance.v0.1",
+  "cases": [
+    {
+      "name": "verified-bitcoin-attestation",
+      "returncode": 0,
+      "expected": {
+        "status": "TEMPORALLY_ANCHORED",
+        "reason": "BITCOIN_ATTESTATION_VERIFIED",
+        "bitcoin_block_height": 358391,
+        "attested_before": "2015-05-28 CEST"
+      },
+      "output": "Assuming target filename is 'payload'\nSuccess! Bitcoin block 358391 attests existence as of 2015-05-28 CEST\n"
+    },
+    {
+      "name": "pending-calendar-proof-stays-pending",
+      "returncode": 1,
+      "expected": {
+        "status": "PENDING",
+        "reason": "BITCOIN_CONFIRMATION_PENDING",
+        "bitcoin_block_height": null,
+        "attested_before": null
+      },
+      "output": "Calendar https://alice.btc.calendar.opentimestamps.org: Pending confirmation in Bitcoin blockchain\n"
+    },
+    {
+      "name": "success-looking-output-with-nonzero-exit-fails-closed",
+      "returncode": 1,
+      "expected": {
+        "status": "INVALID",
+        "reason": "VERIFIER_EXIT_NONZERO",
+        "bitcoin_block_height": null,
+        "attested_before": null
+      },
+      "output": "Success! Bitcoin block 358391 attests existence as of 2015-05-28 CEST\n"
+    },
+    {
+      "name": "zero-exit-without-bitcoin-attestation-fails-closed",
+      "returncode": 0,
+      "expected": {
+        "status": "INVALID",
+        "reason": "NO_BITCOIN_ATTESTATION",
+        "bitcoin_block_height": null,
+        "attested_before": null
+      },
+      "output": "Timestamp syntax is valid.\n"
+    },
+    {
+      "name": "unknown-attestation-is-not-bitcoin-proof",
+      "returncode": 0,
+      "expected": {
+        "status": "INVALID",
+        "reason": "UNKNOWN_ATTESTATION",
+        "bitcoin_block_height": null,
+        "attested_before": null
+      },
+      "output": "Unknown Attestation\n"
+    },
+    {
+      "name": "conflicting-block-attestations-fail-closed",
+      "returncode": 0,
+      "expected": {
+        "status": "INVALID",
+        "reason": "CONFLICTING_BITCOIN_ATTESTATIONS",
+        "bitcoin_block_height": null,
+        "attested_before": null
+      },
+      "output": "Success! Bitcoin block 358391 attests existence as of 2015-05-28 CEST\nSuccess! Bitcoin block 428648 attests existence as of 2016-09-07 CEST\n"
+    },
+    {
+      "name": "duplicate-attestations-are-ambiguous",
+      "returncode": 0,
+      "expected": {
+        "status": "INVALID",
+        "reason": "AMBIGUOUS_MULTIPLE_ATTESTATIONS",
+        "bitcoin_block_height": null,
+        "attested_before": null
+      },
+      "output": "Success! Bitcoin block 358391 attests existence as of 2015-05-28 CEST\nSuccess! Bitcoin block 358391 attests existence as of 2015-05-28 CEST\n"
+    },
+    {
+      "name": "pending-and-confirmed-output-is-conflicting",
+      "returncode": 0,
+      "expected": {
+        "status": "INVALID",
+        "reason": "CONFLICTING_PENDING_AND_CONFIRMED",
+        "bitcoin_block_height": null,
+        "attested_before": null
+      },
+      "output": "Pending confirmation in Bitcoin blockchain\nSuccess! Bitcoin block 358391 attests existence as of 2015-05-28 CEST\n"
+    }
+  ]
+}
