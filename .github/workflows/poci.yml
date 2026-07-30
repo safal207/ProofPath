@@ -1,0 +1,106 @@
+name: PoCI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/poci.yml"
+      - "docs/POCI_*.md"
+      - "docs/THREAT_MODEL_POCI.md"
+      - "schemas/action-proof-envelope.v0.1.schema.json"
+      - "examples/poci-witness/**"
+      - "scripts/verify_poci.py"
+      - "tests/test_poci*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/poci.yml"
+      - "docs/POCI_*.md"
+      - "docs/THREAT_MODEL_POCI.md"
+      - "schemas/action-proof-envelope.v0.1.schema.json"
+      - "examples/poci-witness/**"
+      - "scripts/verify_poci.py"
+      - "tests/test_poci*.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: poci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Guard fixture corpus
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("examples/poci-witness/fixtures")
+          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          cases = manifest.get("cases")
+          if not isinstance(cases, list) or len(cases) != 12:
+              raise SystemExit("PoCI manifest must contain exactly 12 cases")
+          names = [case.get("file") for case in cases]
+          if len(names) != len(set(names)):
+              raise SystemExit("PoCI manifest contains duplicate fixture names")
+          files = sorted(path.name for path in root.glob("*.json") if path.name != "manifest.json")
+          if sorted(names) != files:
+              raise SystemExit(f"fixture corpus drift: manifest={sorted(names)!r}, files={files!r}")
+          print(f"PASS PoCI fixture corpus guard ({len(files)} fixtures)")
+          PY
+
+      - name: Compile Python entrypoints
+        run: |
+          python3 -m py_compile \
+            scripts/verify_poci.py \
+            examples/poci-witness/run_demo.py \
+            tests/test_poci_conformance.py \
+            tests/test_poci_demo.py
+
+      - name: Run PoCI tests
+        run: python3 -m unittest discover -s tests -p 'test_poci*.py' -v
+
+      - name: Generate conformance report
+        run: |
+          mkdir -p artifacts/poci/conformance
+          python3 scripts/verify_poci.py \
+            examples/poci-witness/fixtures/manifest.json \
+            --manifest --pretty \
+            > artifacts/poci/conformance/conformance-report.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("artifacts/poci/conformance/conformance-report.json").read_text())
+          if report.get("passed") is not True or report.get("case_count") != 12:
+              raise SystemExit("PoCI conformance report is not passing all 12 cases")
+          print("PASS PoCI conformance report")
+          PY
+
+      - name: Run reviewer demo
+        run: |
+          mkdir -p artifacts/poci/demo
+          python3 examples/poci-witness/run_demo.py \
+            --output-dir artifacts/poci/demo \
+            --check \
+            | tee artifacts/poci/demo-transcript.txt
+
+      - name: Upload PoCI evidence reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: poci-conformance-${{ github.run_id }}
+          path: artifacts/poci
+          if-no-files-found: error
+          retention-days: 14

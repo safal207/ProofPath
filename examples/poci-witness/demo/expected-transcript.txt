@@ -1,0 +1,5 @@
+PoCI v0.1 evidence demo
+valid-action.accept.json -> ACCEPT (primary=None)
+result-digest-mismatch.challenge.json -> CHALLENGE (primary=RESULT_DIGEST_MISMATCH)
+portable reports: accept-report.json, challenge-report.json, demo-summary.json
+PASS evidence accepted; tampering challenged
