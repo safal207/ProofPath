@@ -1,61 +1,110 @@
-# Architecture reference
+# Architecture reference — Personal Agent Safety v1.1
 
-## Three independent planes
+## Core truth planes
 
 ### Idea plane
 
-Contains the agent's reasoning:
-
 ```text
-problem → hypothesis → proposed strategy → expected outcome
+problem → assumptions → strategy → expected outcome → required proof
 ```
 
-It may contain uncertainty and alternatives. It cannot authorize execution and cannot establish reality.
+Reasoning only. It cannot authorize execution or establish reality.
 
 ### Intent plane
 
-Contains current authority:
-
 ```text
-principal → intent → scope → constraints → approval revision → allowed effects
+principal → current intent → scope → constraints → allowed effects
 ```
 
-It answers whether the action is permitted now. Intent can expire, be revoked, or be narrower than the Idea Graph.
+Current user authority only. It can expire, be revoked, or be narrower than the Idea Graph.
 
 ### Fact plane
-
-Contains evidence-backed state transitions:
 
 ```text
 observed state → dispatch → external transition → readback → verified state
 ```
 
-It answers what happened, not what should have happened.
+Evidence-backed reality only.
 
-## Alignment plane
+## Context-control planes
 
-Alignment is a fourth, derived layer. It does not replace the three graphs.
+### Policy plane
 
 ```text
-Idea expectation ─┐
-                  ├→ alignment rule → status
-Intent constraint ┤
-Fact observation ─┘
+issuer → policy revision → rule → condition → effect → precedence
 ```
 
-Each alignment record should identify:
+Policy may deny or narrow Intent. A permissive rule does not create Intent.
+
+### Memory plane
 
 ```text
-alignment_id
-idea_node_id
-intent_node_id
-fact_node_id
+source → recorded claim → retrieval → freshness/conflict → permitted use
+```
+
+Memory is contextual evidence about the past. It has `authority_effect=none`.
+
+### Risk plane
+
+```text
+hazard → causal path → likelihood/impact → mitigation → residual risk
+```
+
+Risk is an assessment. It influences the gate but does not create authority or fact.
+
+## Decision architecture
+
+```text
+                    ┌──────── Memory Graph ────────┐
+                    │ informs strategy             │
+                    │ never authorizes              │
+                    ▼                              │
+Idea Graph → compare with Intent Graph → Policy Graph
+     │                  │                 │
+     │                  └──── authority ──┘
+     │
+     └──────────────→ Risk Graph
+                         │
+                         ▼
+                ACCEPT / HOLD / BLOCK
+                         │
+                         ▼
+                      Executor
+                         │
+                         ▼
+                     Fact Graph
+                         │
+                         ▼
+           DIVERGED / UNKNOWN / VERIFIED
+```
+
+## Authority precedence
+
+```text
+current Intent
+→ mandatory Policy
+→ Risk gate
+→ execution decision
+```
+
+Memory is deliberately absent from this chain.
+
+## Alignment links
+
+Each link should contain:
+
+```text
+link_id
+from_graph
+from_node_id
+to_graph
+to_node_id
 rule
 status
 evidence_refs
 ```
 
-Allowed statuses:
+Statuses:
 
 ```text
 ALIGNED
@@ -68,7 +117,11 @@ NOT_APPLICABLE
 
 ```text
 PROPOSED
-→ AUTHORIZED | HELD | BLOCKED
+→ CONTEXT_LOADED
+→ INTENT_CURRENT | INTENT_MISSING
+→ POLICY_ALLOWED | POLICY_DENIED | POLICY_UNKNOWN
+→ RISK_ACCEPTABLE | RISK_HIGH | RISK_UNKNOWN
+→ ACCEPTED | HELD | BLOCKED
 → DISPATCHED
 → OBSERVED | UNKNOWN
 → DIVERGED | VERIFIED
@@ -77,41 +130,48 @@ PROPOSED
 → VERIFIED
 ```
 
-`UNKNOWN` is stable until new evidence arrives. It is not a temporary spelling of success.
+`UNKNOWN` is stable until new evidence arrives.
 
 ## Trust boundaries
 
 1. Model output is a proposal.
-2. User/policy authority is external to model reasoning.
-3. Executor and system of record are external to both.
-4. Raw evidence is distinct from a producer-authored graph.
-5. Independent verification must recompute conclusions from raw evidence when practical.
+2. Memory is retrieved context, not current permission.
+3. User Intent is external to model reasoning and memory.
+4. Policy is versioned external control.
+5. Risk is an explicit assessment with uncertainty.
+6. Executor and system of record are external.
+7. Raw evidence is distinct from producer-authored graphs.
+8. Independent verification recomputes conclusions from raw evidence when practical.
 
 ## Graph integrity rules
 
-- unique node and edge IDs;
+- unique graph, node, edge, and link IDs;
 - acyclic causal edges;
-- valid edge endpoints;
+- valid edge and link endpoints;
 - explicit causal parents;
-- timestamps or ordering evidence for Fact nodes;
+- Fact nodes have timestamps and evidence;
+- Memory nodes have provenance, purpose, freshness, conflict state, and `authority_effect=none`;
+- Policy nodes bind an issuer and exact revision;
+- Risk nodes preserve likelihood, impact, uncertainty, mitigation, and residual risk;
 - evidence references resolve inside the evidence root;
 - no path traversal;
-- content digests for important request, authority, and result artifacts;
 - one lineage binding across dispatch, reconciliation, recovery, and verification.
 
-## Safe side-effect protocol
+## Personal agent side-effect protocol
 
 ```text
 proposal
 → build Idea Graph
 → load current Intent Graph
-→ compare proposal with authority
+→ load exact Policy Graph revision
+→ retrieve minimal relevant Memory Graph
+→ build Risk Graph
+→ align context and authority
 → ACCEPT / HOLD / BLOCK
 → dispatch once
 → record Fact Graph
 → authoritative readback
-→ align graphs
 → contain divergence
-→ recover within intent
+→ recover within Intent and Policy
 → independently verify final invariant
 ```

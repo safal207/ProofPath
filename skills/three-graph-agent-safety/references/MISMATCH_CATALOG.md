@@ -1,91 +1,149 @@
 # Mismatch catalog
 
-## IDEA_INTENT_MISMATCH
+## Core truth mismatches
 
-The proposed strategy exceeds or contradicts user authority.
+### IDEA_INTENT_MISMATCH
 
-Examples:
+The proposed strategy exceeds or contradicts current user authority.
 
-- agent proposes two orders while intent permits one;
-- agent selects a different recipient;
-- agent proposes destructive recovery while only reversible recovery is allowed.
+Default: `BLOCK` or `HOLD`.
 
-Default response: `BLOCK` or `HOLD`.
-
-## INTENT_FACT_MISMATCH
+### INTENT_FACT_MISMATCH
 
 Observed effects exceed, omit, or contradict the authorized effect.
 
-Examples:
+Default: stop dependent work, contain, recover, verify.
 
-- two payments exist for `PAY_ONCE`;
-- deleted resource differs from approved target;
-- final limit exceeds policy maximum.
-
-Default response: stop dependent work, contain, recover, verify.
-
-## IDEA_FACT_MISMATCH
+### IDEA_FACT_MISMATCH
 
 Reality contradicts the strategy's expected result.
 
+Default: revise the Idea Graph; do not rewrite facts.
+
+## Policy mismatches
+
+### POLICY_INTENT_CONFLICT
+
+Intent requests an effect that mandatory policy denies or constrains.
+
+Default: `BLOCK`, or `HOLD` when a required approval can resolve it.
+
+### POLICY_REVISION_STALE
+
+The decision used an outdated policy revision.
+
+Default: refresh policy at the execution boundary.
+
+### POLICY_AUTHORITY_SUBSTITUTION
+
+A permissive policy is treated as if it were user consent.
+
+Default: `BLOCK` or `HOLD` for missing Intent.
+
+## Memory mismatches
+
+### MEMORY_AUTHORITY_LEAK
+
+Retrieved or remembered context is used as permission for a side effect.
+
 Examples:
 
-- HTTP 200 but authoritative state is wrong;
-- retry strategy assumed no commit but an order already exists;
-- tests pass but billing invariant fails.
+- remembered recipient used to send a message;
+- remembered budget used to purchase;
+- past merge approval reused for a new PR.
 
-Default response: revise the Idea Graph; do not rewrite facts.
+Default: `BLOCK`.
 
-## AUTHORITY_STALE
+### MEMORY_STALE
 
-The action uses an approval snapshot that is no longer current.
+A high-impact decision relies on stale or unknown-freshness context.
 
-Examples:
+Default: `HOLD` and refresh.
 
-- approval revoked between planning and dispatch;
-- policy revision changed;
-- validity window expired.
+### MEMORY_CONFLICT
 
-Default response: refresh authority at the execution boundary.
+Retrieved memories disagree with each other or with current instructions.
 
-## FACT_MISSING
+Default: current Intent wins; unresolved conflict stays `HOLD`.
+
+### MEMORY_SCOPE_EXCEEDED
+
+The system retrieved or used context unrelated to the present purpose.
+
+Default: exclude the context, minimize retrieval, and assess privacy impact.
+
+### MEMORY_INFERENCE_EXPOSED_AS_FACT
+
+An inferred preference or profile claim is presented as an observed fact.
+
+Default: relabel as inference or remove.
+
+## Risk mismatches
+
+### RISK_UNDERSTATED
+
+Likelihood, impact, irreversibility, or residual risk is materially understated.
+
+Default: recompute and fail closed.
+
+### RISK_UNKNOWN_ACCEPTED
+
+Unknown risk is treated as low and the action is accepted.
+
+Default: `HOLD` or `BLOCK`.
+
+### MITIGATION_NOT_ENFORCED
+
+A claimed mitigation is not present at the action boundary.
+
+Default: remove mitigation credit and re-evaluate residual risk.
+
+### SECONDARY_HARM_RISK
+
+Containment or recovery could create additional harm.
+
+Default: choose the smallest reversible action or escalate.
+
+## Execution and evidence mismatches
+
+### AUTHORITY_STALE
+
+Approval expired or was revoked between planning and dispatch.
+
+Default: refresh authority.
+
+### FACT_MISSING
 
 A required business outcome has no authoritative evidence.
 
-Default response: `UNKNOWN` or `HOLD`, never `VERIFIED`.
+Default: `UNKNOWN` or `HOLD`, never `VERIFIED`.
 
-## UNKNOWN_PROMOTED_TO_SUCCESS
+### UNKNOWN_PROMOTED_TO_SUCCESS
 
-A timeout, missing response, or ambiguous result is described as successful.
+A timeout or ambiguous result is described as successful.
 
-Default response: block success announcement and reconcile.
+Default: block success announcement and reconcile.
 
-## SCOPE_EXPANDED_DURING_RECOVERY
+### SCOPE_EXPANDED_DURING_RECOVERY
 
-Recovery creates a new recipient, key, target, amount, or destructive effect not authorized by the original intent.
+Recovery creates a new target, recipient, amount, key, or destructive effect.
 
-Default response: `BLOCK`; request fresh authority if needed.
+Default: `BLOCK`; request fresh authority if needed.
 
-## DUPLICATE_SIDE_EFFECT
+### DUPLICATE_SIDE_EFFECT
 
-More than one effect exists for a once-only intent.
+More than one effect exists for a once-only Intent.
 
-Default response: stop retries, identify lineage, contain only the agent-created duplicate, preserve unrelated effects.
+Default: stop retries and contain only the agent-created duplicate.
 
-## TOOL_SUCCESS_BUSINESS_FAILURE
+### TOOL_SUCCESS_BUSINESS_FAILURE
 
-Transport or tool status reports success while the authoritative invariant is false.
+Tool status reports success while the authoritative invariant is false.
 
-Default response: freeze dependent actions, read authoritative state, recover, independently verify.
+Default: freeze dependent actions, read authoritative state, recover, verify.
 
-## EVIDENCE_LINEAGE_BROKEN
+### EVIDENCE_LINEAGE_BROKEN
 
-Request, authority, execution, recovery, or verification cannot be tied to the same intent/action lineage.
+Request, authority, policy, memory, risk, execution, or verification cannot be tied to one lineage.
 
-Default response: fail closed and preserve available evidence.
-
-## SECONDARY_HARM_RISK
-
-The proposed containment or recovery could cause additional harm.
-
-Default response: choose the smallest reversible action or escalate to human review.
+Default: fail closed and preserve evidence.
