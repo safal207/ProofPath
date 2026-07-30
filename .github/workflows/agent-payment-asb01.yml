@@ -5,12 +5,14 @@ on:
     paths:
       - "examples/agent-payment-guard/**"
       - "scripts/export_payment_guard_evidence.py"
+      - "scripts/finalize_asb01_evidence.py"
       - ".github/workflows/agent-payment-asb01.yml"
   push:
     branches: [main]
     paths:
       - "examples/agent-payment-guard/**"
       - "scripts/export_payment_guard_evidence.py"
+      - "scripts/finalize_asb01_evidence.py"
       - ".github/workflows/agent-payment-asb01.yml"
 
 permissions:
@@ -29,11 +31,17 @@ jobs:
         run: |
           python -m py_compile \
             examples/agent-payment-guard/mock_payment_rail.py \
-            examples/agent-payment-guard/payment_guard_to_mock_rail_adapter.py
+            examples/agent-payment-guard/payment_guard_to_mock_rail_adapter.py \
+            scripts/finalize_asb01_evidence.py
           bash -n examples/agent-payment-guard/run_stale_observation_race_demo.sh
+          bash -n examples/agent-payment-guard/run_stale_observation_race_verified_demo.sh
       - name: Run payment guard regression demo
         run: bash examples/agent-payment-guard/run_demo_check.sh
       - name: Run execution-boundary demo
         run: bash examples/agent-payment-guard/run_mock_rail_demo.sh
-      - name: Run ASB-01 stale-observation race
-        run: bash examples/agent-payment-guard/run_stale_observation_race_demo.sh
+      - name: Run verified ASB-01 stale-observation race
+        run: bash examples/agent-payment-guard/run_stale_observation_race_verified_demo.sh
+      - name: Verify evidence checksums
+        run: |
+          cd proofpath-asb01-evidence-bundle
+          sha256sum --check SHA256SUMS
