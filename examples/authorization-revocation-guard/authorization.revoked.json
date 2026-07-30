@@ -1,0 +1,15 @@
+{
+  "profile": "org.proofpath.dispatch-authorization",
+  "version": "0.1.0",
+  "authorization_id": "authorization:delete-quarterly-report:001",
+  "revision": 2,
+  "status": "REVOKED",
+  "intent_code": "DELETE_ONLY_WHILE_AUTHORIZED",
+  "resource_scope": "document:quarterly-report-2026-q2",
+  "action": "delete_resource",
+  "issued_at": "2030-01-01T00:00:00Z",
+  "expires_at": "2030-01-01T00:10:00Z",
+  "approval_ref": "approval:human:delete-quarterly-report:001",
+  "revoked_at": "2030-01-01T00:01:00Z",
+  "revocation_reason": "user_withdrew_approval"
+}
