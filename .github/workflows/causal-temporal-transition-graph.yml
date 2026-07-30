@@ -1,0 +1,43 @@
+name: Causal-temporal transition graph
+
+on:
+  pull_request:
+    paths:
+      - "scripts/check_causal_temporal_graph.py"
+      - "conformance/guardrail-decision-v1/causal-temporal/**"
+      - "docs/CAUSAL_TEMPORAL_TRANSITION_GRAPH.md"
+      - "docs/CAUSAL_TEMPORAL_TRACE_SEAL.md"
+      - ".github/workflows/causal-temporal-transition-graph.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/check_causal_temporal_graph.py"
+      - "conformance/guardrail-decision-v1/causal-temporal/**"
+      - "docs/CAUSAL_TEMPORAL_TRANSITION_GRAPH.md"
+      - "docs/CAUSAL_TEMPORAL_TRACE_SEAL.md"
+      - ".github/workflows/causal-temporal-transition-graph.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate causal transition vectors
+        run: |
+          python3 scripts/check_causal_temporal_graph.py \
+            conformance/guardrail-decision-v1/causal-temporal/graph.json \
+            conformance/guardrail-decision-v1/causal-temporal/vectors.json
+      - name: Validate sealed trace completeness
+        run: |
+          python3 scripts/check_causal_temporal_graph.py \
+            conformance/guardrail-decision-v1/causal-temporal/graph.json \
+            conformance/guardrail-decision-v1/causal-temporal/sealed-vectors.json
