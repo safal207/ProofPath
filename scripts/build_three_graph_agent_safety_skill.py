@@ -57,6 +57,8 @@ def validate_skill() -> list[Path]:
     for path in sorted(SKILL_DIR.rglob("*")):
         if path.is_symlink():
             fail(f"symlinks are not allowed in skill package: {path}")
+        if "__pycache__" in path.parts or path.suffix == ".pyc":
+            continue
         if path.is_file():
             files.append(path)
     required = {
