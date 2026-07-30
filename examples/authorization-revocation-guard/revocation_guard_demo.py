@@ -116,6 +116,7 @@ def run_demo(fixtures_dir: Path, runtime_dir: Path) -> None:
             "revision": authorization_before["revision"],
             "status": authorization_before["status"],
             "digest": digest(authorization_before),
+            "approval_ref": authorization_before["approval_ref"],
         },
     }
     write_json(runtime_dir / "plan.json", plan)
@@ -142,12 +143,23 @@ def run_demo(fixtures_dir: Path, runtime_dir: Path) -> None:
     }
     write_json(runtime_dir / "revocation-record.json", revocation_record)
 
+    # Dispatch boundary: refresh authority from the current store. The planner's
+    # earlier ACTIVE snapshot is evidence of past state, not execution authority.
     current_authorization = load_json(authorization_path)
     resource_scope_exact = current_authorization.get("resource_scope") == plan["resource_id"]
+    intent_code_matches = current_authorization.get("intent_code") == plan["intent"]["code"]
+    approval_ref_matches = (
+        current_authorization.get("approval_ref")
+        == plan["authorization_snapshot"]["approval_ref"]
+    )
     current = (
         current_authorization.get("status") == "ACTIVE"
         and current_authorization.get("action") == plan["action"]
         and resource_scope_exact
+        and intent_code_matches
+        and approval_ref_matches
+        and int(current_authorization.get("revision", 0))
+        >= int(plan["authorization_snapshot"]["revision"])
         and current_authorization.get("authorization_id")
         == plan["authorization_snapshot"]["authorization_id"]
         and parse_time(DISPATCH_TIME) <= parse_time(current_authorization["expires_at"])
@@ -175,6 +187,8 @@ def run_demo(fixtures_dir: Path, runtime_dir: Path) -> None:
         "planned_authorization_digest": plan["authorization_snapshot"]["digest"],
         "current_authorization_digest": digest(current_authorization),
         "resource_scope_exact": resource_scope_exact,
+        "intent_code_matches": intent_code_matches,
+        "approval_ref_matches": approval_ref_matches,
         "reason_codes": reason_codes,
     }
     write_json(runtime_dir / "dispatch-decision.json", decision)
@@ -193,6 +207,8 @@ def run_demo(fixtures_dir: Path, runtime_dir: Path) -> None:
         and decision.get("dispatch_allowed") is False,
         "destructive_tool_not_called": tool_call_count(tool_log_path) == 0,
         "resource_scope_exact": decision.get("resource_scope_exact") is True,
+        "intent_code_matches": decision.get("intent_code_matches") is True,
+        "approval_ref_matches": decision.get("approval_ref_matches") is True,
         "revocation_recorded": revocation_record.get("current_authorization_digest")
         == decision.get("current_authorization_digest"),
     }
