@@ -21,9 +21,21 @@ permissions:
 jobs:
   stale-observation-race:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
+    env:
+      CML_AGENT_SAFETY_REF: 872b3f8012447e7bfc1652e4cb696a32758c579d
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout ProofPath
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout pinned CML verifier
+        uses: actions/checkout@v4
+        with:
+          repository: safal207/Causal-Memory-Layer
+          ref: ${{ env.CML_AGENT_SAFETY_REF }}
+          path: .cml-verifier
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -32,16 +44,27 @@ jobs:
           python -m py_compile \
             examples/agent-payment-guard/mock_payment_rail.py \
             examples/agent-payment-guard/payment_guard_to_mock_rail_adapter.py \
-            scripts/finalize_asb01_evidence.py
+            scripts/finalize_asb01_evidence.py \
+            .cml-verifier/scripts/run_agent_safety_benchmark.py
           bash -n examples/agent-payment-guard/run_stale_observation_race_demo.sh
           bash -n examples/agent-payment-guard/run_stale_observation_race_verified_demo.sh
+          bash -n examples/agent-payment-guard/run_cml_asb01_verified_check.sh
       - name: Run payment guard regression demo
         run: bash examples/agent-payment-guard/run_demo_check.sh
       - name: Run execution-boundary demo
         run: bash examples/agent-payment-guard/run_mock_rail_demo.sh
-      - name: Run verified ASB-01 stale-observation race
-        run: bash examples/agent-payment-guard/run_stale_observation_race_verified_demo.sh
+      - name: Run ASB-01 through pinned CML scorer
+        env:
+          CML_ROOT: .cml-verifier
+        run: bash examples/agent-payment-guard/run_cml_asb01_verified_check.sh
       - name: Verify evidence checksums
         run: |
           cd proofpath-asb01-evidence-bundle
           sha256sum --check SHA256SUMS
+      - name: Upload scored evidence bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-asb01-cml-${{ github.sha }}
+          path: proofpath-asb01-evidence-bundle/
+          if-no-files-found: error
+          retention-days: 14
