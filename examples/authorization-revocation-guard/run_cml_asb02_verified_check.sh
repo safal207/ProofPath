@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 CML_ROOT="${CML_ROOT:-${1:-../Causal-Memory-Layer}}"
+CML_EXPECTED_COMMIT="${CML_EXPECTED_COMMIT:-}"
 CML_RUNNER="$CML_ROOT/scripts/run_agent_safety_benchmark.py"
 CML_BENCHMARK="$CML_ROOT/benchmarks/agent_safety/benchmark.json"
 BUNDLE="proofpath-asb02-evidence-bundle"
@@ -26,6 +27,10 @@ if ! CML_COMMIT="$(git -C "$CML_ROOT" rev-parse HEAD 2>/dev/null)"; then
 fi
 if [[ ! "$CML_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
   echo "[cml-asb-02] invalid CML commit: $CML_COMMIT" >&2
+  exit 2
+fi
+if [[ -n "$CML_EXPECTED_COMMIT" && "$CML_COMMIT" != "$CML_EXPECTED_COMMIT" ]]; then
+  echo "[cml-asb-02] verifier commit mismatch: expected $CML_EXPECTED_COMMIT, got $CML_COMMIT" >&2
   exit 2
 fi
 
