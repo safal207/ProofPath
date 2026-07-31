@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 #[path = "../poci.rs"]
 mod poci;
 
