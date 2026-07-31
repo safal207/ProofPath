@@ -1,0 +1,43 @@
+name: Format PoCI Rust
+
+on:
+  push:
+    branches:
+      - agent/poci-rust-verifier-v0.1
+    paths:
+      - ".github/workflows/format-poci-rust.yml"
+      - "crates/proofpath-verifier/src/poci.rs"
+      - "crates/proofpath-verifier/src/bin/proofpath-poci.rs"
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/poci-rust-verifier-v0.1
+
+      - name: Install Rust with rustfmt
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Format and push
+        run: |
+          cargo fmt --all
+          if git diff --quiet; then
+            echo "Rust sources already formatted"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            crates/proofpath-verifier/src/poci.rs \
+            crates/proofpath-verifier/src/bin/proofpath-poci.rs
+          git commit -m "style: format Rust PoCI verifier"
+          git push origin HEAD:agent/poci-rust-verifier-v0.1
