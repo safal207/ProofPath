@@ -1,0 +1,23 @@
+{
+  "profile_id": "proofpath.poci.multigraph.witness-set.v0.1",
+  "round_id": "poci-demo-round-001",
+  "source_path": "source.valid.json",
+  "quorum": 2,
+  "witnesses": [
+    {
+      "witness_id": "witness-alpha",
+      "operator_id": "operator-alpha",
+      "nonce": "nonce-alpha-0001"
+    },
+    {
+      "witness_id": "witness-beta",
+      "operator_id": "operator-beta",
+      "nonce": "nonce-beta-0001"
+    },
+    {
+      "witness_id": "witness-gamma",
+      "operator_id": "operator-gamma",
+      "nonce": "nonce-gamma-0001"
+    }
+  ]
+}
