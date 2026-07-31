@@ -11,6 +11,8 @@ on:
       - "examples/poci-witness/**"
       - "scripts/verify_poci.py"
       - "scripts/build_poci_multigraph.py"
+      - "scripts/run_poci_multigraph_witness.py"
+      - "scripts/verify_poci_multigraph_quorum.py"
       - "tests/test_poci*.py"
       - "crates/proofpath-verifier/src/poci.rs"
       - "crates/proofpath-verifier/src/bin/proofpath-poci.rs"
@@ -23,6 +25,8 @@ on:
       - "examples/poci-witness/**"
       - "scripts/verify_poci.py"
       - "scripts/build_poci_multigraph.py"
+      - "scripts/run_poci_multigraph_witness.py"
+      - "scripts/verify_poci_multigraph_quorum.py"
       - "tests/test_poci*.py"
       - "crates/proofpath-verifier/src/poci.rs"
       - "crates/proofpath-verifier/src/bin/proofpath-poci.rs"
@@ -76,10 +80,13 @@ jobs:
           python3 -m py_compile \
             scripts/verify_poci.py \
             scripts/build_poci_multigraph.py \
+            scripts/run_poci_multigraph_witness.py \
+            scripts/verify_poci_multigraph_quorum.py \
             examples/poci-witness/run_demo.py \
             tests/test_poci_conformance.py \
             tests/test_poci_demo.py \
-            tests/test_poci_multigraph.py
+            tests/test_poci_multigraph.py \
+            tests/test_poci_multigraph_witness.py
 
       - name: Run Python PoCI tests
         run: python3 -m unittest discover -s tests -p 'test_poci*.py' -v
@@ -187,6 +194,51 @@ jobs:
           if len(report.get("transition_cells", [])) != 3:
               raise SystemExit("PoCI multi-graph report must contain three cells")
           print("PASS PoCI multi-graph transition space (6 graphs, 3 cells)")
+          PY
+
+      - name: Run isolated multi-graph witness quorum
+        run: |
+          mkdir -p artifacts/poci/multigraph/witness-statements
+          python3 scripts/verify_poci_multigraph_quorum.py \
+            examples/poci-witness/multigraph/witnesses.json \
+            --pretty \
+            --statements-dir artifacts/poci/multigraph/witness-statements \
+            --output artifacts/poci/multigraph/witness-quorum-report.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(
+              Path("artifacts/poci/multigraph/witness-quorum-report.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          if report.get("decision") != "ACCEPT":
+              raise SystemExit("PoCI witness quorum did not ACCEPT")
+          if report.get("quorum") != 2:
+              raise SystemExit("PoCI witness quorum must require two witnesses")
+          if report.get("configured_witness_count") != 3:
+              raise SystemExit("PoCI witness set must contain three processes")
+          if len(report.get("agreeing_witnesses", [])) < 2:
+              raise SystemExit("PoCI witness quorum did not reach 2-of-3")
+          consensus = report.get("consensus") or {}
+          if len(consensus.get("graph_roots", {})) != 6:
+              raise SystemExit("PoCI witness consensus must commit six graph roots")
+          statement_files = sorted(
+              path.name
+              for path in Path(
+                  "artifacts/poci/multigraph/witness-statements"
+              ).glob("*.json")
+          )
+          if statement_files != [
+              "witness-alpha.json",
+              "witness-beta.json",
+              "witness-gamma.json",
+          ]:
+              raise SystemExit(
+                  f"unexpected PoCI witness statements: {statement_files!r}"
+              )
+          print("PASS PoCI isolated witness quorum (2-of-3, six graph roots)")
           PY
 
       - name: Run reviewer demo
