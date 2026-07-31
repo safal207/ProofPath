@@ -1,0 +1,59 @@
+{
+  "profile_id": "proofpath.poci.external-operator-challenge.v0.1",
+  "challenge_version": "0.1",
+  "producer_owner": "safal207",
+  "status": "AWAITING_INDEPENDENT_OPERATOR",
+  "current": {
+    "domain_count": 2,
+    "distinct_owner_count": 1,
+    "external_owner_count": 0,
+    "distinct_workflow_count": 2
+  },
+  "required": {
+    "minimum_domains": 3,
+    "minimum_distinct_owners": 2,
+    "minimum_external_owners": 1,
+    "minimum_distinct_workflows": 3,
+    "repository_owner_must_differ_from": "safal207",
+    "keyless_attestation_required": true,
+    "exact_consensus_required": true
+  },
+  "expected_consensus": {
+    "round_id": "poci-demo-round-001",
+    "consensus_root": "sha256:f2bc99fe96f24942e5cc9c87f25c48167d875041e85170dbb354c2bc0cd97f5f",
+    "source_digest": "sha256:807bde72ed45ae1566443dec20c85b02f0d6734e4aa4bf9a9cfe08ce2e4c97fa",
+    "graph_set_id": "mg_compute_purchase_001",
+    "poci_envelope_id": "env_valid_action",
+    "graph_roots": {
+      "causal": "sha256:482d5076dc3a80dac8f4ed179491b4d3e153ece780fcebdd81289ffbdc6fd7f4",
+      "intent": "sha256:3a26e5badd5379f69203dfe972143e0f3969b12e5f5c55cd641aa7f2bc41a0b3",
+      "authority": "sha256:6af348f1245a5a1f3b59b0070653bbf4d512a792e54554918058f9692e33bb0c",
+      "state_transition": "sha256:41807cd0bacac6908867ce6839114d3028ec62550eb7cee0fdb50006e3887c10",
+      "evidence": "sha256:1fed70f4f198ce5a993880e283763db8c0dc576824f042619637b37f6d745899",
+      "time_continuity": "sha256:4b28006fc3a21f6afce98e4e4e661fa204060be976110bed3bb571af3d7e4ccc"
+    },
+    "transition_cells_root": "sha256:b5d5fd4ba2638fb685913e621295a1c70b5aff550d14ea5b2d8c0f49bdba7f45",
+    "computed_multigraph_root": "sha256:98543066cb16c06b5300b56749af43b2fdd48eed47650488ac57987156e38219"
+  },
+  "response_contract": {
+    "profile_id": "proofpath.poci.external-operator-response.v0.1",
+    "required_fields": [
+      "domain_id",
+      "repository",
+      "owner",
+      "workflow",
+      "attestation_verified",
+      "attestation_subject_digest",
+      "attestation_verification_digest",
+      "consensus"
+    ],
+    "verification_steps": [
+      "verify the producer keyless attestation",
+      "recompute the six graph roots independently",
+      "compare every transition coordinate and the multi-graph root",
+      "emit the response from a repository owned by another owner or organization",
+      "keyless-attest the exact response bytes"
+    ]
+  },
+  "challenge_root": "sha256:02f8118f2f5ff7465409ec513da5d0474e26ec8d7c469c5e06ed181f02a82c20"
+}

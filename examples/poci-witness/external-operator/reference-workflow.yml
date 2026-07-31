@@ -1,0 +1,114 @@
+name: ProofPath External Witness
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  actions: read
+
+env:
+  PROOFPATH_REPOSITORY: safal207/ProofPath
+  PROOFPATH_REF: 646f5c63795fc7338c3206db1d40aceec4c8a1de
+  PROOFPATH_ATTESTATION_SHA: 3a5dde912c44e0957204d3df733e712c596455f1
+  PROOFPATH_SIGNER_WORKFLOW: safal207/ProofPath/.github/workflows/poci-signed-witness-network.yml
+
+jobs:
+  witness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout operator repository
+        uses: actions/checkout@v4
+
+      - name: Checkout exact ProofPath producer code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PROOFPATH_REPOSITORY }}
+          ref: ${{ env.PROOFPATH_REF }}
+          path: producer
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify challenge root
+        run: |
+          python3 proofpath-witness/proofpath_external_witness.py \
+            verify-challenge proofpath-witness/challenge.json
+
+      - name: Recompute the six-graph transition space
+        run: |
+          mkdir -p artifacts
+          python3 producer/scripts/build_poci_multigraph.py \
+            producer/examples/poci-witness/multigraph/source.valid.json \
+            --pretty \
+            --output artifacts/recomputed-multigraph.json
+
+      - name: Verify ProofPath producer attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh attestation verify \
+            producer/examples/poci-witness/federation/proofpath-attested-quorum-report.json \
+            --repo "$PROOFPATH_REPOSITORY" \
+            --signer-workflow "$PROOFPATH_SIGNER_WORKFLOW" \
+            --source-digest "$PROOFPATH_ATTESTATION_SHA" \
+            --signer-digest "$PROOFPATH_ATTESTATION_SHA" \
+            --cert-oidc-issuer "https://token.actions.githubusercontent.com" \
+            --deny-self-hosted-runners \
+            --format json \
+            > artifacts/producer-attestation.json
+
+      - name: Build independent operator response
+        run: |
+          python3 proofpath-witness/proofpath_external_witness.py \
+            create-response \
+            proofpath-witness/challenge.json \
+            artifacts/recomputed-multigraph.json \
+            --domain-id "external-${GITHUB_REPOSITORY_ID}" \
+            --repository "$GITHUB_REPOSITORY" \
+            --owner "$GITHUB_REPOSITORY_OWNER" \
+            --workflow "$GITHUB_REPOSITORY/.github/workflows/proofpath-external-witness.yml" \
+            --producer-code-sha "$PROOFPATH_REF" \
+            --source-path "examples/poci-witness/multigraph/source.valid.json" \
+            --source-file producer/examples/poci-witness/multigraph/source.valid.json \
+            --producer-attestation-result artifacts/producer-attestation.json \
+            --producer-attestation-verified \
+            --output artifacts/external-operator-response.json
+
+      - name: Keyless-attest exact response bytes
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/external-operator-response.json
+
+      - name: Verify operator response attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh attestation verify artifacts/external-operator-response.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/proofpath-external-witness.yml" \
+            --source-digest "${{ github.sha }}" \
+            --signer-digest "${{ github.workflow_sha }}" \
+            --cert-oidc-issuer "https://token.actions.githubusercontent.com" \
+            --deny-self-hosted-runners \
+            --format json \
+            > artifacts/operator-attestation.json
+
+      - name: Finalize portable submission
+        run: |
+          python3 proofpath-witness/proofpath_external_witness.py \
+            finalize-submission artifacts/external-operator-response.json \
+            --attestation-result artifacts/operator-attestation.json \
+            --output artifacts/external-operator-submission.json
+
+      - name: Upload submission bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-external-witness-${{ github.run_id }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 14
