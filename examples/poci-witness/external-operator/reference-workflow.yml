@@ -98,6 +98,40 @@ jobs:
             --format json \
             > artifacts/operator-attestation.json
 
+      - name: Build admission provenance
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SIGNER_SHA: ${{ github.workflow_sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          response = Path("artifacts/external-operator-response.json").read_bytes()
+          provenance = {
+              "profile_id": "proofpath.poci.external-operator-provenance.v0.1",
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "owner": os.environ["GITHUB_REPOSITORY_OWNER"],
+              "workflow": (
+                  os.environ["GITHUB_REPOSITORY"]
+                  + "/.github/workflows/proofpath-external-witness.yml"
+              ),
+              "source_sha": os.environ["SOURCE_SHA"],
+              "signer_sha": os.environ["SIGNER_SHA"],
+              "oidc_issuer": "https://token.actions.githubusercontent.com",
+              "deny_self_hosted_runners": True,
+              "response_subject_digest": (
+                  "sha256:" + hashlib.sha256(response).hexdigest()
+              ),
+          }
+          Path("artifacts/provenance.json").write_text(
+              json.dumps(provenance, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
       - name: Finalize portable submission
         run: |
           python3 proofpath-witness/proofpath_external_witness.py \
