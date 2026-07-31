@@ -1,0 +1,298 @@
+name: PoCI External Submission Admission
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "external-submissions/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  admission:
+    if: github.event.pull_request.head.repo.owner.login != github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trusted base only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Validate exact submission paths
+        id: paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh api --paginate \
+            "repos/${BASE_REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" \
+            --jq '.[].filename' > /tmp/changed-files.txt
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          files = [
+              line.strip()
+              for line in Path("/tmp/changed-files.txt").read_text().splitlines()
+              if line.strip()
+          ]
+          pattern = re.compile(
+              r"^external-submissions/([A-Za-z0-9._-]+)/"
+              r"(response|submission|provenance)\.json$"
+          )
+          matches = [pattern.fullmatch(path) for path in files]
+          if len(files) != 3 or any(match is None for match in matches):
+              raise SystemExit(
+                  "external admission PR must change exactly response.json, "
+                  "submission.json, and provenance.json in one submission folder"
+              )
+          folders = {match.group(1) for match in matches if match is not None}
+          names = {match.group(2) for match in matches if match is not None}
+          if len(folders) != 1 or names != {"response", "submission", "provenance"}:
+              raise SystemExit("submission files must share one folder and exact names")
+          folder = next(iter(folders))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"folder=external-submissions/{folder}\n")
+          PY
+
+      - name: Download external JSON as data
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          FOLDER: ${{ steps.paths.outputs.folder }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/intake
+          for name in response submission provenance; do
+            gh api \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${HEAD_REPOSITORY}/contents/${FOLDER}/${name}.json?ref=${HEAD_SHA}" \
+              --jq '.content' \
+              | tr -d '\n' \
+              | base64 --decode \
+              > "artifacts/intake/${name}.json"
+          done
+
+      - name: Read and validate provenance fields
+        id: provenance
+        env:
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_OWNER: ${{ github.event.pull_request.head.repo.owner.login }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          data = json.loads(
+              Path("artifacts/intake/provenance.json").read_text(encoding="utf-8")
+          )
+          required = {
+              "profile_id",
+              "repository",
+              "owner",
+              "workflow",
+              "source_sha",
+              "signer_sha",
+              "oidc_issuer",
+              "deny_self_hosted_runners",
+              "response_subject_digest",
+          }
+          if set(data) != required:
+              raise SystemExit("provenance fields do not match the v0.1 contract")
+          if data["profile_id"] != "proofpath.poci.external-operator-provenance.v0.1":
+              raise SystemExit("unsupported provenance profile")
+          if data["repository"] != os.environ["HEAD_REPOSITORY"]:
+              raise SystemExit("provenance repository does not match PR head repository")
+          if data["owner"] != os.environ["HEAD_OWNER"]:
+              raise SystemExit("provenance owner does not match PR head owner")
+          if not re.fullmatch(r"[0-9a-f]{40}([0-9a-f]{24})?", data["source_sha"]):
+              raise SystemExit("invalid source SHA")
+          if not re.fullmatch(r"[0-9a-f]{40}([0-9a-f]{24})?", data["signer_sha"]):
+              raise SystemExit("invalid signer SHA")
+          if not re.fullmatch(
+              re.escape(data["repository"]) + r"/\.github/workflows/[^/]+\.ya?ml",
+              data["workflow"],
+          ):
+              raise SystemExit("workflow identity is outside the operator repository")
+          if data["oidc_issuer"] != "https://token.actions.githubusercontent.com":
+              raise SystemExit("unsupported OIDC issuer")
+          if data["deny_self_hosted_runners"] is not True:
+              raise SystemExit("self-hosted runners must be denied")
+          for key in ("repository", "owner", "workflow", "source_sha", "signer_sha"):
+              value = data[key]
+              if not isinstance(value, str) or "\n" in value or "\r" in value:
+                  raise SystemExit(f"unsafe provenance value: {key}")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              for key in ("repository", "owner", "workflow", "source_sha", "signer_sha"):
+                  output.write(f"{key}={data[key]}\n")
+          PY
+
+      - name: Verify external identity and source ancestry
+        id: ancestry
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_OWNER: ${{ github.repository_owner }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_OWNER: ${{ github.event.pull_request.head.repo.owner.login }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PROVENANCE_REPOSITORY: ${{ steps.provenance.outputs.repository }}
+          PROVENANCE_OWNER: ${{ steps.provenance.outputs.owner }}
+          SOURCE_SHA: ${{ steps.provenance.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "$HEAD_REPOSITORY" = "$PROVENANCE_REPOSITORY"
+          test "$HEAD_OWNER" = "$PROVENANCE_OWNER"
+          test "$HEAD_OWNER" != "$BASE_OWNER"
+          status="$(
+            gh api \
+              "repos/${HEAD_REPOSITORY}/compare/${SOURCE_SHA}...${HEAD_SHA}" \
+              --jq '.status'
+          )"
+          case "$status" in
+            ahead|identical) ;;
+            *) echo "operator source is not an ancestor of the PR head"; exit 1 ;;
+          esac
+          echo "verified=true" >> "$GITHUB_OUTPUT"
+
+      - name: Verify external keyless response attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPERATOR_REPOSITORY: ${{ steps.provenance.outputs.repository }}
+          OPERATOR_WORKFLOW: ${{ steps.provenance.outputs.workflow }}
+          SOURCE_SHA: ${{ steps.provenance.outputs.source_sha }}
+          SIGNER_SHA: ${{ steps.provenance.outputs.signer_sha }}
+        run: |
+          set -euo pipefail
+          gh attestation verify artifacts/intake/response.json \
+            --repo "$OPERATOR_REPOSITORY" \
+            --signer-workflow "$OPERATOR_WORKFLOW" \
+            --source-digest "$SOURCE_SHA" \
+            --signer-digest "$SIGNER_SHA" \
+            --cert-oidc-issuer "https://token.actions.githubusercontent.com" \
+            --deny-self-hosted-runners \
+            --format json \
+            > artifacts/intake/proofpath-attestation-result.json
+
+      - name: Admit external submission
+        env:
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_OWNER: ${{ github.event.pull_request.head.repo.owner.login }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_poci_external_operator_admission.py \
+            examples/poci-witness/external-operator/challenge.json \
+            artifacts/intake/response.json \
+            artifacts/intake/submission.json \
+            artifacts/intake/provenance.json \
+            examples/poci-witness/governance/current-domains.json \
+            --pr-head-repository "$HEAD_REPOSITORY" \
+            --pr-head-owner "$HEAD_OWNER" \
+            --pr-head-sha "$HEAD_SHA" \
+            --attestation-result artifacts/intake/proofpath-attestation-result.json \
+            --attestation-verified \
+            --source-ancestry-verified \
+            --output artifacts/intake/admission-report.json
+
+      - name: Evaluate organizational quorum
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(
+              Path("artifacts/intake/admission-report.json").read_text(encoding="utf-8")
+          )
+          if report.get("decision") != "ACCEPT":
+              raise SystemExit("external submission was not admitted")
+          domains = report.get("updated_domains_document")
+          if not isinstance(domains, dict):
+              raise SystemExit("admission report did not produce an updated domain set")
+          Path("artifacts/intake/updated-domains.json").write_text(
+              json.dumps(domains, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          python3 scripts/verify_poci_organizational_independence.py \
+            examples/poci-witness/governance/organizational-independence-policy.json \
+            artifacts/intake/updated-domains.json \
+            --output artifacts/intake/governance-report.json \
+            --pretty
+
+      - name: Guard independent governance acceptance
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          admission = json.loads(
+              Path("artifacts/intake/admission-report.json").read_text(encoding="utf-8")
+          )
+          governance = json.loads(
+              Path("artifacts/intake/governance-report.json").read_text(encoding="utf-8")
+          )
+          if admission.get("decision") != "ACCEPT":
+              raise SystemExit("admission decision is not ACCEPT")
+          if governance.get("decision") != "ACCEPT":
+              raise SystemExit("organizational governance decision is not ACCEPT")
+          if governance.get("external_owner_count", 0) < 1:
+              raise SystemExit("no independent external owner was admitted")
+          if governance.get("domain_count", 0) < 3:
+              raise SystemExit("organizational quorum requires three domains")
+          if admission.get("authority_granted") is not False:
+              raise SystemExit("admission must not grant authority")
+          PY
+
+      - name: Comment verified result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          admission = json.loads(
+              Path("artifacts/intake/admission-report.json").read_text(encoding="utf-8")
+          )
+          governance = json.loads(
+              Path("artifacts/intake/governance-report.json").read_text(encoding="utf-8")
+          )
+          body = "\n".join(
+              [
+                  "<!-- proofpath-external-admission -->",
+                  "## External PoCI witness admitted",
+                  "",
+                  f"- admission root: `{admission['admission_root']}`",
+                  f"- governance decision: `{governance['decision']}`",
+                  f"- domains: `{governance['domain_count']}`",
+                  f"- distinct owners: `{governance['distinct_owner_count']}`",
+                  f"- external owners: `{governance['external_owner_count']}`",
+                  "",
+                  "No merge, execution, or authorization authority was granted.",
+              ]
+          )
+          Path("/tmp/admission-comment.md").write_text(body + "\n", encoding="utf-8")
+          PY
+          gh pr comment "$PR_NUMBER" \
+            --repo "$BASE_REPOSITORY" \
+            --body-file /tmp/admission-comment.md
+
+      - name: Upload admission evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: poci-external-admission-${{ github.run_id }}
+          path: artifacts/intake
+          if-no-files-found: error
+          retention-days: 14

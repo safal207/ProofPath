@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/safal207/ProofPath/schemas/poci-external-operator-provenance-v0.1.schema.json",
+  "title": "PoCI External Operator Provenance v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "repository",
+    "owner",
+    "workflow",
+    "source_sha",
+    "signer_sha",
+    "oidc_issuer",
+    "deny_self_hosted_runners",
+    "response_subject_digest"
+  ],
+  "properties": {
+    "profile_id": {
+      "const": "proofpath.poci.external-operator-provenance.v0.1"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "owner": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "workflow": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/\\.github/workflows/[^/]+\\.ya?ml$"
+    },
+    "source_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+    },
+    "signer_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+    },
+    "oidc_issuer": {
+      "const": "https://token.actions.githubusercontent.com"
+    },
+    "deny_self_hosted_runners": {
+      "const": true
+    },
+    "response_subject_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

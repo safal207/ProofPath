@@ -1,0 +1,111 @@
+name: PoCI External Submission Admission Conformance
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/poci-external-submission-admission.yml"
+      - ".github/workflows/poci-external-submission-admission-conformance.yml"
+      - "scripts/verify_poci_external_operator_admission.py"
+      - "tests/test_poci_external_operator_admission.py"
+      - "tests/test_external_submission_workflow_security.py"
+      - "schemas/poci-external-operator-provenance-v0.1.schema.json"
+      - "docs/POCI_EXTERNAL_SUBMISSION_ADMISSION.md"
+      - "examples/poci-witness/external-operator/reference-workflow.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile and run admission tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/verify_poci_external_operator_admission.py
+          python3 -m unittest \
+            tests.test_poci_external_operator_admission \
+            tests.test_external_submission_workflow_security \
+            -v
+
+      - name: Build admission readiness report
+        run: |
+          mkdir -p artifacts/admission-readiness
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          report = {
+              "profile_id": "proofpath.poci.external-admission-readiness.v0.1",
+              "decision": "HOLD",
+              "reason_codes": ["EXTERNAL_SUBMISSION_NOT_PRESENT"],
+              "trusted_intake_workflow": (
+                  ".github/workflows/poci-external-submission-admission.yml"
+              ),
+              "intake_trigger": "pull_request_target",
+              "external_code_executed": False,
+              "required_submission_files": [
+                  "response.json",
+                  "submission.json",
+                  "provenance.json",
+              ],
+              "required_attestation_policy": {
+                  "issuer": "https://token.actions.githubusercontent.com",
+                  "deny_self_hosted_runners": True,
+                  "pin_repository": True,
+                  "pin_workflow": True,
+                  "pin_source_sha": True,
+                  "pin_signer_sha": True,
+              },
+              "authority_granted": False,
+              "permitted_next_transition": "AWAIT_EXTERNAL_SUBMISSION_PR",
+              "head_sha": "${{ github.sha }}",
+              "readiness_root": None,
+          }
+          normalized = dict(report)
+          normalized["readiness_root"] = None
+          payload = json.dumps(
+              normalized,
+              sort_keys=True,
+              separators=(",", ":"),
+          ).encode("utf-8")
+          report["readiness_root"] = "sha256:" + hashlib.sha256(
+              b"proofpath:poci:external-admission-readiness:v0.1\n" + payload
+          ).hexdigest()
+          Path("artifacts/admission-readiness/readiness-report.json").write_text(
+              json.dumps(report, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          if report["decision"] != "HOLD":
+              raise SystemExit("readiness report must remain HOLD without external data")
+          PY
+
+      - name: Keyless-attest readiness report
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/admission-readiness/readiness-report.json
+
+      - name: Upload admission readiness evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: poci-external-admission-readiness-${{ github.run_id }}
+          path: |
+            artifacts/admission-readiness
+            scripts/verify_poci_external_operator_admission.py
+            .github/workflows/poci-external-submission-admission.yml
+            schemas/poci-external-operator-provenance-v0.1.schema.json
+            docs/POCI_EXTERNAL_SUBMISSION_ADMISSION.md
+          if-no-files-found: error
+          retention-days: 14
