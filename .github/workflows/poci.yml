@@ -10,6 +10,7 @@ on:
       - "schemas/action-proof-envelope.v0.1.schema.json"
       - "examples/poci-witness/**"
       - "scripts/verify_poci.py"
+      - "scripts/build_poci_multigraph.py"
       - "tests/test_poci*.py"
       - "crates/proofpath-verifier/src/poci.rs"
       - "crates/proofpath-verifier/src/bin/proofpath-poci.rs"
@@ -21,6 +22,7 @@ on:
       - "schemas/action-proof-envelope.v0.1.schema.json"
       - "examples/poci-witness/**"
       - "scripts/verify_poci.py"
+      - "scripts/build_poci_multigraph.py"
       - "tests/test_poci*.py"
       - "crates/proofpath-verifier/src/poci.rs"
       - "crates/proofpath-verifier/src/bin/proofpath-poci.rs"
@@ -73,9 +75,11 @@ jobs:
         run: |
           python3 -m py_compile \
             scripts/verify_poci.py \
+            scripts/build_poci_multigraph.py \
             examples/poci-witness/run_demo.py \
             tests/test_poci_conformance.py \
-            tests/test_poci_demo.py
+            tests/test_poci_demo.py \
+            tests/test_poci_multigraph.py
 
       - name: Run Python PoCI tests
         run: python3 -m unittest discover -s tests -p 'test_poci*.py' -v
@@ -158,6 +162,31 @@ jobs:
               encoding="utf-8",
           )
           print("PASS Python/Rust PoCI parity (12 fixtures)")
+          PY
+
+      - name: Generate multi-graph transition report
+        run: |
+          mkdir -p artifacts/poci/multigraph
+          python3 scripts/build_poci_multigraph.py \
+            examples/poci-witness/multigraph/source.valid.json \
+            --pretty \
+            --output artifacts/poci/multigraph/multigraph-report.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(
+              Path("artifacts/poci/multigraph/multigraph-report.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          if report.get("decision") != "ACCEPT":
+              raise SystemExit("PoCI multi-graph report did not ACCEPT")
+          if len(report.get("graphs", {})) != 6:
+              raise SystemExit("PoCI multi-graph report must contain six graphs")
+          if len(report.get("transition_cells", [])) != 3:
+              raise SystemExit("PoCI multi-graph report must contain three cells")
+          print("PASS PoCI multi-graph transition space (6 graphs, 3 cells)")
           PY
 
       - name: Run reviewer demo
