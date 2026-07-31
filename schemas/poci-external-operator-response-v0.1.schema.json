@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/safal207/ProofPath/schemas/poci-external-operator-response-v0.1.schema.json",
+  "title": "ProofPath PoCI External Operator Response v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "challenge_root",
+    "decision",
+    "valid",
+    "reason_codes",
+    "domain_id",
+    "repository",
+    "owner",
+    "workflow",
+    "role",
+    "claims_organizational_independence",
+    "producer",
+    "attestation_status",
+    "consensus",
+    "transition_cell_count",
+    "response_root",
+    "permitted_next_transition",
+    "authority_granted"
+  ],
+  "properties": {
+    "profile_id": {
+      "const": "proofpath.poci.external-operator-response.v0.1"
+    },
+    "challenge_root": { "$ref": "#/$defs/digest" },
+    "decision": {
+      "enum": ["ACCEPT", "HOLD", "BLOCK", "CHALLENGE"]
+    },
+    "valid": { "type": "boolean" },
+    "reason_codes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "domain_id": { "type": "string", "minLength": 1 },
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/]+/[^/]+$"
+    },
+    "owner": { "type": "string", "minLength": 1 },
+    "workflow": {
+      "type": "string",
+      "pattern": "^[^/]+/[^/]+/\\.github/workflows/[^/]+\\.ya?ml$"
+    },
+    "role": { "const": "independent-external-witness" },
+    "claims_organizational_independence": { "type": "boolean" },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner",
+        "code_sha",
+        "source_path",
+        "source_file_digest",
+        "attestation_verified",
+        "attestation_verification_digest"
+      ],
+      "properties": {
+        "owner": { "type": "string", "minLength": 1 },
+        "code_sha": { "type": "string", "minLength": 7 },
+        "source_path": { "type": "string", "minLength": 1 },
+        "source_file_digest": { "$ref": "#/$defs/digest" },
+        "attestation_verified": { "type": "boolean" },
+        "attestation_verification_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "attestation_status": {
+      "const": "PENDING_KEYLESS_ATTESTATION"
+    },
+    "consensus": { "$ref": "#/$defs/consensus" },
+    "transition_cell_count": { "const": 3 },
+    "response_root": { "$ref": "#/$defs/digest" },
+    "permitted_next_transition": { "type": "string", "minLength": 1 },
+    "authority_granted": { "const": false }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "consensus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "round_id",
+        "consensus_root",
+        "source_digest",
+        "graph_set_id",
+        "poci_envelope_id",
+        "graph_roots",
+        "transition_cells_root",
+        "computed_multigraph_root"
+      ],
+      "properties": {
+        "round_id": { "type": "string", "minLength": 1 },
+        "consensus_root": { "$ref": "#/$defs/digest" },
+        "source_digest": { "$ref": "#/$defs/digest" },
+        "graph_set_id": { "type": "string", "minLength": 1 },
+        "poci_envelope_id": { "type": "string", "minLength": 1 },
+        "graph_roots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "causal",
+            "intent",
+            "authority",
+            "state_transition",
+            "evidence",
+            "time_continuity"
+          ],
+          "properties": {
+            "causal": { "$ref": "#/$defs/digest" },
+            "intent": { "$ref": "#/$defs/digest" },
+            "authority": { "$ref": "#/$defs/digest" },
+            "state_transition": { "$ref": "#/$defs/digest" },
+            "evidence": { "$ref": "#/$defs/digest" },
+            "time_continuity": { "$ref": "#/$defs/digest" }
+          }
+        },
+        "transition_cells_root": { "$ref": "#/$defs/digest" },
+        "computed_multigraph_root": { "$ref": "#/$defs/digest" }
+      }
+    }
+  }
+}
