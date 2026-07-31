@@ -108,6 +108,7 @@ class OrganizationalIndependenceTests(unittest.TestCase):
         policy, current, external = self.make_case()
         external["repository"] = current["domains"][0]["repository"]
         external["owner"] = "producer"
+        external["claims_organizational_independence"] = False
         current["domains"].append(external)
         report, _ = verify(policy, current)
         self.assertEqual(report["decision"], "BLOCK")
@@ -158,6 +159,7 @@ class OrganizationalIndependenceTests(unittest.TestCase):
 
     def test_incomplete_graph_coverage_blocks(self):
         policy, current, external = self.make_case()
+        policy["require_exact_consensus"] = False
         del external["consensus"]["graph_roots"]["evidence"]
         current["domains"].append(external)
         report, _ = verify(policy, current)
