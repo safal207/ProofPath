@@ -11,6 +11,8 @@ on:
       - "examples/poci-witness/**"
       - "scripts/verify_poci.py"
       - "tests/test_poci*.py"
+      - "crates/proofpath-verifier/src/poci.rs"
+      - "crates/proofpath-verifier/src/bin/proofpath-poci.rs"
   pull_request:
     paths:
       - ".github/workflows/poci.yml"
@@ -20,6 +22,8 @@ on:
       - "examples/poci-witness/**"
       - "scripts/verify_poci.py"
       - "tests/test_poci*.py"
+      - "crates/proofpath-verifier/src/poci.rs"
+      - "crates/proofpath-verifier/src/bin/proofpath-poci.rs"
 
 permissions:
   contents: read
@@ -31,7 +35,7 @@ concurrency:
 jobs:
   conformance:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -41,6 +45,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Guard fixture corpus
         run: |
@@ -70,23 +77,87 @@ jobs:
             tests/test_poci_conformance.py \
             tests/test_poci_demo.py
 
-      - name: Run PoCI tests
+      - name: Run Python PoCI tests
         run: python3 -m unittest discover -s tests -p 'test_poci*.py' -v
 
-      - name: Generate conformance report
+      - name: Run Rust PoCI tests
+        run: cargo test -p proofpath-verifier poci --all-targets
+
+      - name: Generate Python conformance report
         run: |
           mkdir -p artifacts/poci/conformance
           python3 scripts/verify_poci.py \
             examples/poci-witness/fixtures/manifest.json \
             --manifest --pretty \
-            > artifacts/poci/conformance/conformance-report.json
+            > artifacts/poci/conformance/python-conformance-report.json
+
+      - name: Generate Rust conformance report
+        run: |
+          cargo run -q -p proofpath-verifier \
+            --bin proofpath-poci -- \
+            examples/poci-witness/fixtures/manifest.json \
+            --manifest --pretty \
+            > artifacts/poci/conformance/rust-conformance-report.json
+
+      - name: Compare Python and Rust decisions and roots
+        run: |
           python3 - <<'PY'
           import json
           from pathlib import Path
-          report = json.loads(Path("artifacts/poci/conformance/conformance-report.json").read_text())
-          if report.get("passed") is not True or report.get("case_count") != 12:
-              raise SystemExit("PoCI conformance report is not passing all 12 cases")
-          print("PASS PoCI conformance report")
+
+          root = Path("artifacts/poci/conformance")
+          python_report = json.loads(
+              (root / "python-conformance-report.json").read_text(encoding="utf-8")
+          )
+          rust_report = json.loads(
+              (root / "rust-conformance-report.json").read_text(encoding="utf-8")
+          )
+
+          for name, report in (("python", python_report), ("rust", rust_report)):
+              if report.get("passed") is not True or report.get("case_count") != 12:
+                  raise SystemExit(f"{name} report is not passing all 12 cases")
+
+          python_cases = {case["file"]: case for case in python_report["cases"]}
+          rust_cases = {case["file"]: case for case in rust_report["cases"]}
+          if python_cases.keys() != rust_cases.keys():
+              raise SystemExit("Python and Rust fixture sets differ")
+
+          compared = []
+          for filename in sorted(python_cases):
+              left = python_cases[filename]
+              right = rust_cases[filename]
+              fields = (
+                  "actual_decision",
+                  "actual_primary_reason_code",
+                  "computed_envelope_root",
+              )
+              for field in fields:
+                  if left.get(field) != right.get(field):
+                      raise SystemExit(
+                          f"PoCI parity mismatch for {filename} {field}: "
+                          f"python={left.get(field)!r} rust={right.get(field)!r}"
+                      )
+              compared.append(
+                  {
+                      "file": filename,
+                      "decision": left["actual_decision"],
+                      "primary_reason_code": left["actual_primary_reason_code"],
+                      "computed_envelope_root": left["computed_envelope_root"],
+                  }
+              )
+
+          parity = {
+              "profile_id": python_report.get("profile_id"),
+              "case_count": len(compared),
+              "passed": True,
+              "implementations": ["python", "rust"],
+              "cases": compared,
+          }
+          (root / "python-rust-parity-report.json").write_text(
+              json.dumps(parity, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print("PASS Python/Rust PoCI parity (12 fixtures)")
           PY
 
       - name: Run reviewer demo
