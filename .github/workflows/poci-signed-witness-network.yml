@@ -1,0 +1,190 @@
+name: PoCI Signed Witness Network
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/poci-signed-witness-network.yml"
+      - "examples/poci-witness/multigraph/**"
+      - "scripts/build_poci_multigraph.py"
+      - "scripts/run_poci_multigraph_witness.py"
+      - "scripts/verify_poci_multigraph_quorum.py"
+  pull_request:
+    paths:
+      - ".github/workflows/poci-signed-witness-network.yml"
+      - "examples/poci-witness/multigraph/**"
+      - "scripts/build_poci_multigraph.py"
+      - "scripts/run_poci_multigraph_witness.py"
+      - "scripts/verify_poci_multigraph_quorum.py"
+
+concurrency:
+  group: poci-signed-witness-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  witness:
+    name: witness-${{ matrix.witness_id }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - witness_id: witness-alpha
+            operator_id: operator-alpha
+            nonce: nonce-alpha-0001
+          - witness_id: witness-beta
+            operator_id: operator-beta
+            nonce: nonce-beta-0001
+          - witness_id: witness-gamma
+            operator_id: operator-gamma
+            nonce: nonce-gamma-0001
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build witness statement
+        run: |
+          mkdir -p artifacts/witness
+          python3 scripts/run_poci_multigraph_witness.py \
+            examples/poci-witness/multigraph/source.valid.json \
+            --round-id poci-demo-round-001 \
+            --witness-id "${{ matrix.witness_id }}" \
+            --operator-id "${{ matrix.operator_id }}" \
+            --nonce "${{ matrix.nonce }}" \
+            --pretty \
+            --output "artifacts/witness/${{ matrix.witness_id }}.json"
+
+      - name: Create keyless provenance attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: "artifacts/witness/${{ matrix.witness_id }}.json"
+
+      - name: Upload witness statement
+        uses: actions/upload-artifact@v4
+        with:
+          name: poci-signed-${{ matrix.witness_id }}
+          path: "artifacts/witness/${{ matrix.witness_id }}.json"
+          if-no-files-found: error
+          retention-days: 14
+
+  coordinator:
+    name: signed-quorum-coordinator
+    needs: witness
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download witness statements
+        uses: actions/download-artifact@v4
+        with:
+          pattern: poci-signed-*
+          path: artifacts/poci/signed-witness/statements
+          merge-multiple: true
+
+      - name: Verify keyless attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/poci/signed-witness/attestation-results
+          for statement in artifacts/poci/signed-witness/statements/*.json; do
+            name="$(basename "$statement" .json)"
+            gh attestation verify "$statement" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/poci-signed-witness-network.yml" \
+              --source-digest "${{ github.sha }}" \
+              --signer-digest "${{ github.workflow_sha }}" \
+              --cert-oidc-issuer "https://token.actions.githubusercontent.com" \
+              --deny-self-hosted-runners \
+              --format json \
+              > "artifacts/poci/signed-witness/attestation-results/${name}.json"
+          done
+
+      - name: Evaluate exact-root quorum
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+
+          sys.path.insert(0, "scripts")
+          from verify_poci_multigraph_quorum import verify_quorum
+
+          config = json.loads(
+              Path("examples/poci-witness/multigraph/witnesses.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          statement_dir = Path("artifacts/poci/signed-witness/statements")
+          statements = [
+              json.loads(path.read_text(encoding="utf-8"))
+              for path in sorted(statement_dir.glob("*.json"))
+          ]
+          attestation_files = sorted(
+              Path("artifacts/poci/signed-witness/attestation-results").glob("*.json")
+          )
+          if len(attestation_files) != len(statements):
+              raise SystemExit("every witness statement must have a verified attestation")
+
+          report = verify_quorum(config, statements)
+          report["attestation_profile"] = "github-keyless-slsa-provenance"
+          report["verified_attestation_count"] = len(attestation_files)
+          report["signer_workflow"] = (
+              "safal207/ProofPath/.github/workflows/"
+              "poci-signed-witness-network.yml"
+          )
+          report["source_digest"] = "${{ github.sha }}"
+          report["signer_digest"] = "${{ github.workflow_sha }}"
+          report["self_hosted_runners_denied"] = True
+          report["honest_limitations"] = [
+              "witness jobs use separate GitHub-hosted runners",
+              "one GitHub repository still controls all three jobs",
+              "external organizational independence is not yet proven",
+          ]
+
+          output = Path("artifacts/poci/signed-witness/attested-quorum-report.json")
+          output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+
+          if report.get("decision") != "ACCEPT":
+              raise SystemExit("attested witness quorum did not ACCEPT")
+          if report.get("verified_attestation_count") != 3:
+              raise SystemExit("expected three verified witness attestations")
+          if len(report.get("agreeing_witnesses", [])) != 3:
+              raise SystemExit("expected three matching witness root vectors")
+          if len(report.get("consensus", {}).get("graph_roots", {})) != 6:
+              raise SystemExit("consensus must commit all six graph roots")
+          print("PASS keyless signed witness quorum (3 runners, 3 attestations, 2-of-3 policy)")
+          PY
+
+      - name: Attest final quorum report
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/poci/signed-witness/attested-quorum-report.json
+
+      - name: Upload signed witness evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: poci-signed-witness-network-${{ github.run_id }}
+          path: artifacts/poci/signed-witness
+          if-no-files-found: error
+          retention-days: 14
