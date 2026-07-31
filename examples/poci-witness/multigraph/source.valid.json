@@ -1,0 +1,284 @@
+{
+  "profile_id": "proofpath.poci.multigraph.source.v0.1",
+  "graph_set_id": "mg_compute_purchase_001",
+  "poci_envelope_path": "../fixtures/valid-action.accept.json",
+  "adapters": [
+    {
+      "adapter_id": "tip",
+      "repository": "safal207/transition-intelligence-protocol",
+      "protocol": "tip-record",
+      "version": "0.1",
+      "mode": "exported-json"
+    },
+    {
+      "adapter_id": "cml",
+      "repository": "safal207/Causal-Memory-Layer",
+      "protocol": "causal-record",
+      "version": "0.4.0",
+      "mode": "exported-json"
+    },
+    {
+      "adapter_id": "ttrace",
+      "repository": "safal207/T-Trace",
+      "protocol": "t-trace-record",
+      "version": "0.1",
+      "mode": "exported-jsonl-shape"
+    },
+    {
+      "adapter_id": "liminaldb",
+      "repository": "safal207/LiminalDB",
+      "protocol": "evidence-continuity-receipt",
+      "version": "0.1-draft",
+      "mode": "exported-json"
+    },
+    {
+      "adapter_id": "ibex",
+      "repository": "safal207/ibex-agent-verification",
+      "protocol": "transition-phase",
+      "version": "1",
+      "mode": "exported-json"
+    }
+  ],
+  "tip": {
+    "id": "tip_compute_purchase_001",
+    "title": "Bounded inference purchase",
+    "status": "reviewed",
+    "state": {
+      "summary": "A bounded inference request is approved but not yet executed.",
+      "actors": [
+        "principal_demo",
+        "agent_demo",
+        "executor_demo",
+        "observer_demo"
+      ],
+      "known_facts": [
+        "decision_001 authorizes one inference purchase"
+      ],
+      "constraints": [
+        "scope=compute.inference.once",
+        "no duplicate execution"
+      ]
+    },
+    "tension": {
+      "summary": "The approved result is needed without exceeding scope.",
+      "kind": "unmet_need",
+      "severity": "medium"
+    },
+    "cause": {
+      "cause_type": "permission",
+      "summary": "decision_001 authorizes the bounded purchase.",
+      "supporting_signals": [
+        "grant_001",
+        "intent_ok_001"
+      ],
+      "basis": "signed intent and delegated grant",
+      "parent_cause": "decision_001",
+      "confidence": 1
+    },
+    "transition": {
+      "from": "compute.request.approved",
+      "to": "compute.result.observed",
+      "trigger": "decision_001",
+      "reversibility": "medium",
+      "expected_consequence": "One result is observed and execution stops.",
+      "uncertainty": "low"
+    },
+    "cooperation": {
+      "participants": [
+        {
+          "name": "principal_demo",
+          "goal": "receive one bounded result",
+          "risk": "scope overrun"
+        },
+        {
+          "name": "agent_demo",
+          "goal": "fulfil the intent",
+          "risk": "intent drift"
+        },
+        {
+          "name": "executor_demo",
+          "goal": "execute once",
+          "risk": "duplicate side effect"
+        }
+      ],
+      "shared_upside": "Auditable one-shot completion.",
+      "defection_risk": "low",
+      "stability": "stable",
+      "recommendation": "commit"
+    },
+    "action": {
+      "summary": "Purchase one bounded inference job.",
+      "review_after": "result observation",
+      "owner": "agent_demo"
+    },
+    "review": {
+      "summary": "The result was observed and the stopping condition was met.",
+      "actual_consequence": "One result artifact was produced.",
+      "evidence": [
+        "receipt_001",
+        "result_001",
+        "witness_stmt_001"
+      ],
+      "next_state": "compute.result.observed"
+    }
+  },
+  "cml": {
+    "records": [
+      {
+        "id": "decision_001",
+        "timestamp": 1,
+        "actor": {
+          "id": "principal_demo",
+          "role": "principal"
+        },
+        "action": "authorize",
+        "object": {
+          "intent_id": "intent_ok_001",
+          "scope": "compute.inference.once"
+        },
+        "permitted_by": "root_event:principal_demo",
+        "parent_cause": null,
+        "class": "OVERRIDE"
+      },
+      {
+        "id": "grant_001",
+        "timestamp": 2,
+        "actor": {
+          "id": "principal_demo",
+          "role": "principal"
+        },
+        "action": "delegate",
+        "object": {
+          "agent_id": "agent_demo",
+          "executor_id": "executor_demo"
+        },
+        "permitted_by": "decision:decision_001",
+        "parent_cause": "decision_001",
+        "class": "OVERRIDE"
+      },
+      {
+        "id": "proposal_001",
+        "timestamp": 3,
+        "actor": {
+          "id": "agent_demo",
+          "role": "agent"
+        },
+        "action": "propose",
+        "object": {
+          "action_kind": "compute.inference.purchase"
+        },
+        "permitted_by": "grant:grant_001",
+        "parent_cause": "grant_001",
+        "class": "ML_ACTION"
+      },
+      {
+        "id": "execution_001",
+        "timestamp": 4,
+        "actor": {
+          "id": "executor_demo",
+          "role": "executor"
+        },
+        "action": "execute",
+        "object": {
+          "proposal_id": "proposal_001",
+          "receipt_id": "receipt_001"
+        },
+        "permitted_by": "grant:grant_001",
+        "parent_cause": "proposal_001",
+        "class": "EXEC"
+      },
+      {
+        "id": "result_001",
+        "timestamp": 5,
+        "actor": {
+          "id": "observer_demo",
+          "role": "observer"
+        },
+        "action": "observe",
+        "object": {
+          "result_id": "result_001"
+        },
+        "permitted_by": "execution:execution_001",
+        "parent_cause": "execution_001",
+        "class": "READ"
+      }
+    ]
+  },
+  "ttrace": {
+    "records": [
+      {
+        "id": "sense_001",
+        "type": "sense",
+        "ts": "2026-07-31T00:05:00Z",
+        "thread_id": "thread_compute_001",
+        "state": "compute.request.approved"
+      },
+      {
+        "id": "transition_001",
+        "type": "transition",
+        "ts": "2026-07-31T00:06:00Z",
+        "thread_id": "thread_compute_001",
+        "from": "compute.request.approved",
+        "to": "compute.job.running",
+        "cause_id": "decision_001",
+        "proposal_id": "proposal_001"
+      },
+      {
+        "id": "commit_001",
+        "type": "commit",
+        "ts": "2026-07-31T00:06:04Z",
+        "thread_id": "thread_compute_001",
+        "transition_id": "transition_001",
+        "state": "compute.result.observed",
+        "result_ref": "result_001"
+      }
+    ]
+  },
+  "liminaldb": {
+    "authorization_ref": "intent_ok_001",
+    "observation_ref": "result_001",
+    "response_integrity": "verified",
+    "causal_audit_ref": "decision_001",
+    "continuity_decision": "stop",
+    "checkpoint_id": "checkpoint_001",
+    "checkpoint_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+    "previous_checkpoint_digest": null,
+    "sequence": 1
+  },
+  "ibex": {
+    "schema_version": 1,
+    "transition_id": "transition_001",
+    "time": {
+      "observed_before_ns": 100,
+      "intent_declared_ns": 120,
+      "commit_ns": 140,
+      "action_started_ns": 160,
+      "result_observed_ns": 220,
+      "evaluated_ns": 240,
+      "deadline_ns": 300
+    },
+    "intention": {
+      "intent_id": "intent_ok_001",
+      "statement": "Purchase one bounded inference job.",
+      "action": "Purchase one bounded inference job.",
+      "expected_result": "One result artifact is observed.",
+      "stopping_condition": "The result is verified and no retry is emitted."
+    },
+    "space": {
+      "origin": "compute.request.approved",
+      "boundary": "bounded-inference-execution",
+      "destination": "compute.result.observed"
+    },
+    "evidence": {
+      "intent_ref": "sig_001",
+      "action_ref": "receipt_001",
+      "result_ref": "result_001",
+      "verification_ref": "witness_stmt_001"
+    },
+    "verification": {
+      "result_matches_expectation": true,
+      "destination_observed": true,
+      "stopping_condition_met": true
+    }
+  }
+}

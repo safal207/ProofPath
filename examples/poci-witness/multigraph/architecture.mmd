@@ -1,0 +1,34 @@
+flowchart LR
+  subgraph Product["PoCI multi-graph transition space"]
+    C["Causal graph"]
+    I["Intent graph"]
+    A["Authority graph"]
+    S["State-transition graph"]
+    E["Evidence graph"]
+    T["Time / continuity graph"]
+  end
+
+  P["Proposal cell"] --> X["Execution cell"] --> O["Observation cell"]
+
+  C --> P
+  I --> P
+  A --> P
+  S --> P
+  E --> P
+  T --> P
+
+  C --> X
+  I --> X
+  A --> X
+  S --> X
+  E --> X
+  T --> X
+
+  C --> O
+  I --> O
+  A --> O
+  S --> O
+  E --> O
+  T --> O
+
+  O --> R["Decision + graph roots + product root"]
