@@ -1,0 +1,70 @@
+{
+  "profile_id": "proofpath.poci.governance-domains.v0.1",
+  "federation_root": "sha256:f045abce1526680b818e2630ac3100217add46b7be060bd56ad106148a4e857a",
+  "domains": [
+    {
+      "domain_id": "proofpath-producer",
+      "repository": "safal207/ProofPath",
+      "owner": "safal207",
+      "workflow": "safal207/ProofPath/.github/workflows/poci-signed-witness-network.yml",
+      "role": "producer",
+      "attestation_verified": true,
+      "claims_organizational_independence": false,
+      "attestation_subject_digest": "sha256:87119740993bc570749542ef4e06a8cf0ce44cebd77e88eb5aa1b432d0228fde",
+      "attestation_evidence": {
+        "workflow_run_id": 30617244808,
+        "artifact_id": 8787874915,
+        "artifact_digest": "sha256:3874fb7c66f47a76813a04120bab096b198e57351046fd264ec13d6b0dd21b9f"
+      },
+      "consensus": {
+        "round_id": "poci-demo-round-001",
+        "consensus_root": "sha256:f2bc99fe96f24942e5cc9c87f25c48167d875041e85170dbb354c2bc0cd97f5f",
+        "source_digest": "sha256:807bde72ed45ae1566443dec20c85b02f0d6734e4aa4bf9a9cfe08ce2e4c97fa",
+        "graph_set_id": "mg_compute_purchase_001",
+        "poci_envelope_id": "env_valid_action",
+        "graph_roots": {
+          "causal": "sha256:482d5076dc3a80dac8f4ed179491b4d3e153ece780fcebdd81289ffbdc6fd7f4",
+          "intent": "sha256:3a26e5badd5379f69203dfe972143e0f3969b12e5f5c55cd641aa7f2bc41a0b3",
+          "authority": "sha256:6af348f1245a5a1f3b59b0070653bbf4d512a792e54554918058f9692e33bb0c",
+          "state_transition": "sha256:41807cd0bacac6908867ce6839114d3028ec62550eb7cee0fdb50006e3887c10",
+          "evidence": "sha256:1fed70f4f198ce5a993880e283763db8c0dc576824f042619637b37f6d745899",
+          "time_continuity": "sha256:4b28006fc3a21f6afce98e4e4e661fa204060be976110bed3bb571af3d7e4ccc"
+        },
+        "transition_cells_root": "sha256:b5d5fd4ba2638fb685913e621295a1c70b5aff550d14ea5b2d8c0f49bdba7f45",
+        "computed_multigraph_root": "sha256:98543066cb16c06b5300b56749af43b2fdd48eed47650488ac57987156e38219"
+      }
+    },
+    {
+      "domain_id": "ibex-external-consumer",
+      "repository": "safal207/ibex-agent-verification",
+      "owner": "safal207",
+      "workflow": "safal207/ibex-agent-verification/.github/workflows/proofpath-poci-consumer.yml",
+      "role": "external-consumer",
+      "attestation_verified": true,
+      "claims_organizational_independence": false,
+      "attestation_subject_digest": "sha256:756a893289f50221194b1e40b2e9fc2f10d5549c15fc9b9c57aa5f02c936d357",
+      "attestation_evidence": {
+        "workflow_run_id": 30618870140,
+        "artifact_id": 8788494929,
+        "artifact_digest": "sha256:d1a6dba10a9e251dbb7c1a94e637875d9a4e30a2c1d6329017f14ce469953ee8"
+      },
+      "consensus": {
+        "round_id": "poci-demo-round-001",
+        "consensus_root": "sha256:f2bc99fe96f24942e5cc9c87f25c48167d875041e85170dbb354c2bc0cd97f5f",
+        "source_digest": "sha256:807bde72ed45ae1566443dec20c85b02f0d6734e4aa4bf9a9cfe08ce2e4c97fa",
+        "graph_set_id": "mg_compute_purchase_001",
+        "poci_envelope_id": "env_valid_action",
+        "graph_roots": {
+          "causal": "sha256:482d5076dc3a80dac8f4ed179491b4d3e153ece780fcebdd81289ffbdc6fd7f4",
+          "intent": "sha256:3a26e5badd5379f69203dfe972143e0f3969b12e5f5c55cd641aa7f2bc41a0b3",
+          "authority": "sha256:6af348f1245a5a1f3b59b0070653bbf4d512a792e54554918058f9692e33bb0c",
+          "state_transition": "sha256:41807cd0bacac6908867ce6839114d3028ec62550eb7cee0fdb50006e3887c10",
+          "evidence": "sha256:1fed70f4f198ce5a993880e283763db8c0dc576824f042619637b37f6d745899",
+          "time_continuity": "sha256:4b28006fc3a21f6afce98e4e4e661fa204060be976110bed3bb571af3d7e4ccc"
+        },
+        "transition_cells_root": "sha256:b5d5fd4ba2638fb685913e621295a1c70b5aff550d14ea5b2d8c0f49bdba7f45",
+        "computed_multigraph_root": "sha256:98543066cb16c06b5300b56749af43b2fdd48eed47650488ac57987156e38219"
+      }
+    }
+  ]
+}

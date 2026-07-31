@@ -1,0 +1,113 @@
+name: PoCI Organizational Independence
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/poci-organizational-independence.yml"
+      - "examples/poci-witness/governance/**"
+      - "scripts/verify_poci_organizational_independence.py"
+      - "tests/test_poci_organizational_independence.py"
+      - "docs/POCI_ORGANIZATIONAL_INDEPENDENCE.md"
+  pull_request:
+    paths:
+      - ".github/workflows/poci-organizational-independence.yml"
+      - "examples/poci-witness/governance/**"
+      - "scripts/verify_poci_organizational_independence.py"
+      - "tests/test_poci_organizational_independence.py"
+      - "docs/POCI_ORGANIZATIONAL_INDEPENDENCE.md"
+
+concurrency:
+  group: poci-organizational-independence-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  governance-readiness:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile verifier
+        run: python3 -m py_compile scripts/verify_poci_organizational_independence.py
+
+      - name: Run organizational-independence tests
+        run: python3 -m unittest tests.test_poci_organizational_independence -v
+
+      - name: Evaluate current governance domains
+        run: |
+          mkdir -p artifacts/poci/governance
+          python3 scripts/verify_poci_organizational_independence.py \
+            examples/poci-witness/governance/organizational-independence-policy.json \
+            examples/poci-witness/governance/current-domains.json \
+            --pretty \
+            --allow-hold \
+            --output artifacts/poci/governance/readiness-report.json \
+            --challenge-output artifacts/poci/governance/external-operator-challenge.json
+
+      - name: Guard honest HOLD and portable challenge
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("artifacts/poci/governance")
+          report = json.loads((root / "readiness-report.json").read_text(encoding="utf-8"))
+          challenge = json.loads(
+              (root / "external-operator-challenge.json").read_text(encoding="utf-8")
+          )
+
+          required_reasons = {
+              "GOVERNANCE_DOMAIN_COUNT_INSUFFICIENT",
+              "GOVERNANCE_OWNER_DIVERSITY_INSUFFICIENT",
+              "GOVERNANCE_EXTERNAL_OWNER_MISSING",
+              "GOVERNANCE_WORKFLOW_DIVERSITY_INSUFFICIENT",
+          }
+          if report.get("decision") != "HOLD":
+              raise SystemExit("current same-owner federation must remain HOLD")
+          if not required_reasons.issubset(set(report.get("reason_codes", []))):
+              raise SystemExit("readiness report must preserve every missing-independence reason")
+          if report.get("domain_count") != 2:
+              raise SystemExit("expected the current ProofPath and Ibex domains")
+          if report.get("distinct_owner_count") != 1:
+              raise SystemExit("the two current repositories have one controlling owner")
+          if report.get("external_owner_count") != 0:
+              raise SystemExit("no organizationally external owner is admitted yet")
+          if report.get("permitted_next_transition") != "AWAIT_EXTERNAL_OPERATOR":
+              raise SystemExit("the only permitted transition is external operator admission")
+          if challenge.get("status") != "AWAITING_INDEPENDENT_OPERATOR":
+              raise SystemExit("portable challenge must await an independent operator")
+          if not str(challenge.get("challenge_root", "")).startswith("sha256:"):
+              raise SystemExit("challenge must have a deterministic root")
+          if len(challenge.get("expected_consensus", {}).get("graph_roots", {})) != 6:
+              raise SystemExit("challenge must commit all six graph roots")
+
+          print("PASS honest organizational HOLD with portable external-operator challenge")
+          PY
+
+      - name: Attest readiness report
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/poci/governance/readiness-report.json
+
+      - name: Attest external-operator challenge
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/poci/governance/external-operator-challenge.json
+
+      - name: Upload governance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: poci-organizational-independence-${{ github.run_id }}
+          path: artifacts/poci/governance
+          if-no-files-found: error
+          retention-days: 14
