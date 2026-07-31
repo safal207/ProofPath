@@ -1,0 +1,9 @@
+{
+  "profile_id": "proofpath.poci.multigraph.signed-witness-policy.v0.1",
+  "witness_set_path": "witnesses.json",
+  "repository": "safal207/ProofPath",
+  "workflow_path": ".github/workflows/poci-signed-witness-network.yml",
+  "require_attestation_receipts": true,
+  "attestation_issuer": "https://token.actions.githubusercontent.com",
+  "identity_boundary": "github-actions-keyless"
+}
