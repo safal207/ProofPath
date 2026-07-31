@@ -18,8 +18,7 @@ struct Arguments {
 fn parse_arguments() -> Result<Arguments, String> {
     let mut values = env::args().skip(1);
     let path = values.next().ok_or_else(|| {
-        "usage: proofpath-poci <path.json> [--manifest] [--pretty] [--allow-non-accept]"
-            .to_owned()
+        "usage: proofpath-poci <path.json> [--manifest] [--pretty] [--allow-non-accept]".to_owned()
     })?;
     let mut arguments = Arguments {
         path: PathBuf::from(path),

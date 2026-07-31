@@ -616,7 +616,8 @@ fn semantic_findings(
         .and_then(|value| value.get("used_nonces"))
         .and_then(Value::as_array);
     if nonce.is_some_and(|candidate| {
-        used_nonces.is_some_and(|values| values.iter().any(|value| value.as_str() == Some(candidate)))
+        used_nonces
+            .is_some_and(|values| values.iter().any(|value| value.as_str() == Some(candidate)))
     }) {
         add_finding(
             findings,
@@ -649,7 +650,8 @@ fn semantic_findings(
                 "agent mismatch",
             );
         }
-        if text(authority, "executor_id") != execution.and_then(|value| text(value, "executor_id")) {
+        if text(authority, "executor_id") != execution.and_then(|value| text(value, "executor_id"))
+        {
             add_finding(
                 findings,
                 seen,
@@ -674,9 +676,8 @@ fn semantic_findings(
         }
 
         let allowed_scope = string_set(authority.get("scope"));
-        let proposed_scope = proposal.map_or_else(BTreeSet::new, |value| {
-            string_set(value.get("scope"))
-        });
+        let proposed_scope =
+            proposal.map_or_else(BTreeSet::new, |value| string_set(value.get("scope")));
         if !proposed_scope.is_subset(&allowed_scope) {
             add_finding(
                 findings,
@@ -703,7 +704,11 @@ fn semantic_findings(
         }
     }
 
-    if causal.and_then(|value| value.get("required")).and_then(Value::as_bool) == Some(true) {
+    if causal
+        .and_then(|value| value.get("required"))
+        .and_then(Value::as_bool)
+        == Some(true)
+    {
         let missing = causal.is_none_or(|value| {
             text(value, "parent_type").is_none_or(|kind| kind == "none")
                 || value.get("parent_id").is_none_or(Value::is_null)
@@ -761,7 +766,10 @@ fn semantic_findings(
             .and_then(Value::as_object)
             .and_then(|value| text(value, "digest"));
         let claimed_digest = text(execution, "receipt_digest");
-        if reference_digest.is_some() && claimed_digest.is_some() && reference_digest != claimed_digest {
+        if reference_digest.is_some()
+            && claimed_digest.is_some()
+            && reference_digest != claimed_digest
+        {
             add_finding(
                 findings,
                 seen,
@@ -791,7 +799,10 @@ fn semantic_findings(
             .and_then(Value::as_object)
             .and_then(|value| text(value, "digest"));
         let claimed_digest = text(observed, "result_digest");
-        if reference_digest.is_some() && claimed_digest.is_some() && reference_digest != claimed_digest {
+        if reference_digest.is_some()
+            && claimed_digest.is_some()
+            && reference_digest != claimed_digest
+        {
             add_finding(
                 findings,
                 seen,
@@ -845,9 +856,7 @@ fn semantic_findings(
                 .get("statement_ref")
                 .and_then(Value::as_object)
                 .and_then(|value| text(value, "digest"));
-            if reference_digest.is_some()
-                && reference_digest != text(witness, "statement_digest")
-            {
+            if reference_digest.is_some() && reference_digest != text(witness, "statement_digest") {
                 add_finding(
                     findings,
                     seen,
@@ -1030,10 +1039,9 @@ fn valid_timestamp(value: Option<&str>) -> bool {
         && bytes[13] == b':'
         && bytes[16] == b':'
         && bytes[19] == b'Z'
-        && bytes
-            .iter()
-            .enumerate()
-            .all(|(index, byte)| matches!(index, 4 | 7 | 10 | 13 | 16 | 19) || byte.is_ascii_digit())
+        && bytes.iter().enumerate().all(|(index, byte)| {
+            matches!(index, 4 | 7 | 10 | 13 | 16 | 19) || byte.is_ascii_digit()
+        })
 }
 
 fn valid_digest(value: &str) -> bool {
@@ -1105,14 +1113,13 @@ mod tests {
     use super::*;
 
     fn fixture_root() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../examples/poci-witness/fixtures")
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/poci-witness/fixtures")
     }
 
     #[test]
     fn poci_manifest_matches_all_committed_cases() {
-        let report = verify_manifest(&fixture_root().join("manifest.json"))
-            .expect("manifest should verify");
+        let report =
+            verify_manifest(&fixture_root().join("manifest.json")).expect("manifest should verify");
         assert!(report.passed);
         assert_eq!(report.case_count, 12);
     }
@@ -1130,8 +1137,8 @@ mod tests {
 
     #[test]
     fn poci_rejects_duplicate_json_keys() {
-        let error = parse_strict_json(r#"{"a":1,"a":2}"#)
-            .expect_err("duplicate keys must fail closed");
+        let error =
+            parse_strict_json(r#"{"a":1,"a":2}"#).expect_err("duplicate keys must fail closed");
         assert!(error.contains("duplicate JSON key"));
     }
 
