@@ -8,7 +8,11 @@
   "quorum": 2,
   "configured_witness_count": 3,
   "valid_statement_count": 3,
-  "agreeing_witnesses": ["witness-alpha", "witness-beta", "witness-gamma"],
+  "agreeing_witnesses": [
+    "witness-alpha",
+    "witness-beta",
+    "witness-gamma"
+  ],
   "dissenting_witnesses": [],
   "invalid_witnesses": [],
   "non_accepting_witnesses": [],
@@ -40,7 +44,11 @@
     "profile_id": "proofpath.poci.multigraph.witness-quorum.v0.1",
     "round_id": "poci-demo-round-001",
     "quorum": 2,
-    "agreeing_witnesses": ["witness-alpha", "witness-beta", "witness-gamma"],
+    "agreeing_witnesses": [
+      "witness-alpha",
+      "witness-beta",
+      "witness-gamma"
+    ],
     "source_digest": "sha256:807bde72ed45ae1566443dec20c85b02f0d6734e4aa4bf9a9cfe08ce2e4c97fa",
     "graph_set_id": "mg_compute_purchase_001",
     "poci_envelope_id": "env_valid_action",
