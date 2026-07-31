@@ -1,0 +1,142 @@
+name: PoCI Cross-Repository Federation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/poci-cross-repo-federation.yml"
+      - "docs/POCI_CROSS_REPO_FEDERATION.md"
+      - "examples/poci-witness/federation/**"
+      - "scripts/verify_poci_cross_repo_federation.py"
+      - "tests/test_poci_cross_repo_federation.py"
+  pull_request:
+    paths:
+      - ".github/workflows/poci-cross-repo-federation.yml"
+      - "docs/POCI_CROSS_REPO_FEDERATION.md"
+      - "examples/poci-witness/federation/**"
+      - "scripts/verify_poci_cross_repo_federation.py"
+      - "tests/test_poci_cross_repo_federation.py"
+
+concurrency:
+  group: poci-federation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+  attestations: write
+
+jobs:
+  federation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile and run federation mutations
+        run: |
+          python3 -m py_compile \
+            scripts/verify_poci_cross_repo_federation.py \
+            tests/test_poci_cross_repo_federation.py
+          python3 -m unittest tests.test_poci_cross_repo_federation -v
+
+      - name: Verify ProofPath producer attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts/poci/federation/attestation-results
+          gh attestation verify \
+            examples/poci-witness/federation/proofpath-attested-quorum-report.json \
+            --repo safal207/ProofPath \
+            --signer-workflow \
+              safal207/ProofPath/.github/workflows/poci-signed-witness-network.yml \
+            --source-digest 3a5dde912c44e0957204d3df733e712c596455f1 \
+            --signer-digest 3a5dde912c44e0957204d3df733e712c596455f1 \
+            --cert-oidc-issuer https://token.actions.githubusercontent.com \
+            --deny-self-hosted-runners \
+            --format json \
+            > artifacts/poci/federation/attestation-results/producer.json
+
+      - name: Verify Ibex external-consumer attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh attestation verify \
+            examples/poci-witness/federation/ibex-external-consumer-receipt.json \
+            --repo safal207/ibex-agent-verification \
+            --signer-workflow \
+              safal207/ibex-agent-verification/.github/workflows/proofpath-poci-consumer.yml \
+            --source-digest 24efa1eadd72275bcc29f0c436e46fb508aac113 \
+            --signer-digest 24efa1eadd72275bcc29f0c436e46fb508aac113 \
+            --cert-oidc-issuer https://token.actions.githubusercontent.com \
+            --deny-self-hosted-runners \
+            --format json \
+            > artifacts/poci/federation/attestation-results/external-consumer.json
+
+      - name: Build cross-repository federation report
+        run: |
+          python3 scripts/verify_poci_cross_repo_federation.py \
+            examples/poci-witness/federation/policy.json \
+            --producer-report \
+              examples/poci-witness/federation/proofpath-attested-quorum-report.json \
+            --consumer-receipt \
+              examples/poci-witness/federation/ibex-external-consumer-receipt.json \
+            --producer-attestation-result \
+              artifacts/poci/federation/attestation-results/producer.json \
+            --consumer-attestation-result \
+              artifacts/poci/federation/attestation-results/external-consumer.json \
+            --pretty \
+            --output artifacts/poci/federation/federation-report.json
+
+      - name: Guard accepted two-domain federation
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(
+              Path("artifacts/poci/federation/federation-report.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          if report.get("decision") != "ACCEPT" or report.get("valid") is not True:
+              raise SystemExit("cross-repository federation did not ACCEPT")
+          if report.get("domain_count") != 2:
+              raise SystemExit("federation must contain exactly two domains")
+          if report.get("external_consumer_required") is not True:
+              raise SystemExit("external consumer must be mandatory")
+          domains = report.get("domains", [])
+          repositories = {item.get("repository") for item in domains}
+          workflows = {item.get("workflow") for item in domains}
+          if len(repositories) != 2 or len(workflows) != 2:
+              raise SystemExit("repository and workflow identities must differ")
+          verification = report.get("verification", {})
+          if not verification or any(value is not True for value in verification.values()):
+              raise SystemExit("all federation verification flags must be true")
+          if len(report.get("consensus", {}).get("graph_roots", {})) != 6:
+              raise SystemExit("federation consensus must commit six graph roots")
+          root = report.get("federation_root")
+          if not isinstance(root, str) or not root.startswith("sha256:"):
+              raise SystemExit("federation root is missing")
+          print("PASS two-domain PoCI federation (ProofPath + Ibex)")
+          PY
+
+      - name: Attest final federation report
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/poci/federation/federation-report.json
+
+      - name: Upload federation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: poci-cross-repo-federation-${{ github.run_id }}
+          path: artifacts/poci/federation
+          if-no-files-found: error
+          retention-days: 14
