@@ -1,0 +1,55 @@
+{
+  "profile_id": "ibex.poci.external-consumer-receipt.v0.1",
+  "decision": "ACCEPT",
+  "primary_reason_code": null,
+  "reason_codes": [],
+  "findings": [],
+  "consumer": {
+    "consumer_id": "ibex-proofpath-poci-consumer",
+    "repository": "safal207/ibex-agent-verification",
+    "workflow": "safal207/ibex-agent-verification/.github/workflows/proofpath-poci-consumer.yml",
+    "commit_sha": "24efa1eadd72275bcc29f0c436e46fb508aac113"
+  },
+  "producer": {
+    "repository": "safal207/ProofPath",
+    "code_sha": "a726f2a8b3bd9c6c4469be542e30bb54b230d510",
+    "attestation_source_sha": "3a5dde912c44e0957204d3df733e712c596455f1",
+    "attestation_signer_sha": "3a5dde912c44e0957204d3df733e712c596455f1",
+    "workflow": "safal207/ProofPath/.github/workflows/poci-signed-witness-network.yml",
+    "report_sha256": "sha256:87119740993bc570749542ef4e06a8cf0ce44cebd77e88eb5aa1b432d0228fde",
+    "attestation_result_sha256": "sha256:eac7008a5dcdfaf0e7c75eed1dfdbaffa633f61d72301818281ee7ca6a13bef0"
+  },
+  "accepted_consensus": {
+    "round_id": "poci-demo-round-001",
+    "consensus_root": "sha256:f2bc99fe96f24942e5cc9c87f25c48167d875041e85170dbb354c2bc0cd97f5f",
+    "source_digest": "sha256:807bde72ed45ae1566443dec20c85b02f0d6734e4aa4bf9a9cfe08ce2e4c97fa",
+    "graph_set_id": "mg_compute_purchase_001",
+    "poci_envelope_id": "env_valid_action",
+    "graph_roots": {
+      "causal": "sha256:482d5076dc3a80dac8f4ed179491b4d3e153ece780fcebdd81289ffbdc6fd7f4",
+      "intent": "sha256:3a26e5badd5379f69203dfe972143e0f3969b12e5f5c55cd641aa7f2bc41a0b3",
+      "authority": "sha256:6af348f1245a5a1f3b59b0070653bbf4d512a792e54554918058f9692e33bb0c",
+      "state_transition": "sha256:41807cd0bacac6908867ce6839114d3028ec62550eb7cee0fdb50006e3887c10",
+      "evidence": "sha256:1fed70f4f198ce5a993880e283763db8c0dc576824f042619637b37f6d745899",
+      "time_continuity": "sha256:4b28006fc3a21f6afce98e4e4e661fa204060be976110bed3bb571af3d7e4ccc"
+    },
+    "transition_cells_root": "sha256:b5d5fd4ba2638fb685913e621295a1c70b5aff550d14ea5b2d8c0f49bdba7f45",
+    "computed_multigraph_root": "sha256:98543066cb16c06b5300b56749af43b2fdd48eed47650488ac57987156e38219"
+  },
+  "verification": {
+    "producer_attestation_verified": true,
+    "producer_report_digest_verified": true,
+    "producer_code_sha_verified": true,
+    "source_recomputed": true,
+    "six_graph_roots_recomputed": true,
+    "transition_cells_recomputed": true,
+    "consumer_attestation_required": true
+  },
+  "honest_limitations": [
+    "ProofPath and Ibex use different repositories and workflow identities",
+    "both repositories are currently controlled by the same GitHub account owner",
+    "this proves evidence consistency, not objective real-world truth"
+  ],
+  "receipt_root": "sha256:a810c52ebc8e313d535962b668d5eb608a4fab0e74ce9ef9ba64c313a195aa2d",
+  "valid": true
+}
