@@ -1,0 +1,16 @@
+{
+  "profile_id": "proofpath.github.governance-facts.v0.1",
+  "authority": {
+    "active": true,
+    "expires_at": "2026-12-31T23:59:59Z",
+    "scope": {
+      "repositories": ["safal207/ProofPath"],
+      "environments": ["production"],
+      "actions": ["deploy"]
+    }
+  },
+  "security": {
+    "critical_vulnerabilities": 0
+  },
+  "change_ticket": null
+}
