@@ -1,0 +1,271 @@
+name: ProofPath GitHub Evidence Collector
+
+on:
+  pull_request:
+    paths:
+      - "deploy-guard/github-collector/**"
+      - "deploy-guard/evidence-builder/**"
+      - "deploy-guard/action.yml"
+      - "deploy-guard/run_action.py"
+      - "scripts/verify_proofpath_deploy_guard.py"
+      - "schemas/proofpath-github-evidence-collector-config-v0.1.schema.json"
+      - "examples/deploy-guard/github-collector-config.fixture.json"
+      - "examples/deploy-guard/github-collector-consumer-workflow.yml"
+      - "tests/test_github_evidence_collector.py"
+      - "tests/test_github_evidence_collector_security.py"
+      - ".github/workflows/proofpath-github-evidence-collector.yml"
+      - "docs/PROOFPATH_GITHUB_EVIDENCE_COLLECTOR.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  seed-artifact:
+    name: build-artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build deterministic seed artifact
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/collector-seed
+          printf 'proofpath collector seed\nsource_sha=%s\n' "$SOURCE_SHA" \
+            > artifacts/collector-seed/payload.txt
+
+      - name: Upload seed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-collector-seed
+          path: artifacts/collector-seed/payload.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  collector-conformance:
+    needs: seed-artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile and run collector tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy-guard/github-collector/collector.py
+          python3 -m json.tool \
+            schemas/proofpath-github-evidence-collector-config-v0.1.schema.json \
+            >/dev/null
+          python3 -m unittest \
+            tests.test_github_evidence_collector \
+            tests.test_github_evidence_collector_security \
+            -v
+
+      - name: Build live collector config and Deploy Guard policy
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          sha = os.environ["SOURCE_SHA"]
+          branch = os.environ["SOURCE_BRANCH"]
+          repository = os.environ["REPOSITORY"]
+          root = Path("artifacts/github-collector")
+          root.mkdir(parents=True, exist_ok=True)
+
+          config = {
+              "profile_id": "proofpath.github.evidence-collector-config.v0.1",
+              "artifact_job_name": "build-artifact",
+              "authority": {
+                  "active": True,
+                  "expires_at": "2099-12-31T23:59:59Z",
+                  "scope": {
+                      "repositories": [repository],
+                      "environments": ["production"],
+                      "actions": ["deploy"],
+                  },
+              },
+              "provenance": {
+                  "attestation_verified": False,
+                  "runner_environment": "github-hosted",
+                  "workflow": f"{repository}/.github/workflows/proofpath-github-evidence-collector.yml",
+                  "source_sha": sha,
+                  "signer_sha": sha,
+              },
+              "security": {"critical_vulnerabilities": 0},
+              "approval_role_map": {},
+              "check_names": ["build-artifact"],
+              "check_app_allowlist": {"build-artifact": "github-actions"},
+              "change_ticket": None,
+          }
+          policy = {
+              "profile_id": "proofpath.deploy.guard-policy.v0.1",
+              "policy_id": "github-collector-conformance",
+              "policy_version": "0.1.0",
+              "allowed_repositories": [repository],
+              "allowed_environments": ["production"],
+              "allowed_branches": [branch],
+              "allowed_actions": ["deploy"],
+              "minimum_approvals": 0,
+              "required_approval_roles": [],
+              "required_checks": ["build-artifact"],
+              "maximum_critical_vulnerabilities": 0,
+              "require_change_ticket": False,
+              "require_artifact_attestation": False,
+              "require_github_hosted_runner": True,
+          }
+          (root / "collector-config.json").write_text(
+              json.dumps(config, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          (root / "deploy-policy.json").write_text(
+              json.dumps(policy, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Collect live GitHub evidence
+        id: collector
+        uses: ./deploy-guard/github-collector
+        with:
+          github-token: ${{ github.token }}
+          config: artifacts/github-collector/collector-config.json
+          artifact-run-id: ${{ github.run_id }}
+          artifact-name: proofpath-collector-seed
+          repository: ${{ github.repository }}
+          source-sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          pull-request-number: ${{ github.event.pull_request.number || 0 }}
+          output: artifacts/github-collector/trusted-facts.json
+          report: artifacts/github-collector/collector-report.json
+
+      - name: Build Deploy Guard evidence from collected facts
+        id: evidence
+        uses: ./deploy-guard/evidence-builder
+        with:
+          policy: artifacts/github-collector/deploy-policy.json
+          trusted-facts: ${{ steps.collector.outputs.trusted-facts-path }}
+          artifact-digest: ${{ steps.collector.outputs.artifact-digest }}
+          environment: production
+          agent-id: github-actions/proofpath-collector-conformance
+          repository: ${{ steps.collector.outputs.repository }}
+          source-branch: ${{ steps.collector.outputs.source-branch }}
+          source-sha: ${{ steps.collector.outputs.source-sha }}
+          evaluated-at: 2026-08-01T20:00:00Z
+          output: artifacts/github-collector/deploy-action-evidence.json
+
+      - name: Evaluate collected evidence through Deploy Guard
+        id: guard
+        uses: ./deploy-guard
+        with:
+          policy: artifacts/github-collector/deploy-policy.json
+          evidence: ${{ steps.evidence.outputs.evidence-path }}
+          certificate: artifacts/github-collector/deploy-clearance.json
+          mode: enforce
+
+      - name: Verify live Collector Builder Guard binding
+        env:
+          CHECK_COUNT: ${{ steps.collector.outputs.check-count }}
+          APPROVAL_COUNT: ${{ steps.collector.outputs.approval-count }}
+          COLLECTED_DIGEST: ${{ steps.collector.outputs.artifact-digest }}
+          COLLECTED_SHA: ${{ steps.collector.outputs.source-sha }}
+          COLLECTED_BRANCH: ${{ steps.collector.outputs.source-branch }}
+          BUILDER_ROOT: ${{ steps.evidence.outputs.evidence-root }}
+          GUARD_ROOT: ${{ steps.guard.outputs.evidence-root }}
+          DECISION: ${{ steps.guard.outputs.decision }}
+          AUTHORITY_GRANTED: ${{ steps.guard.outputs.authority-granted }}
+        run: |
+          set -euo pipefail
+          test "$CHECK_COUNT" = "1"
+          test "$APPROVAL_COUNT" = "0"
+          test "$COLLECTED_DIGEST" != ""
+          test "$COLLECTED_SHA" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          test "$COLLECTED_BRANCH" = "${{ github.head_ref || github.ref_name }}"
+          test "$BUILDER_ROOT" = "$GUARD_ROOT"
+          test "$DECISION" = "ACCEPT"
+          test "$AUTHORITY_GRANTED" = "false"
+
+      - name: Build collector conformance manifest
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          WORKFLOW_SUBJECT_SHA: ${{ github.sha }}
+          ARTIFACT_RUN_ID: ${{ github.run_id }}
+          ARTIFACT_ID: ${{ steps.collector.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.collector.outputs.artifact-digest }}
+          EVIDENCE_ROOT: ${{ steps.evidence.outputs.evidence-root }}
+          CLEARANCE_ROOT: ${{ steps.guard.outputs.clearance-root }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          directory = Path("artifacts/github-collector")
+          report = json.loads((directory / "collector-report.json").read_text(encoding="utf-8"))
+          facts = json.loads((directory / "trusted-facts.json").read_text(encoding="utf-8"))
+          certificate = json.loads((directory / "deploy-clearance.json").read_text(encoding="utf-8"))
+          assert report["collector_live_github_api"] is True
+          assert report["collector_verified_authority"] is False
+          assert report["collector_verified_attestation_claim"] is False
+          assert report["workflow_run"]["producer_job"]["conclusion"] == "success"
+          assert facts["build_provenance"]["artifact_digest"] == os.environ["ARTIFACT_DIGEST"]
+          assert certificate["decision"] == "ACCEPT"
+          assert certificate["evidence_root"] == os.environ["EVIDENCE_ROOT"]
+          assert certificate["clearance_root"] == os.environ["CLEARANCE_ROOT"]
+          assert certificate["authority_granted"] is False
+          manifest = {
+              "profile_id": "proofpath.github.evidence-collector-conformance.v0.1",
+              "source_sha": os.environ["SOURCE_SHA"],
+              "workflow_subject_sha": os.environ["WORKFLOW_SUBJECT_SHA"],
+              "artifact_run_id": int(os.environ["ARTIFACT_RUN_ID"]),
+              "artifact_id": int(os.environ["ARTIFACT_ID"]),
+              "artifact_digest": os.environ["ARTIFACT_DIGEST"],
+              "evidence_root": os.environ["EVIDENCE_ROOT"],
+              "clearance_root": os.environ["CLEARANCE_ROOT"],
+              "decision": "ACCEPT",
+              "collector_report_sha256": hashlib.sha256(
+                  (directory / "collector-report.json").read_bytes()
+              ).hexdigest(),
+              "trusted_facts_sha256": hashlib.sha256(
+                  (directory / "trusted-facts.json").read_bytes()
+              ).hexdigest(),
+              "collector_verified_authority": False,
+              "collector_verified_attestation_claim": False,
+              "deployment_performed": False,
+              "authority_granted": False,
+          }
+          (directory / "collector-conformance-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload GitHub collector evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-github-evidence-collector-${{ github.run_id }}
+          path: |
+            artifacts/github-collector
+            deploy-guard/github-collector/action.yml
+            deploy-guard/github-collector/collector.py
+            schemas/proofpath-github-evidence-collector-config-v0.1.schema.json
+            examples/deploy-guard/github-collector-consumer-workflow.yml
+            docs/PROOFPATH_GITHUB_EVIDENCE_COLLECTOR.md
+          if-no-files-found: error
+          retention-days: 14
