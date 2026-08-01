@@ -1,0 +1,88 @@
+{
+  "profile_id": "proofpath.assured-action.economy-bundle.v0.1",
+  "evaluated_at": "2026-08-01T22:00:00Z",
+  "job": {
+    "job_id": "job-deploy-production-0001",
+    "client_account_id": "design-partner-alpha",
+    "action_clearance_root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "risk_class": "L2_SENSITIVE",
+    "assurance_level": "INDEPENDENT_QUORUM",
+    "pricing_model": "FIXED_RATE_NO_AUCTION",
+    "currency": "USD",
+    "customer_charge_minor": 10000,
+    "platform_fee_minor": 3000,
+    "dispute_reserve_minor": 1600,
+    "quorum_required": 3,
+    "minimum_control_domains": 3,
+    "minimum_implementations": 2,
+    "created_at": "2026-08-01T20:00:00Z",
+    "challenge_window_ends_at": "2026-08-01T21:00:00Z",
+    "coverage": "NOT_FINANCIALLY_COVERED",
+    "payment_rail": "EXTERNAL_PROVIDER_REQUIRED",
+    "job_root": "sha256:87c6cb893202c5a7ae2c03439a2261ee478f14b297e265b72c914bfc63494164"
+  },
+  "assignments": [
+    {
+      "witness_id": "witness-alpha",
+      "control_domain": "operator-org-alpha",
+      "implementation_id": "proofpath-python-ref-v0.1",
+      "payout_minor": 1800,
+      "admission_receipt_root": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "witness_id": "witness-beta",
+      "control_domain": "operator-org-beta",
+      "implementation_id": "proofpath-rust-ref-v0.1",
+      "payout_minor": 1800,
+      "admission_receipt_root": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    {
+      "witness_id": "witness-gamma",
+      "control_domain": "operator-org-gamma",
+      "implementation_id": "proofpath-python-ref-v0.1",
+      "payout_minor": 1800,
+      "admission_receipt_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "commitments": [
+    {
+      "witness_id": "witness-alpha",
+      "commitment_root": "sha256:b411fe3e39ce0dd87dd6d71322f2ce4e9581ce34f21e052c764ea5928f4f5235"
+    },
+    {
+      "witness_id": "witness-beta",
+      "commitment_root": "sha256:c23b398f61e50e15699bef043a7c0317654f4dd0774160fd33489084c24d1f7a"
+    },
+    {
+      "witness_id": "witness-gamma",
+      "commitment_root": "sha256:81d510a52d51855ea50f37083cc393f42169515dd411da8a82bcaaad0f3995ab"
+    }
+  ],
+  "reveals": [
+    {
+      "witness_id": "witness-alpha",
+      "verdict": "ACCEPT",
+      "action_clearance_root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "evidence_root": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "admission_receipt_root": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "nonce": "alpha-private-reveal-nonce-0001"
+    },
+    {
+      "witness_id": "witness-beta",
+      "verdict": "ACCEPT",
+      "action_clearance_root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "evidence_root": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "admission_receipt_root": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "nonce": "beta-private-reveal-nonce-0001"
+    },
+    {
+      "witness_id": "witness-gamma",
+      "verdict": "ACCEPT",
+      "action_clearance_root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "evidence_root": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "admission_receipt_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "nonce": "gamma-private-reveal-nonce-0001"
+    }
+  ],
+  "disputes": []
+}

@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofpath.dev/schemas/assured-action-settlement-receipt-v0.1.schema.json",
+  "title": "ProofPath Assured Action Settlement Receipt v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "product",
+    "job_id",
+    "job_root",
+    "bundle_root",
+    "evaluated_at",
+    "decision",
+    "primary_reason_code",
+    "findings",
+    "action_consensus",
+    "economics",
+    "independence",
+    "settlement_state",
+    "permitted_next_transition",
+    "payment_request_ready",
+    "external_payment_authority_granted",
+    "payment_execution_performed",
+    "slashing_performed",
+    "coverage",
+    "assurance",
+    "settlement_root"
+  ],
+  "properties": {
+    "profile_id": {
+      "const": "proofpath.assured-action.settlement-receipt.v0.1"
+    },
+    "product": {
+      "const": "PROOFPATH_ASSURED_ACTION_ECONOMY"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "job_root": {
+      "$ref": "#/$defs/digestOrNull"
+    },
+    "bundle_root": {
+      "$ref": "#/$defs/digest"
+    },
+    "evaluated_at": {
+      "oneOf": [
+        {"type": "string", "format": "date-time"},
+        {"type": "null"}
+      ]
+    },
+    "decision": {
+      "enum": ["ACCEPT", "HOLD", "BLOCK", "CHALLENGE"]
+    },
+    "primary_reason_code": {
+      "type": "string",
+      "minLength": 1
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "decision", "path", "message"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "decision": {"enum": ["HOLD", "BLOCK", "CHALLENGE"]},
+          "path": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "action_consensus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdict", "action_clearance_root", "evidence_root", "witness_count"],
+      "properties": {
+        "verdict": {
+          "oneOf": [
+            {"enum": ["ACCEPT", "HOLD", "BLOCK", "CHALLENGE"]},
+            {"type": "null"}
+          ]
+        },
+        "action_clearance_root": {"$ref": "#/$defs/digestOrNull"},
+        "evidence_root": {"$ref": "#/$defs/digestOrNull"},
+        "witness_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "economics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currency",
+        "customer_charge_minor",
+        "witness_payouts",
+        "witness_payout_total_minor",
+        "platform_fee_minor",
+        "dispute_reserve_minor",
+        "allocation_total_minor",
+        "conservation_verified"
+      ],
+      "properties": {
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "customer_charge_minor": {"type": "integer", "minimum": 0},
+        "witness_payouts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["witness_id", "amount_minor"],
+            "properties": {
+              "witness_id": {"type": "string", "minLength": 1},
+              "amount_minor": {"type": "integer", "minimum": 1}
+            }
+          }
+        },
+        "witness_payout_total_minor": {"type": "integer", "minimum": 0},
+        "platform_fee_minor": {"type": "integer", "minimum": 0},
+        "dispute_reserve_minor": {"type": "integer", "minimum": 0},
+        "allocation_total_minor": {"type": "integer", "minimum": 0},
+        "conservation_verified": {"type": "boolean"}
+      }
+    },
+    "independence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_control_domains",
+        "observed_control_domains",
+        "required_implementations",
+        "observed_implementations",
+        "selection_method"
+      ],
+      "properties": {
+        "required_control_domains": {"type": "integer", "minimum": 1},
+        "observed_control_domains": {"type": "integer", "minimum": 0},
+        "required_implementations": {"type": "integer", "minimum": 1},
+        "observed_implementations": {"type": "integer", "minimum": 0},
+        "selection_method": {"type": ["string", "null"]}
+      }
+    },
+    "settlement_state": {
+      "enum": ["READY_FOR_EXTERNAL_PAYMENT_REQUEST", "LOCKED", "REJECTED", "DISPUTED"]
+    },
+    "permitted_next_transition": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payment_request_ready": {
+      "type": "boolean"
+    },
+    "external_payment_authority_granted": {
+      "const": false
+    },
+    "payment_execution_performed": {
+      "const": false
+    },
+    "slashing_performed": {
+      "const": false
+    },
+    "coverage": {
+      "const": "NOT_FINANCIALLY_COVERED"
+    },
+    "assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "identity_verification", "money_movement", "insurance"],
+      "properties": {
+        "level": {"const": "DETERMINISTIC_SETTLEMENT_PLAN"},
+        "identity_verification": {"const": "UPSTREAM_ADMISSION_RECEIPTS_REQUIRED"},
+        "money_movement": {"const": "OUT_OF_SCOPE"},
+        "insurance": {"const": "NOT_PROVIDED"}
+      }
+    },
+    "settlement_root": {
+      "$ref": "#/$defs/digest"
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "digestOrNull": {
+      "oneOf": [
+        {"$ref": "#/$defs/digest"},
+        {"type": "null"}
+      ]
+    }
+  }
+}

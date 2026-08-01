@@ -44,6 +44,23 @@ HTTPS proves that a connection is secure. ProofPath proves that an action was au
 
 > HTTPS proves the channel. ProofPath proves the action.
 
+## Assured Action Economy
+
+ProofPath now includes a token-free reference contract for turning independent verification into paid work:
+
+```text
+funded verification job
+  -> fixed-rate independent witnesses
+  -> commit / reveal
+  -> quorum or dispute hold
+  -> deterministic settlement receipt
+  -> external payment provider
+```
+
+The reference evaluator conserves the exact customer-funded allocation, blocks false independence, detects reveal substitution, preserves honest dissent, and never moves money or claims financial coverage. A correctly verified `BLOCK` action is still payable work; operators are not rewarded for approving actions.
+
+Start with [ProofPath Assured Action Economy v0.1](docs/PROOFPATH_ASSURED_ACTION_ECONOMY.md).
+
 ## Agent Payment Guard
 
 > **Model output is a proposal, not authorization.**
