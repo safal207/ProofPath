@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://proofpath.example/schemas/proofpath-deploy-evidence-inputs-v0.1.schema.json",
+  "$id": "urn:proofpath:schema:deploy-evidence-inputs:v0.1",
   "title": "ProofPath Deploy Evidence Inputs v0.1",
   "type": "object",
   "additionalProperties": false,
