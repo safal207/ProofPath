@@ -66,10 +66,10 @@ jobs:
           PY
 
           rm -rf .bootstrap
-          rm .github/workflows/proofpath-sigstore-admission.yml
           find control-cloud tests -type d -name __pycache__ -prune -exec rm -rf {} +
           python3 -m py_compile control-cloud/admission/verify_sigstore.py control-cloud/ingestion/admitted_ingest.py
           python3 -m unittest tests.test_sigstore_admission tests.test_admitted_ingestion tests.test_sigstore_admission_security -v
+          rm .github/workflows/proofpath-sigstore-admission.yml
           find control-cloud tests -type d -name __pycache__ -prune -exec rm -rf {} +
           git config user.name 'proofpath-bot'
           git config user.email '55020240+safal207@users.noreply.github.com'
