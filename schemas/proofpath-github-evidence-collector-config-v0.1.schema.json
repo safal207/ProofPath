@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofpath.example/schemas/proofpath-github-evidence-collector-config-v0.1.schema.json",
+  "title": "ProofPath GitHub Evidence Collector Config v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "authority",
+    "provenance",
+    "security",
+    "approval_role_map",
+    "check_names",
+    "change_ticket"
+  ],
+  "properties": {
+    "profile_id": {
+      "const": "proofpath.github.evidence-collector-config.v0.1"
+    },
+    "authority": {
+      "type": "object"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attestation_verified",
+        "runner_environment",
+        "workflow",
+        "source_sha",
+        "signer_sha"
+      ],
+      "properties": {
+        "attestation_verified": {
+          "type": "boolean"
+        },
+        "runner_environment": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000\\r\\n]+$"
+        },
+        "workflow": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000\\r\\n]+$"
+        },
+        "source_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40,64}$"
+        },
+        "signer_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40,64}$"
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "critical_vulnerabilities"
+      ],
+      "properties": {
+        "critical_vulnerabilities": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "approval_role_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[^\\u0000\\r\\n]+$"
+      }
+    },
+    "check_names": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[^\\u0000\\r\\n]+$"
+      }
+    },
+    "check_app_allowlist": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[^\\u0000\\r\\n]+$"
+      },
+      "default": {}
+    },
+    "change_ticket": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "id",
+            "status",
+            "commit_sha"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1
+            },
+            "commit_sha": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40,64}$"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
