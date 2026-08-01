@@ -1,5 +1,6 @@
 {
   "profile_id": "proofpath.github.evidence-collector-config.v0.1",
+  "artifact_job_name": "build-artifact",
   "authority": {
     "active": true,
     "expires_at": "2026-12-31T23:59:59Z",
