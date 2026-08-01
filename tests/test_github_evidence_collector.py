@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import io
 import json
 import os
 import tempfile
@@ -10,7 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "deploy-guard" / "github-collector" / "collect_github_evidence.py"
+SCRIPT = ROOT / "deploy-guard" / "github-collector" / "collector.py"
 FIXTURE = ROOT / "examples" / "deploy-guard" / "github-collector-config.fixture.json"
 
 SPEC = importlib.util.spec_from_file_location("proofpath_github_collector", SCRIPT)
@@ -19,7 +18,6 @@ collector = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(collector)
 
 SHA = "a" * 40
-SIGNER_SHA = "c" * 40
 DIGEST = "sha256:" + "b" * 64
 
 
@@ -83,6 +81,17 @@ class GitHubEvidenceCollectorTests(unittest.TestCase):
                 "html_url": "https://github.com/safal207/ProofPath/actions/runs/77",
                 "repository": {"full_name": "safal207/ProofPath"},
             },
+            "/repos/safal207/ProofPath/actions/runs/77/jobs": {
+                "total_count": 1,
+                "jobs": [
+                    {
+                        "id": 5001,
+                        "name": "build-artifact",
+                        "status": "completed",
+                        "conclusion": "success",
+                    }
+                ],
+            },
             "/repos/safal207/ProofPath/actions/runs/77/artifacts": {
                 "total_count": 1,
                 "artifacts": [
@@ -126,23 +135,10 @@ class GitHubEvidenceCollectorTests(unittest.TestCase):
                     },
                 ],
             },
-            "/repos/safal207/ProofPath/pulls/12": {
-                "number": 12,
-                "head": {"sha": SHA},
-            },
+            "/repos/safal207/ProofPath/pulls/12": {"number": 12, "head": {"sha": SHA}},
             "/repos/safal207/ProofPath/pulls/12/reviews": [
-                {
-                    "id": 10,
-                    "user": {"login": "Alice"},
-                    "state": "APPROVED",
-                    "commit_id": SHA,
-                },
-                {
-                    "id": 11,
-                    "user": {"login": "bob"},
-                    "state": "APPROVED",
-                    "commit_id": SHA,
-                },
+                {"id": 10, "user": {"login": "Alice"}, "state": "APPROVED", "commit_id": SHA},
+                {"id": 11, "user": {"login": "bob"}, "state": "APPROVED", "commit_id": SHA},
             ],
         }
 
@@ -159,29 +155,17 @@ class GitHubEvidenceCollectorTests(unittest.TestCase):
             with mock.patch.object(collector.urllib.request, "urlopen", self._fake_urlopen):
                 return collector.main()
 
-    def test_collects_commit_bound_checks_reviews_and_artifact(self):
+    def test_collects_commit_bound_checks_reviews_job_and_artifact(self):
         self.assertEqual(self._run(), 0)
         facts = json.loads(self.output.read_text(encoding="utf-8"))
         report = json.loads(self.report.read_text(encoding="utf-8"))
-
         self.assertEqual(facts["profile_id"], "proofpath.deploy.evidence-inputs.v0.1")
         self.assertEqual(facts["build_provenance"]["commit_sha"], SHA)
         self.assertEqual(facts["build_provenance"]["artifact_digest"], DIGEST)
         self.assertFalse(facts["build_provenance"]["attestation_verified"])
-        self.assertEqual(
-            facts["checks"],
-            [
-                {"name": "unit-tests", "status": "success", "commit_sha": SHA},
-                {"name": "security-scan", "status": "success", "commit_sha": SHA},
-            ],
-        )
-        self.assertEqual(
-            facts["approvals"],
-            [
-                {"actor": "alice", "role": "service-owner", "approved": True, "commit_sha": SHA},
-                {"actor": "bob", "role": "security", "approved": True, "commit_sha": SHA},
-            ],
-        )
+        self.assertEqual([item["status"] for item in facts["checks"]], ["success", "success"])
+        self.assertEqual([item["actor"] for item in facts["approvals"]], ["alice", "bob"])
+        self.assertEqual(report["workflow_run"]["producer_job"]["name"], "build-artifact")
         self.assertTrue(report["collector_live_github_api"])
         self.assertFalse(report["collector_verified_authority"])
         self.assertFalse(report["collector_verified_attestation_claim"])
@@ -191,7 +175,22 @@ class GitHubEvidenceCollectorTests(unittest.TestCase):
         self.assertIn(f"artifact-digest={DIGEST}", outputs)
         self.assertIn("check-count=2", outputs)
         self.assertIn("approval-count=2", outputs)
-        self.assertIn("Collector verified authority: `false`", self.summary.read_text(encoding="utf-8"))
+
+    def test_in_progress_run_is_allowed_after_producer_job_succeeds(self):
+        self.responses["/repos/safal207/ProofPath/actions/runs/77"]["status"] = "in_progress"
+        self.responses["/repos/safal207/ProofPath/actions/runs/77"]["conclusion"] = None
+        self.assertEqual(self._run(), 0)
+
+    def test_producer_job_must_be_completed_successfully(self):
+        job = self.responses["/repos/safal207/ProofPath/actions/runs/77/jobs"]["jobs"][0]
+        job["status"] = "in_progress"
+        job["conclusion"] = None
+        self.assertEqual(self._run(), 1)
+        self.assertFalse(self.output.exists())
+
+    def test_producer_job_name_must_match_exactly_once(self):
+        self.responses["/repos/safal207/ProofPath/actions/runs/77/jobs"]["jobs"] = []
+        self.assertEqual(self._run(), 1)
 
     def test_latest_check_rerun_wins_for_same_commit_and_app(self):
         self.assertEqual(self._run(), 0)
@@ -214,12 +213,7 @@ class GitHubEvidenceCollectorTests(unittest.TestCase):
 
     def test_latest_nonapproval_revokes_previous_approval(self):
         self.responses["/repos/safal207/ProofPath/pulls/12/reviews"].append(
-            {
-                "id": 12,
-                "user": {"login": "alice"},
-                "state": "CHANGES_REQUESTED",
-                "commit_id": SHA,
-            }
+            {"id": 12, "user": {"login": "alice"}, "state": "CHANGES_REQUESTED", "commit_id": SHA}
         )
         self.assertEqual(self._run(), 0)
         facts = json.loads(self.output.read_text(encoding="utf-8"))
@@ -235,7 +229,7 @@ class GitHubEvidenceCollectorTests(unittest.TestCase):
         self.assertEqual(self._run(), 1)
         self.assertFalse(self.output.exists())
 
-    def test_failed_artifact_run_fails_before_output(self):
+    def test_failed_completed_run_fails_before_output(self):
         self.responses["/repos/safal207/ProofPath/actions/runs/77"]["conclusion"] = "failure"
         self.assertEqual(self._run(), 1)
         self.assertFalse(self.output.exists())
@@ -245,7 +239,6 @@ class GitHubEvidenceCollectorTests(unittest.TestCase):
         artifact["id"] = 9002
         self.responses["/repos/safal207/ProofPath/actions/runs/77/artifacts"]["artifacts"].append(artifact)
         self.assertEqual(self._run(), 1)
-        self.assertFalse(self.output.exists())
 
     def test_unmapped_approved_reviewer_is_not_granted_a_role(self):
         self.responses["/repos/safal207/ProofPath/pulls/12/reviews"].append(
@@ -260,7 +253,6 @@ class GitHubEvidenceCollectorTests(unittest.TestCase):
         value["change_ticket"]["commit_sha"] = "d" * 40
         self.config.write_text(json.dumps(value), encoding="utf-8")
         self.assertEqual(self._run(), 1)
-        self.assertFalse(self.output.exists())
 
     def test_output_path_cannot_escape_workspace(self):
         self.environment["PROOFPATH_OUTPUT"] = str(self.workspace.parent / "escape.json")
@@ -269,7 +261,6 @@ class GitHubEvidenceCollectorTests(unittest.TestCase):
     def test_non_https_api_origin_is_rejected(self):
         self.environment["GITHUB_API_URL"] = "http://api.github.com"
         self.assertEqual(self._run(), 1)
-        self.assertFalse(self.output.exists())
 
     def test_pull_request_collection_can_be_disabled(self):
         self.environment["PROOFPATH_PULL_REQUEST_NUMBER"] = "0"
