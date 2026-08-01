@@ -1,0 +1,79 @@
+name: Production Deploy with ProofPath GitHub Collector
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact-run-id:
+        description: Successful workflow run containing the deployment artifact.
+        required: true
+      artifact-name:
+        description: Exact artifact name.
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  assured-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Collect GitHub deployment facts
+        id: collector
+        uses: safal207/ProofPath/deploy-guard/github-collector@REPLACE_WITH_REVIEWED_40_CHAR_COMMIT_SHA
+        with:
+          github-token: ${{ github.token }}
+          config: .proofpath/github-collector.json
+          artifact-run-id: ${{ inputs.artifact-run-id }}
+          artifact-name: ${{ inputs.artifact-name }}
+          repository: ${{ github.repository }}
+          source-sha: ${{ github.sha }}
+          pull-request-number: "0"
+          output: proofpath-evidence/github-trusted-facts.json
+          report: proofpath-evidence/github-collector-report.json
+
+      - name: Build commit-bound Deploy Guard evidence
+        id: evidence
+        uses: safal207/ProofPath/deploy-guard/evidence-builder@REPLACE_WITH_REVIEWED_40_CHAR_COMMIT_SHA
+        with:
+          policy: .proofpath/deploy-policy.json
+          trusted-facts: ${{ steps.collector.outputs.trusted-facts-path }}
+          artifact-digest: ${{ steps.collector.outputs.artifact-digest }}
+          environment: production
+          agent-id: github-actions/production-deployer
+          repository: ${{ steps.collector.outputs.repository }}
+          source-branch: ${{ steps.collector.outputs.source-branch }}
+          source-sha: ${{ steps.collector.outputs.source-sha }}
+          output: proofpath-evidence/deploy-action-evidence.json
+
+      - name: Evaluate ProofPath deployment clearance
+        id: guard
+        uses: safal207/ProofPath/deploy-guard@REPLACE_WITH_REVIEWED_40_CHAR_COMMIT_SHA
+        with:
+          policy: .proofpath/deploy-policy.json
+          evidence: ${{ steps.evidence.outputs.evidence-path }}
+          certificate: proofpath-evidence/deploy-clearance.json
+          mode: enforce
+
+      - name: Retain ProofPath evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-deploy-evidence-${{ github.run_id }}
+          path: proofpath-evidence
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Consumer-owned deployment boundary
+        if: steps.guard.outputs.decision == 'ACCEPT'
+        run: |
+          set -euo pipefail
+          echo "ProofPath clearance accepted. Insert the reviewed deployment command here."
+          echo "ProofPath itself does not perform the deployment."
