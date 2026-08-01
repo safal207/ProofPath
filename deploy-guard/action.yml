@@ -1,0 +1,78 @@
+name: ProofPath Deploy Guard
+
+description: Evaluate one production-deploy proposal and emit a deterministic ProofPath clearance certificate.
+
+author: safal207
+
+inputs:
+  policy:
+    description: Path to the Deploy Guard policy JSON inside GITHUB_WORKSPACE.
+    required: true
+  evidence:
+    description: Path to the deploy-action evidence JSON inside GITHUB_WORKSPACE.
+    required: true
+  certificate:
+    description: Path where the clearance certificate should be written inside GITHUB_WORKSPACE.
+    required: false
+    default: proofpath-deploy-clearance.json
+  mode:
+    description: enforce fails unless the decision is ACCEPT; observe reports any valid decision without failing.
+    required: false
+    default: enforce
+
+outputs:
+  decision:
+    description: ACCEPT, HOLD, BLOCK, or CHALLENGE.
+    value: ${{ steps.guard.outputs.decision }}
+  primary-reason-code:
+    description: Primary machine-readable reason code, or NONE for ACCEPT.
+    value: ${{ steps.guard.outputs.primary-reason-code }}
+  clearance-root:
+    description: Domain-separated root of the exact clearance certificate.
+    value: ${{ steps.guard.outputs.clearance-root }}
+  policy-root:
+    description: Domain-separated root of the evaluated policy.
+    value: ${{ steps.guard.outputs.policy-root }}
+  evidence-root:
+    description: Domain-separated root of the evaluated evidence.
+    value: ${{ steps.guard.outputs.evidence-root }}
+  execution-allowed:
+    description: true only when the decision is ACCEPT.
+    value: ${{ steps.guard.outputs.execution-allowed }}
+  authority-granted:
+    description: Always false; this action evaluates existing authority and never creates it.
+    value: ${{ steps.guard.outputs.authority-granted }}
+  permitted-next-transition:
+    description: Next transition associated with the decision.
+    value: ${{ steps.guard.outputs.permitted-next-transition }}
+  assurance-level:
+    description: Current assurance level.
+    value: ${{ steps.guard.outputs.assurance-level }}
+  witness-level:
+    description: Current witness level.
+    value: ${{ steps.guard.outputs.witness-level }}
+  coverage:
+    description: Current financial-coverage label.
+    value: ${{ steps.guard.outputs.coverage }}
+  certificate-path:
+    description: Absolute path to the generated certificate.
+    value: ${{ steps.guard.outputs.certificate-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Evaluate deployment proposal
+      id: guard
+      shell: bash
+      env:
+        PROOFPATH_POLICY: ${{ inputs.policy }}
+        PROOFPATH_EVIDENCE: ${{ inputs.evidence }}
+        PROOFPATH_CERTIFICATE: ${{ inputs.certificate }}
+        PROOFPATH_MODE: ${{ inputs.mode }}
+      run: |
+        set -euo pipefail
+        python3 "$GITHUB_ACTION_PATH/run_action.py" \
+          --policy "$PROOFPATH_POLICY" \
+          --evidence "$PROOFPATH_EVIDENCE" \
+          --certificate "$PROOFPATH_CERTIFICATE" \
+          --mode "$PROOFPATH_MODE"

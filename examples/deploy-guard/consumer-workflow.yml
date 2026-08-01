@@ -1,0 +1,37 @@
+name: Production Deploy Clearance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deployment-clearance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Evaluate exact deployment proposal
+        id: deploy_guard
+        uses: safal207/ProofPath/deploy-guard@REPLACE_WITH_FULL_40_CHARACTER_COMMIT_SHA
+        with:
+          policy: .proofpath/deploy-policy.json
+          evidence: .proofpath/deploy-evidence.json
+          certificate: proofpath-evidence/deploy-clearance.json
+          mode: enforce
+
+      - name: Deployment boundary
+        if: steps.deploy_guard.outputs.decision == 'ACCEPT'
+        run: |
+          echo "ProofPath clearance accepted. Insert the separately authorized deployment command here."
+
+      - name: Upload clearance certificate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-deploy-clearance-${{ github.run_id }}
+          path: proofpath-evidence/deploy-clearance.json
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,166 @@
+name: ProofPath Deploy Guard Action
+
+on:
+  pull_request:
+    paths:
+      - "deploy-guard/**"
+      - "scripts/verify_proofpath_deploy_guard.py"
+      - "examples/deploy-guard/**"
+      - "tests/test_deploy_guard_action.py"
+      - "tests/test_deploy_guard_action_security.py"
+      - ".github/workflows/proofpath-deploy-guard-action.yml"
+      - "docs/PROOFPATH_DEPLOY_GUARD_ACTION.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  action-conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile and run action tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile deploy-guard/run_action.py
+          python3 -m unittest \
+            tests.test_deploy_guard_action \
+            tests.test_deploy_guard_action_security \
+            -v
+
+      - name: Evaluate ACCEPT in enforce mode
+        id: accept
+        uses: ./deploy-guard
+        with:
+          policy: examples/deploy-guard/deploy-policy.json
+          evidence: examples/deploy-guard/deploy.accept.json
+          certificate: artifacts/action/accept.json
+          mode: enforce
+
+      - name: Evaluate HOLD in observe mode
+        id: hold
+        uses: ./deploy-guard
+        with:
+          policy: examples/deploy-guard/deploy-policy.json
+          evidence: examples/deploy-guard/deploy.hold-missing-approval.json
+          certificate: artifacts/action/hold.json
+          mode: observe
+
+      - name: Evaluate BLOCK in observe mode
+        id: block
+        uses: ./deploy-guard
+        with:
+          policy: examples/deploy-guard/deploy-policy.json
+          evidence: examples/deploy-guard/deploy.block-tests-failed.json
+          certificate: artifacts/action/block.json
+          mode: observe
+
+      - name: Evaluate CHALLENGE in observe mode
+        id: challenge
+        uses: ./deploy-guard
+        with:
+          policy: examples/deploy-guard/deploy-policy.json
+          evidence: examples/deploy-guard/deploy.challenge-artifact-mismatch.json
+          certificate: artifacts/action/challenge.json
+          mode: observe
+
+      - name: Prove enforce mode stops on HOLD
+        id: enforce_hold
+        continue-on-error: true
+        uses: ./deploy-guard
+        with:
+          policy: examples/deploy-guard/deploy-policy.json
+          evidence: examples/deploy-guard/deploy.hold-missing-approval.json
+          certificate: artifacts/action/enforce-hold.json
+          mode: enforce
+
+      - name: Guard action decisions and enforcement outcome
+        env:
+          ACCEPT_DECISION: ${{ steps.accept.outputs.decision }}
+          HOLD_DECISION: ${{ steps.hold.outputs.decision }}
+          BLOCK_DECISION: ${{ steps.block.outputs.decision }}
+          CHALLENGE_DECISION: ${{ steps.challenge.outputs.decision }}
+          ENFORCE_HOLD_OUTCOME: ${{ steps.enforce_hold.outcome }}
+        run: |
+          set -euo pipefail
+          test "$ACCEPT_DECISION" = "ACCEPT"
+          test "$HOLD_DECISION" = "HOLD"
+          test "$BLOCK_DECISION" = "BLOCK"
+          test "$CHALLENGE_DECISION" = "CHALLENGE"
+          test "$ENFORCE_HOLD_OUTCOME" = "failure"
+
+      - name: Build action integration manifest
+        env:
+          ACTION_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          WORKFLOW_SUBJECT_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          certificate_dir = Path("artifacts/action")
+          expected = {
+              "accept": "ACCEPT",
+              "hold": "HOLD",
+              "block": "BLOCK",
+              "challenge": "CHALLENGE",
+              "enforce-hold": "HOLD",
+          }
+          records = []
+          for name, decision in expected.items():
+              path = certificate_dir / f"{name}.json"
+              value = json.loads(path.read_text(encoding="utf-8"))
+              assert value["decision"] == decision
+              assert value["authority_granted"] is False
+              assert value["assurance"]["coverage"] == "NOT_FINANCIALLY_COVERED"
+              records.append(
+                  {
+                      "scenario": name,
+                      "decision": decision,
+                      "primary_reason_code": value["primary_reason_code"],
+                      "clearance_root": value["clearance_root"],
+                      "certificate_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                  }
+              )
+          manifest = {
+              "profile_id": "proofpath.deploy.guard-action-conformance.v0.1",
+              "source_sha": os.environ["ACTION_SOURCE_SHA"],
+              "workflow_subject_sha": os.environ["WORKFLOW_SUBJECT_SHA"],
+              "scenario_count": len(records),
+              "scenarios": records,
+              "modes": {
+                  "enforce": "FAIL_UNLESS_ACCEPT",
+                  "observe": "REPORT_COMPLETE_VALID_CERTIFICATE",
+              },
+              "deployment_performed": False,
+              "authority_granted": False,
+          }
+          Path("artifacts/action-conformance-manifest.json").write_text(
+              json.dumps(manifest, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload Deploy Guard action evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-deploy-guard-action-${{ github.run_id }}
+          path: |
+            artifacts/action
+            artifacts/action-conformance-manifest.json
+            deploy-guard/action.yml
+            deploy-guard/run_action.py
+            examples/deploy-guard/consumer-workflow.yml
+            docs/PROOFPATH_DEPLOY_GUARD_ACTION.md
+          if-no-files-found: error
+          retention-days: 14
