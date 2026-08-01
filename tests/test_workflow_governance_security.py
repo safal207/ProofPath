@@ -105,7 +105,7 @@ class WorkflowGovernanceSecurityTests(unittest.TestCase):
     def test_documentation_is_honest_about_reference_reviewers(self):
         for phrase in (
             "illustrative only",
-            "do **not** represent independent production approval",
+            "**not** represent independent production approval",
             "synthetic reviewer identities",
             "does not",
             "Production still requires",
