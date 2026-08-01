@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofpath.example/schemas/proofpath-github-governance-facts-v0.1.schema.json",
+  "title": "ProofPath GitHub Governance Facts v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["profile_id", "authority", "security", "change_ticket"],
+  "properties": {
+    "profile_id": {"const": "proofpath.github.governance-facts.v0.1"},
+    "authority": {"type": "object"},
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["critical_vulnerabilities"],
+      "properties": {
+        "critical_vulnerabilities": {"type": "integer", "minimum": 0}
+      }
+    },
+    "change_ticket": {"type": ["object", "null"]}
+  }
+}
