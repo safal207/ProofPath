@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "admission_result_root": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "approval_bundle_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "approval_freshness_verified": {
+      "type": "boolean"
+    },
+    "author_separation_verified": {
+      "type": "boolean"
+    },
+    "authority_granted": {
+      "const": false,
+      "type": "boolean"
+    },
+    "control_cluster_separation_verified": {
+      "type": "boolean"
+    },
+    "decision": {
+      "enum": [
+        "ACCEPT",
+        "HOLD",
+        "BLOCK",
+        "CHALLENGE"
+      ]
+    },
+    "decision_root": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "governance_decision_root": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "identity_evidence_verified": {
+      "type": "boolean"
+    },
+    "identity_registry_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "identity_status_verified": {
+      "type": "boolean"
+    },
+    "identity_verifier_identity": {
+      "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+      "type": "string"
+    },
+    "observed_at": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "type": "string"
+    },
+    "organization_separation_verified": {
+      "type": "boolean"
+    },
+    "payment_cluster_separation_verified": {
+      "type": "boolean"
+    },
+    "payments_executed": {
+      "const": false,
+      "type": "boolean"
+    },
+    "profile_id": {
+      "const": "proofpath.control-cloud.reviewer-separation-decision.v0.1"
+    },
+    "reason_code": {
+      "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+      "type": "string"
+    },
+    "repository_write_performed": {
+      "const": false,
+      "type": "boolean"
+    },
+    "reviewer_role_verified": {
+      "type": "boolean"
+    },
+    "separation_of_duties_verified": {
+      "type": "boolean"
+    },
+    "signer_sha": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "suspension_checked": {
+      "type": "boolean"
+    },
+    "verified_organization_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "verified_organization_ids": {
+      "items": {
+        "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "verified_reviewer_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "verified_reviewer_ids": {
+      "items": {
+        "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "workflow": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile_id",
+    "decision",
+    "reason_code",
+    "separation_of_duties_verified",
+    "governance_decision_root",
+    "admission_result_root",
+    "workflow",
+    "signer_sha",
+    "identity_registry_digest",
+    "approval_bundle_digest",
+    "verified_reviewer_ids",
+    "verified_organization_ids",
+    "verified_reviewer_count",
+    "verified_organization_count",
+    "identity_status_verified",
+    "identity_evidence_verified",
+    "reviewer_role_verified",
+    "author_separation_verified",
+    "organization_separation_verified",
+    "control_cluster_separation_verified",
+    "payment_cluster_separation_verified",
+    "approval_freshness_verified",
+    "suspension_checked",
+    "observed_at",
+    "identity_verifier_identity",
+    "authority_granted",
+    "repository_write_performed",
+    "payments_executed",
+    "decision_root"
+  ],
+  "type": "object"
+}

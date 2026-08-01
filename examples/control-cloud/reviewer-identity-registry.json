@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-08-02T00:00:00Z",
+  "policy": {
+    "allowed_identity_providers": [
+      "github-oidc"
+    ],
+    "forbid_author_organization": true,
+    "max_approval_age_seconds": 86400,
+    "require_distinct_control_clusters": true,
+    "require_distinct_payment_clusters": true,
+    "required_approvals": 2,
+    "required_distinct_organizations": 2,
+    "required_role": "workflow-reviewer"
+  },
+  "profile_id": "proofpath.control-cloud.reviewer-identity-registry.v0.1",
+  "reviewers": [
+    {
+      "authority_granted": false,
+      "control_cluster_id": "reference-control-a",
+      "effective_at": "2025-01-01T00:00:00Z",
+      "expires_at": "2099-01-01T00:00:00Z",
+      "github_login": "reference-reviewer-a",
+      "identity_evidence_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "identity_provider": "github-oidc",
+      "identity_subject": "https://github.com/reference-reviewer-a",
+      "independence_attested": true,
+      "organization_id": "reference-org-a",
+      "payment_cluster_id": "reference-payment-a",
+      "reviewer_id": "reference-reviewer-a",
+      "roles": [
+        "workflow-reviewer"
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "authority_granted": false,
+      "control_cluster_id": "reference-control-b",
+      "effective_at": "2025-01-01T00:00:00Z",
+      "expires_at": "2099-01-01T00:00:00Z",
+      "github_login": "reference-reviewer-b",
+      "identity_evidence_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "identity_provider": "github-oidc",
+      "identity_subject": "https://github.com/reference-reviewer-b",
+      "independence_attested": true,
+      "organization_id": "reference-org-b",
+      "payment_cluster_id": "reference-payment-b",
+      "reviewer_id": "reference-reviewer-b",
+      "roles": [
+        "workflow-reviewer"
+      ],
+      "status": "ACTIVE"
+    }
+  ],
+  "suspensions": []
+}

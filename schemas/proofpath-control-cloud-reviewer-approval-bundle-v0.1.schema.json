@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approvals": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "approval_id": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          },
+          "approved_at": {
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            "type": "string"
+          },
+          "conflict_of_interest_declared": {
+            "type": "boolean"
+          },
+          "decision": {
+            "enum": [
+              "APPROVE",
+              "REJECT"
+            ]
+          },
+          "governance_decision_root": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "identity_evidence_digest": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          },
+          "reviewer_identity_subject": {
+            "pattern": "^[a-z][a-z0-9+.-]*://\\S{3,500}$",
+            "type": "string"
+          },
+          "signer_sha": {
+            "pattern": "^[0-9a-f]{40}$",
+            "type": "string"
+          },
+          "statement_digest": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "workflow": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "approval_id",
+          "reviewer_id",
+          "reviewer_identity_subject",
+          "decision",
+          "approved_at",
+          "governance_decision_root",
+          "workflow",
+          "signer_sha",
+          "statement_digest",
+          "identity_evidence_digest",
+          "conflict_of_interest_declared"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "author_control_cluster_id": {
+      "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+      "type": "string"
+    },
+    "author_identity_subject": {
+      "pattern": "^[a-z][a-z0-9+.-]*://\\S{3,500}$",
+      "type": "string"
+    },
+    "author_organization_id": {
+      "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+      "type": "string"
+    },
+    "author_payment_cluster_id": {
+      "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+      "type": "string"
+    },
+    "governance_decision_root": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "profile_id": {
+      "const": "proofpath.control-cloud.reviewer-approval-bundle.v0.1"
+    },
+    "signer_sha": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "workflow": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile_id",
+    "governance_decision_root",
+    "author_identity_subject",
+    "author_organization_id",
+    "author_control_cluster_id",
+    "author_payment_cluster_id",
+    "workflow",
+    "signer_sha",
+    "approvals"
+  ],
+  "type": "object"
+}
