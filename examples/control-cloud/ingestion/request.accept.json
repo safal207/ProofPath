@@ -24,10 +24,10 @@
       "decision": "ACCEPT",
       "evidence_root": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
       "execution_allowed": true,
+      "policy_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
       "primary_reason_code": null,
       "product": "PROOFPATH_ASSURED_ACTION",
       "profile_id": "proofpath.deploy.clearance-certificate.v0.1",
-      "policy_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
       "valid": true
     },
     "dispute_state": "none",
