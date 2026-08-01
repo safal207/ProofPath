@@ -1,0 +1,110 @@
+{
+  "$defs": {
+    "digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://proofpath.dev/schemas/proofpath-control-cloud-admitted-ingest-receipt-v0.1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "type": "string"
+    },
+    "admission_result_root": {
+      "$ref": "#/$defs/digest"
+    },
+    "authority_granted": {
+      "const": false
+    },
+    "content_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "decision": {
+      "enum": [
+        "ACCEPT",
+        "HOLD",
+        "BLOCK",
+        "CHALLENGE"
+      ]
+    },
+    "deployment_performed": {
+      "const": false
+    },
+    "event_index": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "event_root": {
+      "$ref": "#/$defs/digest"
+    },
+    "financial_status": {
+      "const": "RECORDED_NOT_PAYABLE"
+    },
+    "insurance_provided": {
+      "const": false
+    },
+    "payments_executed": {
+      "const": false
+    },
+    "previous_event_root": {
+      "$ref": "#/$defs/digest"
+    },
+    "profile_id": {
+      "const": "proofpath.control-cloud.admitted-ingest-receipt.v0.1"
+    },
+    "provenance_cryptographically_verified_by_api": {
+      "const": true
+    },
+    "receipt_root": {
+      "$ref": "#/$defs/digest"
+    },
+    "request_id": {
+      "maxLength": 128,
+      "minLength": 3,
+      "type": "string"
+    },
+    "status": {
+      "const": "ACCEPTED_WITH_CRYPTOGRAPHIC_PROVENANCE"
+    },
+    "stored_at": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "subject_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "tenant_id": {
+      "pattern": "^[a-z0-9][a-z0-9-]{2,62}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile_id",
+    "status",
+    "tenant_id",
+    "request_id",
+    "action_id",
+    "decision",
+    "content_digest",
+    "event_index",
+    "previous_event_root",
+    "event_root",
+    "admission_result_root",
+    "subject_digest",
+    "stored_at",
+    "receipt_root",
+    "financial_status",
+    "payments_executed",
+    "insurance_provided",
+    "deployment_performed",
+    "authority_granted",
+    "provenance_cryptographically_verified_by_api"
+  ],
+  "title": "ProofPath Control Cloud admission-gated ingestion receipt v0.1",
+  "type": "object"
+}

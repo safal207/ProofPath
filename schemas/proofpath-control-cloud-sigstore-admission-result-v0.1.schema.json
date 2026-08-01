@@ -1,0 +1,140 @@
+{
+  "$defs": {
+    "digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "repo": {
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "sha": {
+      "pattern": "^[0-9a-f]{40,64}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://proofpath.dev/schemas/proofpath-control-cloud-sigstore-admission-result-v0.1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "authority_granted": {
+      "const": false
+    },
+    "cert_oidc_issuer": {
+      "const": "https://token.actions.githubusercontent.com"
+    },
+    "certificate_canonical_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "clearance_root": {
+      "$ref": "#/$defs/digest"
+    },
+    "decision": {
+      "const": "ACCEPT"
+    },
+    "deny_self_hosted_runners": {
+      "const": true
+    },
+    "deployment_performed": {
+      "const": false
+    },
+    "github_attestation_verified": {
+      "const": true
+    },
+    "payments_executed": {
+      "const": false
+    },
+    "predicate_type": {
+      "const": "https://slsa.dev/provenance/v1"
+    },
+    "profile_id": {
+      "const": "proofpath.control-cloud.sigstore-admission-result.v0.1"
+    },
+    "repository": {
+      "$ref": "#/$defs/repo"
+    },
+    "result_root": {
+      "$ref": "#/$defs/digest"
+    },
+    "runner_environment": {
+      "const": "github-hosted"
+    },
+    "signer_repository": {
+      "$ref": "#/$defs/repo"
+    },
+    "signer_sha": {
+      "$ref": "#/$defs/sha"
+    },
+    "signer_workflow": {
+      "pattern": "^(github\\\\.com/)?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/\\\\.github/workflows/[A-Za-z0-9_.-]+\\\\.ya?ml$",
+      "type": "string"
+    },
+    "source_sha": {
+      "$ref": "#/$defs/sha"
+    },
+    "subject_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "transparency_timestamp_verified": {
+      "const": true
+    },
+    "verification_mode": {
+      "const": "GH_ATTESTATION_VERIFY"
+    },
+    "verified": {
+      "const": true
+    },
+    "verified_at": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "verified_attestation_count": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "verified_timestamp_count": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "verifier_identity": {
+      "maxLength": 256,
+      "minLength": 3,
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile_id",
+    "decision",
+    "verified",
+    "verification_mode",
+    "subject_digest",
+    "certificate_canonical_digest",
+    "clearance_root",
+    "repository",
+    "source_sha",
+    "artifact_digest",
+    "signer_repository",
+    "signer_workflow",
+    "signer_sha",
+    "cert_oidc_issuer",
+    "predicate_type",
+    "runner_environment",
+    "deny_self_hosted_runners",
+    "github_attestation_verified",
+    "transparency_timestamp_verified",
+    "verified_attestation_count",
+    "verified_timestamp_count",
+    "verifier_identity",
+    "verified_at",
+    "authority_granted",
+    "deployment_performed",
+    "payments_executed",
+    "result_root"
+  ],
+  "title": "ProofPath Control Cloud Sigstore admission result v0.1",
+  "type": "object"
+}
