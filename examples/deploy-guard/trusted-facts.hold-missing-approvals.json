@@ -1,0 +1,47 @@
+{
+  "profile_id": "proofpath.deploy.evidence-inputs.v0.1",
+  "authority": {
+    "active": true,
+    "expires_at": "2026-12-31T23:59:59Z",
+    "scope": {
+      "repositories": ["safal207/ProofPath"],
+      "environments": ["production"],
+      "actions": ["deploy"]
+    }
+  },
+  "build_provenance": {
+    "commit_sha": "4444444444444444444444444444444444444444",
+    "artifact_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "attestation_verified": true,
+    "runner_environment": "github-hosted",
+    "workflow": "safal207/ProofPath/.github/workflows/build.yml",
+    "source_sha": "4444444444444444444444444444444444444444",
+    "signer_sha": "5555555555555555555555555555555555555555"
+  },
+  "checks": [
+    {
+      "name": "unit-tests",
+      "status": "success",
+      "commit_sha": "4444444444444444444444444444444444444444"
+    },
+    {
+      "name": "integration-tests",
+      "status": "success",
+      "commit_sha": "4444444444444444444444444444444444444444"
+    },
+    {
+      "name": "security-scan",
+      "status": "success",
+      "commit_sha": "4444444444444444444444444444444444444444"
+    }
+  ],
+  "security": {
+    "critical_vulnerabilities": 0
+  },
+  "approvals": [],
+  "change_ticket": {
+    "id": "CHG-2026-0042",
+    "status": "approved",
+    "commit_sha": "4444444444444444444444444444444444444444"
+  }
+}
