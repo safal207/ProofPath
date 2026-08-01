@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "generated_at": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "type": "string"
+    },
+    "policy": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_identity_providers": {
+          "items": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "forbid_author_organization": {
+          "type": "boolean"
+        },
+        "max_approval_age_seconds": {
+          "minimum": 60,
+          "type": "integer"
+        },
+        "require_distinct_control_clusters": {
+          "type": "boolean"
+        },
+        "require_distinct_payment_clusters": {
+          "type": "boolean"
+        },
+        "required_approvals": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "required_distinct_organizations": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "required_role": {
+          "pattern": "^[a-z][a-z0-9-]{1,63}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "required_approvals",
+        "required_distinct_organizations",
+        "required_role",
+        "allowed_identity_providers",
+        "forbid_author_organization",
+        "require_distinct_control_clusters",
+        "require_distinct_payment_clusters",
+        "max_approval_age_seconds"
+      ],
+      "type": "object"
+    },
+    "profile_id": {
+      "const": "proofpath.control-cloud.reviewer-identity-registry.v0.1"
+    },
+    "reviewers": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "authority_granted": {
+            "const": false,
+            "type": "boolean"
+          },
+          "control_cluster_id": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          },
+          "effective_at": {
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            "type": "string"
+          },
+          "expires_at": {
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            "type": "string"
+          },
+          "github_login": {
+            "maxLength": 39,
+            "minLength": 1,
+            "type": "string"
+          },
+          "identity_evidence_digest": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "identity_provider": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          },
+          "identity_subject": {
+            "pattern": "^[a-z][a-z0-9+.-]*://\\S{3,500}$",
+            "type": "string"
+          },
+          "independence_attested": {
+            "const": true,
+            "type": "boolean"
+          },
+          "organization_id": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          },
+          "payment_cluster_id": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9-]{1,63}$",
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "status": {
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED",
+              "REVOKED"
+            ]
+          }
+        },
+        "required": [
+          "reviewer_id",
+          "status",
+          "github_login",
+          "identity_provider",
+          "identity_subject",
+          "organization_id",
+          "control_cluster_id",
+          "payment_cluster_id",
+          "roles",
+          "effective_at",
+          "expires_at",
+          "identity_evidence_digest",
+          "independence_attested",
+          "authority_granted"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "suspensions": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_by": {
+            "items": {
+              "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "authority_granted": {
+            "const": false,
+            "type": "boolean"
+          },
+          "effective_at": {
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            "type": "string"
+          },
+          "reason_code": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          },
+          "suspension_id": {
+            "pattern": "^[a-z0-9][a-z0-9._:-]{2,127}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "suspension_id",
+          "reviewer_id",
+          "effective_at",
+          "reason_code",
+          "approved_by",
+          "authority_granted"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile_id",
+    "generated_at",
+    "policy",
+    "reviewers",
+    "suspensions"
+  ],
+  "type": "object"
+}
