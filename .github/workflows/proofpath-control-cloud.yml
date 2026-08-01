@@ -56,6 +56,7 @@ jobs:
       - name: Verify snapshot and audit invariants
         env:
           EXPECTED_ROOT: sha256:a782f7a1b8fc5d7a6a11815066191a304a32231d969381637902a75f55467deb
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
         run: |
           python3 - <<'PY'
           import hashlib
@@ -114,9 +115,6 @@ jobs:
               encoding="utf-8",
           )
           PY
-        env:
-          EXPECTED_ROOT: sha256:a782f7a1b8fc5d7a6a11815066191a304a32231d969381637902a75f55467deb
-          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
 
       - name: Attest exact Control Cloud snapshot
         uses: actions/attest-build-provenance@v2
