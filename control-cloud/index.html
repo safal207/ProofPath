@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ProofPath Control Cloud</title>
+  <style>
+    :root{color-scheme:dark;--bg:#07101d;--panel:#101b2d;--line:#263650;--text:#ecf3ff;--muted:#91a3bd;--accent:#6ee7c7;--warn:#ffd166;--bad:#ff7a90;--challenge:#b99cff}
+    *{box-sizing:border-box} body{margin:0;font:15px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;background:radial-gradient(circle at top right,#142442 0,#07101d 42%);color:var(--text)}
+    main{max-width:1240px;margin:auto;padding:32px 20px 64px}.top{display:flex;gap:24px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+    h1{font-size:clamp(30px,5vw,58px);line-height:1;margin:8px 0 14px;letter-spacing:-.04em}.eyebrow{color:var(--accent);font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    .muted{color:var(--muted)}.banner{padding:12px 16px;border:1px solid #6c5c2d;background:#2a2413;border-radius:12px;color:#ffe49a;font-weight:800}
+    button,.upload{border:1px solid var(--line);background:#17243a;color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700}
+    input[type=file]{display:none}.controls{display:flex;gap:10px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:22px}
+    .panel{background:linear-gradient(180deg,rgba(20,34,57,.96),rgba(12,24,41,.96));border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.2)}
+    .kpi{grid-column:span 3}.wide{grid-column:span 8}.side{grid-column:span 4}.full{grid-column:1/-1}.label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+    .value{font-size:30px;font-weight:900;margin-top:5px}.decision-row{display:grid;grid-template-columns:105px 1fr 42px;gap:10px;align-items:center;margin:13px 0}
+    .track{height:10px;background:#0a1321;border-radius:99px;overflow:hidden}.bar{height:100%;border-radius:99px;background:var(--accent)}
+    .bar.HOLD{background:var(--warn)}.bar.BLOCK{background:var(--bad)}.bar.CHALLENGE{background:var(--challenge)}
+    table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted)}
+    .pill{display:inline-block;padding:3px 8px;border-radius:99px;background:#18382f;color:#8af1d1;font-size:11px;font-weight:900}.pill.HOLD{background:#3c3115;color:#ffdc78}.pill.BLOCK{background:#421f2a;color:#ff9cad}.pill.CHALLENGE{background:#302347;color:#cfb8ff}
+    code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#b9c9df}.root{word-break:break-all;font-size:11px}.empty{padding:26px;text-align:center;color:var(--muted)}
+    .money-note{border-left:3px solid var(--warn);padding-left:12px;color:#d9c88f}.footer{margin-top:22px;color:var(--muted);font-size:12px}
+    @media(max-width:900px){.kpi{grid-column:span 6}.wide,.side{grid-column:1/-1}}@media(max-width:560px){.kpi{grid-column:1/-1}th:nth-child(3),td:nth-child(3),th:nth-child(5),td:nth-child(5){display:none}}
+  </style>
+</head>
+<body>
+<main>
+  <section class="top">
+    <div>
+      <div class="eyebrow">ProofPath Control Cloud v0.1</div>
+      <h1>Assured actions.<br>Visible economics.</h1>
+      <div class="muted" id="meta">Loading signed-build snapshot…</div>
+    </div>
+    <div>
+      <div class="banner">SIMULATION ONLY · NOT PAYABLE · NOT INSURANCE</div>
+      <div class="controls" style="margin-top:12px">
+        <label class="upload">Load snapshot<input id="file" type="file" accept="application/json"></label>
+        <button id="download" type="button">Download snapshot</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <article class="panel kpi"><div class="label">Assured actions</div><div class="value" id="actions">—</div></article>
+    <article class="panel kpi"><div class="label">Gross preview</div><div class="value" id="gross">—</div></article>
+    <article class="panel kpi"><div class="label">Operator pool</div><div class="value" id="pool">—</div></article>
+    <article class="panel kpi"><div class="label">Platform preview</div><div class="value" id="platform">—</div></article>
+
+    <article class="panel wide">
+      <div class="label">Decision mix</div>
+      <div id="decisions"></div>
+    </article>
+    <article class="panel side">
+      <div class="label">Assurance boundary</div>
+      <p class="money-note">This UI displays a deterministic settlement preview. It does not send payments, deploy software, grant authority, or provide coverage.</p>
+      <div class="root" id="root"></div>
+    </article>
+
+    <article class="panel full">
+      <div class="label">Operator earnings preview</div>
+      <div style="overflow:auto"><table>
+        <thead><tr><th>Operator</th><th>Roles</th><th>Actions</th><th>Preview earnings</th><th>Status</th></tr></thead>
+        <tbody id="operators"></tbody>
+      </table></div>
+    </article>
+
+    <article class="panel full">
+      <div class="label">Assured Action ledger</div>
+      <div style="overflow:auto"><table>
+        <thead><tr><th>Action</th><th>Decision</th><th>Repository</th><th>Risk</th><th>Gross</th><th>Reason / clearance</th></tr></thead>
+        <tbody id="ledger"></tbody>
+      </table></div>
+    </article>
+  </section>
+  <div class="footer">Open the workflow artifact through a local static server, or load a Control Cloud snapshot JSON manually.</div>
+</main>
+<script>
+"use strict";
+let currentSnapshot = null;
+const byId = (id) => document.getElementById(id);
+const money = (minor, currency) => new Intl.NumberFormat(undefined,{style:"currency",currency}).format(minor/100);
+const addCell = (row, value, className="") => {const cell=document.createElement("td");cell.textContent=String(value);if(className)cell.className=className;row.appendChild(cell);return cell;};
+
+function render(snapshot){
+  if(snapshot.profile_id !== "proofpath.control-cloud.snapshot.v0.1") throw new Error("Unsupported snapshot profile");
+  currentSnapshot=snapshot;
+  byId("meta").textContent=`Tenant ${snapshot.tenant_id} · ${snapshot.generated_at} · ${snapshot.currency}`;
+  byId("actions").textContent=String(snapshot.action_count);
+  byId("gross").textContent=money(snapshot.financial_summary.gross_revenue_minor,snapshot.currency);
+  byId("pool").textContent=money(snapshot.financial_summary.operator_pool_minor,snapshot.currency);
+  byId("platform").textContent=money(snapshot.financial_summary.platform_revenue_minor,snapshot.currency);
+  byId("root").textContent=`Snapshot root: ${snapshot.snapshot_root}`;
+
+  const decisions=byId("decisions");decisions.replaceChildren();
+  const max=Math.max(1,...Object.values(snapshot.decision_counts));
+  for(const decision of ["ACCEPT","HOLD","BLOCK","CHALLENGE"]){
+    const row=document.createElement("div");row.className="decision-row";
+    const name=document.createElement("span");name.textContent=decision;row.appendChild(name);
+    const track=document.createElement("div");track.className="track";
+    const bar=document.createElement("div");bar.className=`bar ${decision}`;bar.style.width=`${(snapshot.decision_counts[decision]/max)*100}%`;track.appendChild(bar);row.appendChild(track);
+    const count=document.createElement("strong");count.textContent=String(snapshot.decision_counts[decision]);row.appendChild(count);decisions.appendChild(row);
+  }
+
+  const operators=byId("operators");operators.replaceChildren();
+  for(const operator of [...snapshot.operator_earnings].sort((a,b)=>b.earnings_minor-a.earnings_minor)){
+    const row=document.createElement("tr");
+    addCell(row,operator.operator_id);addCell(row,operator.roles.join(", "));addCell(row,operator.action_count);
+    addCell(row,money(operator.earnings_minor,snapshot.currency));addCell(row,operator.financial_status);
+    operators.appendChild(row);
+  }
+
+  const ledger=byId("ledger");ledger.replaceChildren();
+  for(const action of snapshot.actions){
+    const row=document.createElement("tr");
+    addCell(row,action.action_id);
+    const decisionCell=addCell(row,action.decision);decisionCell.className=`pill ${action.decision}`;
+    addCell(row,action.repository);addCell(row,action.risk_tier);addCell(row,money(action.gross_price_minor,snapshot.currency));
+    addCell(row,action.primary_reason_code || action.clearance_root,"root");
+    ledger.appendChild(row);
+  }
+}
+
+async function loadDefault(){
+  try{
+    const response=await fetch("control-cloud-snapshot.json",{cache:"no-store"});
+    if(!response.ok) throw new Error(`Snapshot request failed: ${response.status}`);
+    render(await response.json());
+  }catch(error){
+    byId("meta").textContent=`Load control-cloud-snapshot.json manually (${error.message})`;
+  }
+}
+byId("file").addEventListener("change",async(event)=>{
+  const [file]=event.target.files;if(!file)return;
+  try{render(JSON.parse(await file.text()));}catch(error){byId("meta").textContent=`Invalid snapshot: ${error.message}`;}
+});
+byId("download").addEventListener("click",()=>{
+  if(!currentSnapshot)return;
+  const blob=new Blob([JSON.stringify(currentSnapshot,null,2)+"\n"],{type:"application/json"});
+  const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="proofpath-control-cloud-snapshot.json";link.click();URL.revokeObjectURL(link.href);
+});
+loadDefault();
+</script>
+</body>
+</html>

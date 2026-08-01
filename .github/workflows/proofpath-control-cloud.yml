@@ -1,0 +1,135 @@
+name: ProofPath Control Cloud
+
+on:
+  pull_request:
+    paths:
+      - "control-cloud/**"
+      - "examples/control-cloud/**"
+      - "schemas/proofpath-control-cloud-*.schema.json"
+      - "tests/test_control_cloud.py"
+      - "tests/test_control_cloud_security.py"
+      - ".github/workflows/proofpath-control-cloud.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  control-cloud-conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate source and run focused tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile control-cloud/build_snapshot.py
+          python3 -m json.tool examples/control-cloud/assured-actions.json >/dev/null
+          python3 -m json.tool examples/control-cloud/settlement-policy.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-dataset-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-snapshot-v0.1.schema.json >/dev/null
+          python3 -m unittest \
+            tests.test_control_cloud \
+            tests.test_control_cloud_security \
+            -v
+
+      - name: Build deterministic Control Cloud snapshot
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/control-cloud
+          python3 control-cloud/build_snapshot.py \
+            --dataset examples/control-cloud/assured-actions.json \
+            --policy examples/control-cloud/settlement-policy.json \
+            --output artifacts/control-cloud/control-cloud-snapshot.json \
+            --audit-export artifacts/control-cloud/audit-export.jsonl
+          cp control-cloud/index.html artifacts/control-cloud/index.html
+          cp control-cloud/README.md artifacts/control-cloud/README.md
+
+      - name: Verify snapshot and audit invariants
+        env:
+          EXPECTED_ROOT: sha256:a782f7a1b8fc5d7a6a11815066191a304a32231d969381637902a75f55467deb
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          directory = Path("artifacts/control-cloud")
+          snapshot_path = directory / "control-cloud-snapshot.json"
+          audit_path = directory / "audit-export.jsonl"
+          snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+          assert snapshot["profile_id"] == "proofpath.control-cloud.snapshot.v0.1"
+          assert snapshot["snapshot_root"] == os.environ["EXPECTED_ROOT"]
+          assert snapshot["action_count"] == 4
+          assert snapshot["decision_counts"] == {
+              "ACCEPT": 1,
+              "HOLD": 1,
+              "BLOCK": 1,
+              "CHALLENGE": 1,
+          }
+          assert snapshot["financial_summary"] == {
+              "gross_revenue_minor": 25500,
+              "operator_pool_minor": 14024,
+              "dispute_reserve_minor": 2550,
+              "infrastructure_minor": 1274,
+              "platform_revenue_minor": 7652,
+          }
+          assert snapshot["assurance_boundary"] == {
+              "financial_status": "SIMULATION_ONLY_NOT_PAYABLE",
+              "payments_executed": False,
+              "insurance_provided": False,
+              "deployment_performed": False,
+              "authority_granted": False,
+              "external_quorum_claimed": False,
+          }
+          lines = audit_path.read_text(encoding="utf-8").splitlines()
+          assert len(lines) == 4
+          events = [json.loads(line) for line in lines]
+          assert all(event["snapshot_root"] == snapshot["snapshot_root"] for event in events)
+          manifest = {
+              "profile_id": "proofpath.control-cloud.conformance.v0.1",
+              "source_sha": os.environ.get("GITHUB_HEAD_SHA") or os.environ["GITHUB_SHA"],
+              "workflow_subject_sha": os.environ["GITHUB_SHA"],
+              "snapshot_root": snapshot["snapshot_root"],
+              "snapshot_sha256": hashlib.sha256(snapshot_path.read_bytes()).hexdigest(),
+              "audit_export_sha256": hashlib.sha256(audit_path.read_bytes()).hexdigest(),
+              "action_count": snapshot["action_count"],
+              "financial_mode": "SIMULATION_ONLY",
+              "payments_executed": False,
+              "insurance_provided": False,
+              "deployment_performed": False,
+              "authority_granted": False,
+          }
+          (directory / "conformance-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Attest exact Control Cloud snapshot
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: artifacts/control-cloud/control-cloud-snapshot.json
+
+      - name: Attest exact Control Cloud audit export
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: artifacts/control-cloud/audit-export.jsonl
+
+      - name: Upload Control Cloud product artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-control-cloud-${{ github.run_id }}
+          path: artifacts/control-cloud
+          if-no-files-found: error
+          retention-days: 14

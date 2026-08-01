@@ -1,0 +1,25 @@
+{
+  "allocations_bps": {
+    "dispute_reserve": 1000,
+    "infrastructure": 500,
+    "operator_pool": 5500,
+    "platform": 3000
+  },
+  "currency": "USD",
+  "decision_multipliers_bps": {
+    "ACCEPT": 10000,
+    "BLOCK": 5000,
+    "CHALLENGE": 8000,
+    "HOLD": 2500
+  },
+  "financial_mode": "SIMULATION_ONLY",
+  "policy_id": "control-cloud-demo",
+  "policy_version": "0.1.0",
+  "profile_id": "proofpath.control-cloud.settlement-policy.v0.1",
+  "risk_multipliers_bps": {
+    "critical": 50000,
+    "high": 25000,
+    "low": 10000,
+    "medium": 15000
+  }
+}
