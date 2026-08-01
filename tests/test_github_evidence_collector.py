@@ -1,413 +1,272 @@
 from __future__ import annotations
 
-import hashlib
+import importlib.util
 import json
 import os
-import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "deploy-guard" / "github-collector" / "collector.py"
+FIXTURE = ROOT / "examples" / "deploy-guard" / "github-collector-config.fixture.json"
+
+SPEC = importlib.util.spec_from_file_location("proofpath_github_collector", SCRIPT)
+assert SPEC and SPEC.loader
+collector = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(collector)
+
+SHA = "a" * 40
+DIGEST = "sha256:" + "b" * 64
+
+
+class FakeResponse:
+    def __init__(self, value):
+        self._bytes = json.dumps(value).encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self):
+        return self._bytes
 
 
 class GitHubEvidenceCollectorTests(unittest.TestCase):
-    SHA = "a" * 40
-    SIGNER_SHA = "c" * 40
-    DIGEST = "sha256:" + "b" * 64
-    REPOSITORY = "acme/app"
-    RUN_ID = 123
-    ARTIFACT_NAME = "deploy-bundle"
-
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.workspace = Path(self.temp.name)
-        self.fixtures = self.workspace / "fixtures"
-        self.fixtures.mkdir()
+        self.config = self.workspace / "collector-config.json"
+        self.config.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
         self.output = self.workspace / "facts.json"
         self.report = self.workspace / "report.json"
-
-        self.policy = {
-            "profile_id": "proofpath.deploy.guard-policy.v0.1",
-            "policy_id": "production",
-            "policy_version": "1",
-            "allowed_repositories": [self.REPOSITORY],
-            "allowed_environments": ["production"],
-            "allowed_branches": ["main"],
-            "allowed_actions": ["deploy"],
-            "minimum_approvals": 2,
-            "required_approval_roles": ["service-owner", "security"],
-            "required_checks": ["unit-tests", "security-scan"],
-            "maximum_critical_vulnerabilities": 0,
-            "require_change_ticket": True,
-            "require_artifact_attestation": True,
-            "require_github_hosted_runner": True,
+        self.github_output = self.workspace / "github-output.txt"
+        self.summary = self.workspace / "summary.md"
+        self.responses = self._base_responses()
+        self.environment = {
+            "GITHUB_WORKSPACE": str(self.workspace),
+            "GITHUB_API_URL": "https://api.github.com",
+            "GITHUB_REPOSITORY": "safal207/ProofPath",
+            "GITHUB_SHA": SHA,
+            "GITHUB_OUTPUT": str(self.github_output),
+            "GITHUB_STEP_SUMMARY": str(self.summary),
+            "PROOFPATH_GITHUB_TOKEN": "test-token",
+            "PROOFPATH_COLLECTOR_CONFIG": str(self.config),
+            "PROOFPATH_ARTIFACT_RUN_ID": "77",
+            "PROOFPATH_ARTIFACT_NAME": "deployable",
+            "PROOFPATH_REPOSITORY": "safal207/ProofPath",
+            "PROOFPATH_SOURCE_SHA": SHA,
+            "PROOFPATH_PULL_REQUEST_NUMBER": "12",
+            "PROOFPATH_OUTPUT": str(self.output),
+            "PROOFPATH_REPORT": str(self.report),
         }
-        self.config = {
-            "profile_id": "proofpath.github.evidence-collector-config.v0.1",
-            "artifact_job_name": "build-artifact",
-            "authority": {
-                "active": True,
-                "expires_at": "2026-12-31T23:59:59Z",
-                "scope": {
-                    "repositories": [self.REPOSITORY],
-                    "environments": ["production"],
-                    "actions": ["deploy"],
-                },
-            },
-            "security": {"critical_vulnerabilities": 0},
-            "approval_role_map": {
-                "alice": "service-owner",
-                "bob": "security",
-            },
-            "check_app_allowlist": {
-                "unit-tests": "github-actions",
-                "security-scan": "github-actions",
-            },
-            "change_ticket": {
-                "id": "CHG-1",
-                "status": "approved",
-                "commit_sha": self.SHA,
-            },
-        }
-        self.attestation = {
-            "profile_id": "proofpath.github.attestation-result.v0.1",
-            "verified": True,
-            "source_sha": self.SHA,
-            "artifact_digest": self.DIGEST,
-            "workflow": f"{self.REPOSITORY}/.github/workflows/build.yml",
-            "signer_sha": self.SIGNER_SHA,
-            "runner_environment": "github-hosted",
-        }
-        self._write("policy.json", self.policy)
-        self._write("config.json", self.config)
-        self._write("attestation.json", self.attestation)
-        self._install_default_api()
 
     def tearDown(self):
         self.temp.cleanup()
 
-    def _write(self, name: str, value):
-        (self.workspace / name).write_text(
-            json.dumps(value, sort_keys=True),
-            encoding="utf-8",
-        )
-
-    def _fixture(self, endpoint: str, body):
-        name = hashlib.sha256(endpoint.encode("utf-8")).hexdigest() + ".json"
-        (self.fixtures / name).write_text(
-            json.dumps({"body": body}, sort_keys=True),
-            encoding="utf-8",
-        )
-
-    def _install_default_api(self):
-        self._fixture(
-            f"/repos/acme/app/actions/runs/{self.RUN_ID}",
-            {
-                "id": self.RUN_ID,
-                "run_number": 1,
-                "workflow_id": 2,
-                "event": "workflow_dispatch",
-                "head_branch": "main",
-                "head_sha": self.SHA,
-                "status": "in_progress",
-                "conclusion": None,
-                "path": ".github/workflows/build.yml@refs/heads/main",
-                "html_url": "https://github.example/run/123",
-                "repository": {"full_name": self.REPOSITORY},
+    def _base_responses(self):
+        return {
+            "/repos/safal207/ProofPath/actions/runs/77": {
+                "id": 77,
+                "run_number": 9,
+                "workflow_id": 123,
+                "event": "pull_request",
+                "head_branch": "feature/deploy",
+                "head_sha": SHA,
+                "status": "completed",
+                "conclusion": "success",
+                "html_url": "https://github.com/safal207/ProofPath/actions/runs/77",
+                "repository": {"full_name": "safal207/ProofPath"},
             },
-        )
-        self._fixture(
-            f"/repos/acme/app/actions/runs/{self.RUN_ID}/jobs?per_page=100&page=1",
-            {
+            "/repos/safal207/ProofPath/actions/runs/77/jobs": {
+                "total_count": 1,
                 "jobs": [
                     {
-                        "id": 9,
+                        "id": 5001,
                         "name": "build-artifact",
                         "status": "completed",
                         "conclusion": "success",
                     }
-                ]
+                ],
             },
-        )
-        self._fixture(
-            f"/repos/acme/app/actions/runs/{self.RUN_ID}/artifacts?per_page=100&page=1",
-            {
+            "/repos/safal207/ProofPath/actions/runs/77/artifacts": {
+                "total_count": 1,
                 "artifacts": [
                     {
-                        "id": 77,
-                        "name": self.ARTIFACT_NAME,
+                        "id": 9001,
+                        "name": "deployable",
+                        "digest": DIGEST,
                         "expired": False,
-                        "digest": self.DIGEST,
-                        "size_in_bytes": 100,
+                        "size_in_bytes": 1234,
+                        "created_at": "2026-08-01T20:00:00Z",
+                        "expires_at": "2026-08-15T20:00:00Z",
                     }
-                ]
+                ],
             },
-        )
-        self._fixture(
-            f"/repos/acme/app/commits/{self.SHA}/check-runs?filter=latest&per_page=100&page=1",
-            {
+            f"/repos/safal207/ProofPath/commits/{SHA}/check-runs": {
+                "total_count": 3,
                 "check_runs": [
                     {
-                        "id": 10,
+                        "id": 1,
                         "name": "unit-tests",
-                        "head_sha": self.SHA,
+                        "head_sha": SHA,
+                        "status": "completed",
+                        "conclusion": "failure",
+                        "app": {"slug": "github-actions"},
+                    },
+                    {
+                        "id": 2,
+                        "name": "unit-tests",
+                        "head_sha": SHA,
                         "status": "completed",
                         "conclusion": "success",
                         "app": {"slug": "github-actions"},
                     },
                     {
-                        "id": 11,
+                        "id": 3,
                         "name": "security-scan",
-                        "head_sha": self.SHA,
+                        "head_sha": SHA,
                         "status": "completed",
                         "conclusion": "success",
                         "app": {"slug": "github-actions"},
                     },
-                ]
+                ],
             },
-        )
-        self._fixture(
-            "/repos/acme/app/pulls/9",
-            {"head": {"sha": self.SHA}},
-        )
-        self._fixture(
-            "/repos/acme/app/pulls/9/reviews?per_page=100&page=1",
-            [
-                {
-                    "id": 20,
-                    "state": "APPROVED",
-                    "commit_id": self.SHA,
-                    "user": {"login": "Alice"},
-                },
-                {
-                    "id": 21,
-                    "state": "APPROVED",
-                    "commit_id": self.SHA,
-                    "user": {"login": "bob"},
-                },
+            "/repos/safal207/ProofPath/pulls/12": {"number": 12, "head": {"sha": SHA}},
+            "/repos/safal207/ProofPath/pulls/12/reviews": [
+                {"id": 10, "user": {"login": "Alice"}, "state": "APPROVED", "commit_id": SHA},
+                {"id": 11, "user": {"login": "bob"}, "state": "APPROVED", "commit_id": SHA},
             ],
-        )
+        }
 
-    def _env(self):
-        env = os.environ.copy()
-        env.pop("GITHUB_ACTIONS", None)
-        env.update(
-            {
-                "GITHUB_WORKSPACE": str(self.workspace),
-                "GITHUB_REPOSITORY": self.REPOSITORY,
-                "GITHUB_API_URL": "https://api.github.com",
-                "PROOFPATH_COLLECTOR_FIXTURE_DIR": str(self.fixtures),
-                "PROOFPATH_GITHUB_TOKEN": "fixture-token",
-                "PROOFPATH_POLICY": "policy.json",
-                "PROOFPATH_COLLECTOR_CONFIG": "config.json",
-                "PROOFPATH_ARTIFACT_RUN_ID": str(self.RUN_ID),
-                "PROOFPATH_ARTIFACT_NAME": self.ARTIFACT_NAME,
-                "PROOFPATH_REPOSITORY": self.REPOSITORY,
-                "PROOFPATH_SOURCE_SHA": self.SHA,
-                "PROOFPATH_PULL_REQUEST_NUMBER": "9",
-                "PROOFPATH_ATTESTATION_RESULT": "attestation.json",
-                "PROOFPATH_OUTPUT": "facts.json",
-                "PROOFPATH_REPORT": "report.json",
-            }
-        )
-        return env
+    def _fake_urlopen(self, request, timeout=20):
+        self.assertEqual(timeout, 20)
+        self.assertEqual(request.get_header("Authorization"), "Bearer test-token")
+        path = request.full_url.removeprefix("https://api.github.com").split("?", 1)[0]
+        if path not in self.responses:
+            raise AssertionError(f"unexpected API path: {path}")
+        return FakeResponse(self.responses[path])
 
-    def _run(self, **overrides):
-        env = self._env()
-        env.update({key: value for key, value in overrides.items() if value is not None})
-        for key, value in overrides.items():
-            if value is None:
-                env.pop(key, None)
-        return subprocess.run(
-            [sys.executable, str(SCRIPT)],
-            cwd=ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-        )
+    def _run(self):
+        with mock.patch.dict(os.environ, self.environment, clear=True):
+            with mock.patch.object(collector.urllib.request, "urlopen", self._fake_urlopen):
+                return collector.main()
 
-    def test_collects_exact_artifact_checks_reviews_and_workflow(self):
-        result = self._run()
-        self.assertEqual(result.returncode, 0, result.stderr)
+    def test_collects_commit_bound_checks_reviews_job_and_artifact(self):
+        self.assertEqual(self._run(), 0)
         facts = json.loads(self.output.read_text(encoding="utf-8"))
         report = json.loads(self.report.read_text(encoding="utf-8"))
-        self.assertEqual(facts["build_provenance"]["artifact_digest"], self.DIGEST)
-        self.assertEqual(
-            facts["build_provenance"]["workflow"],
-            f"{self.REPOSITORY}/.github/workflows/build.yml",
-        )
-        self.assertTrue(facts["build_provenance"]["attestation_verified"])
-        self.assertEqual(
-            [item["name"] for item in facts["checks"]],
-            ["unit-tests", "security-scan"],
-        )
-        self.assertEqual(
-            [item["actor"] for item in facts["approvals"]],
-            ["alice", "bob"],
-        )
+        self.assertEqual(facts["profile_id"], "proofpath.deploy.evidence-inputs.v0.1")
+        self.assertEqual(facts["build_provenance"]["commit_sha"], SHA)
+        self.assertEqual(facts["build_provenance"]["artifact_digest"], DIGEST)
+        self.assertFalse(facts["build_provenance"]["attestation_verified"])
+        self.assertEqual([item["status"] for item in facts["checks"]], ["success", "success"])
+        self.assertEqual([item["actor"] for item in facts["approvals"]], ["alice", "bob"])
         self.assertEqual(report["workflow_run"]["producer_job"]["name"], "build-artifact")
-        self.assertFalse(report["collector_live_github_api"])
-        self.assertFalse(report["collector_verified_attestation_cryptography"])
+        self.assertTrue(report["collector_live_github_api"])
+        self.assertFalse(report["collector_verified_authority"])
+        self.assertFalse(report["collector_verified_attestation_claim"])
+        self.assertFalse(report["deployment_performed"])
         self.assertRegex(report["report_root"], r"^sha256:[0-9a-f]{64}$")
+        outputs = self.github_output.read_text(encoding="utf-8")
+        self.assertIn(f"artifact-digest={DIGEST}", outputs)
+        self.assertIn("check-count=2", outputs)
+        self.assertIn("approval-count=2", outputs)
 
-    def test_output_is_byte_deterministic(self):
-        first = self._run()
-        first_facts = self.output.read_bytes()
-        first_report = self.report.read_bytes()
-        second = self._run()
-        self.assertEqual(first.returncode, 0)
-        self.assertEqual(second.returncode, 0)
-        self.assertEqual(first_facts, self.output.read_bytes())
-        self.assertEqual(first_report, self.report.read_bytes())
+    def test_in_progress_run_is_allowed_after_producer_job_succeeds(self):
+        self.responses["/repos/safal207/ProofPath/actions/runs/77"]["status"] = "in_progress"
+        self.responses["/repos/safal207/ProofPath/actions/runs/77"]["conclusion"] = None
+        self.assertEqual(self._run(), 0)
 
-    def test_missing_required_check_becomes_pending(self):
-        self._fixture(
-            f"/repos/acme/app/commits/{self.SHA}/check-runs?filter=latest&per_page=100&page=1",
-            {"check_runs": []},
-        )
-        result = self._run()
-        self.assertEqual(result.returncode, 0, result.stderr)
+    def test_producer_job_must_be_completed_successfully(self):
+        job = self.responses["/repos/safal207/ProofPath/actions/runs/77/jobs"]["jobs"][0]
+        job["status"] = "in_progress"
+        job["conclusion"] = None
+        self.assertEqual(self._run(), 1)
+        self.assertFalse(self.output.exists())
+
+    def test_producer_job_name_must_match_exactly_once(self):
+        self.responses["/repos/safal207/ProofPath/actions/runs/77/jobs"]["jobs"] = []
+        self.assertEqual(self._run(), 1)
+
+    def test_latest_check_rerun_wins_for_same_commit_and_app(self):
+        self.assertEqual(self._run(), 0)
+        report = json.loads(self.report.read_text(encoding="utf-8"))
+        unit = next(item for item in report["check_selection"] if item["name"] == "unit-tests")
+        self.assertEqual(unit["check_run_id"], 2)
+        self.assertEqual(unit["normalized_status"], "success")
+
+    def test_missing_configured_check_becomes_pending_for_guard_hold(self):
+        self.responses[f"/repos/safal207/ProofPath/commits/{SHA}/check-runs"]["check_runs"] = []
+        self.assertEqual(self._run(), 0)
         facts = json.loads(self.output.read_text(encoding="utf-8"))
         self.assertEqual([item["status"] for item in facts["checks"]], ["pending", "pending"])
 
-    def test_latest_changes_requested_revokes_approval(self):
-        self._fixture(
-            "/repos/acme/app/pulls/9/reviews?per_page=100&page=1",
-            [
-                {"id": 20, "state": "APPROVED", "commit_id": self.SHA, "user": {"login": "Alice"}},
-                {"id": 30, "state": "CHANGES_REQUESTED", "commit_id": self.SHA, "user": {"login": "alice"}},
-                {"id": 21, "state": "APPROVED", "commit_id": self.SHA, "user": {"login": "bob"}},
-            ],
-        )
-        result = self._run()
-        self.assertEqual(result.returncode, 0, result.stderr)
+    def test_stale_review_is_not_promoted_to_current_approval(self):
+        self.responses["/repos/safal207/ProofPath/pulls/12/reviews"][0]["commit_id"] = "d" * 40
+        self.assertEqual(self._run(), 0)
         facts = json.loads(self.output.read_text(encoding="utf-8"))
         self.assertEqual([item["actor"] for item in facts["approvals"]], ["bob"])
 
-    def test_stale_review_is_not_promoted(self):
-        self._fixture(
-            "/repos/acme/app/pulls/9/reviews?per_page=100&page=1",
-            [
-                {"id": 20, "state": "APPROVED", "commit_id": "d" * 40, "user": {"login": "Alice"}},
-                {"id": 21, "state": "APPROVED", "commit_id": self.SHA, "user": {"login": "bob"}},
-            ],
+    def test_latest_nonapproval_revokes_previous_approval(self):
+        self.responses["/repos/safal207/ProofPath/pulls/12/reviews"].append(
+            {"id": 12, "user": {"login": "alice"}, "state": "CHANGES_REQUESTED", "commit_id": SHA}
         )
-        result = self._run()
-        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self._run(), 0)
         facts = json.loads(self.output.read_text(encoding="utf-8"))
         self.assertEqual([item["actor"] for item in facts["approvals"]], ["bob"])
 
-    def test_run_head_mismatch_fails_before_output(self):
-        self._fixture(
-            f"/repos/acme/app/actions/runs/{self.RUN_ID}",
-            {
-                "repository": {"full_name": self.REPOSITORY},
-                "head_sha": "d" * 40,
-                "status": "completed",
-                "conclusion": "success",
-                "head_branch": "main",
-                "path": ".github/workflows/build.yml",
-            },
-        )
-        result = self._run()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("head SHA does not match", result.stderr)
+    def test_pull_request_head_mismatch_fails_before_output(self):
+        self.responses["/repos/safal207/ProofPath/pulls/12"]["head"]["sha"] = "d" * 40
+        self.assertEqual(self._run(), 1)
         self.assertFalse(self.output.exists())
 
-    def test_incomplete_producer_job_fails_before_output(self):
-        self._fixture(
-            f"/repos/acme/app/actions/runs/{self.RUN_ID}/jobs?per_page=100&page=1",
-            {
-                "jobs": [
-                    {
-                        "id": 9,
-                        "name": "build-artifact",
-                        "status": "in_progress",
-                        "conclusion": None,
-                    }
-                ]
-            },
+    def test_artifact_run_head_mismatch_fails_before_output(self):
+        self.responses["/repos/safal207/ProofPath/actions/runs/77"]["head_sha"] = "d" * 40
+        self.assertEqual(self._run(), 1)
+        self.assertFalse(self.output.exists())
+
+    def test_failed_completed_run_fails_before_output(self):
+        self.responses["/repos/safal207/ProofPath/actions/runs/77"]["conclusion"] = "failure"
+        self.assertEqual(self._run(), 1)
+        self.assertFalse(self.output.exists())
+
+    def test_duplicate_artifact_name_fails_before_output(self):
+        artifact = dict(self.responses["/repos/safal207/ProofPath/actions/runs/77/artifacts"]["artifacts"][0])
+        artifact["id"] = 9002
+        self.responses["/repos/safal207/ProofPath/actions/runs/77/artifacts"]["artifacts"].append(artifact)
+        self.assertEqual(self._run(), 1)
+
+    def test_unmapped_approved_reviewer_is_not_granted_a_role(self):
+        self.responses["/repos/safal207/ProofPath/pulls/12/reviews"].append(
+            {"id": 15, "user": {"login": "mallory"}, "state": "APPROVED", "commit_id": SHA}
         )
-        result = self._run()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("producer job must be completed successfully", result.stderr)
-
-    def test_duplicate_artifact_name_fails_closed(self):
-        artifact = {
-            "id": 77,
-            "name": self.ARTIFACT_NAME,
-            "expired": False,
-            "digest": self.DIGEST,
-        }
-        self._fixture(
-            f"/repos/acme/app/actions/runs/{self.RUN_ID}/artifacts?per_page=100&page=1",
-            {"artifacts": [artifact, dict(artifact, id=78)]},
-        )
-        result = self._run()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("exactly one non-expired artifact", result.stderr)
-
-    def test_attestation_digest_mismatch_fails_closed(self):
-        value = dict(self.attestation, artifact_digest="sha256:" + "d" * 64)
-        self._write("attestation.json", value)
-        result = self._run()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("artifact_digest does not match selected artifact", result.stderr)
-
-    def test_attestation_workflow_mismatch_fails_closed(self):
-        value = dict(
-            self.attestation,
-            workflow=f"{self.REPOSITORY}/.github/workflows/other.yml",
-        )
-        self._write("attestation.json", value)
-        result = self._run()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("workflow does not match artifact-producing workflow", result.stderr)
-
-    def test_no_attestation_result_stays_unverified(self):
-        result = self._run(PROOFPATH_ATTESTATION_RESULT=None)
-        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self._run(), 0)
         facts = json.loads(self.output.read_text(encoding="utf-8"))
-        self.assertFalse(facts["build_provenance"]["attestation_verified"])
-        self.assertEqual(facts["build_provenance"]["runner_environment"], "unknown")
+        self.assertNotIn("mallory", [item["actor"] for item in facts["approvals"]])
 
-    def test_policy_is_source_of_required_check_names(self):
-        self.policy["required_checks"] = ["unit-tests"]
-        self._write("policy.json", self.policy)
-        result = self._run()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("check_app_allowlist may only reference policy.required_checks", result.stderr)
+    def test_change_ticket_must_bind_to_source_sha(self):
+        value = json.loads(self.config.read_text(encoding="utf-8"))
+        value["change_ticket"]["commit_sha"] = "d" * 40
+        self.config.write_text(json.dumps(value), encoding="utf-8")
+        self.assertEqual(self._run(), 1)
 
-    def test_failed_completed_run_fails_closed(self):
-        self._fixture(
-            f"/repos/acme/app/actions/runs/{self.RUN_ID}",
-            {
-                "repository": {"full_name": self.REPOSITORY},
-                "head_sha": self.SHA,
-                "status": "completed",
-                "conclusion": "failure",
-                "head_branch": "main",
-                "path": ".github/workflows/build.yml",
-            },
-        )
-        result = self._run()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("completed artifact workflow run must be successful", result.stderr)
+    def test_output_path_cannot_escape_workspace(self):
+        self.environment["PROOFPATH_OUTPUT"] = str(self.workspace.parent / "escape.json")
+        self.assertEqual(self._run(), 1)
 
-    def test_fixture_mode_is_forbidden_inside_github_actions(self):
-        result = self._run(GITHUB_ACTIONS="true")
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("API fixtures are forbidden inside GitHub Actions", result.stderr)
+    def test_non_https_api_origin_is_rejected(self):
+        self.environment["GITHUB_API_URL"] = "http://api.github.com"
+        self.assertEqual(self._run(), 1)
 
-    def test_output_and_report_paths_are_workspace_confined_and_distinct(self):
-        escaped = self._run(PROOFPATH_OUTPUT="../escape.json")
-        self.assertEqual(escaped.returncode, 1)
-        same = self._run(PROOFPATH_REPORT="facts.json")
-        self.assertEqual(same.returncode, 1)
-        self.assertIn("output and report paths must differ", same.stderr)
+    def test_pull_request_collection_can_be_disabled(self):
+        self.environment["PROOFPATH_PULL_REQUEST_NUMBER"] = "0"
+        self.assertEqual(self._run(), 0)
+        facts = json.loads(self.output.read_text(encoding="utf-8"))
+        self.assertEqual(facts["approvals"], [])
 
 
 if __name__ == "__main__":
