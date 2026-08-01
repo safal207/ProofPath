@@ -8,10 +8,9 @@
     "profile_id",
     "artifact_job_name",
     "authority",
-    "provenance",
     "security",
     "approval_role_map",
-    "check_names",
+    "check_app_allowlist",
     "change_ticket"
   ],
   "properties": {
@@ -24,67 +23,36 @@
       "pattern": "^[^\\u0000\\r\\n]+$"
     },
     "authority": {
-      "type": "object"
-    },
-    "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "attestation_verified",
-        "runner_environment",
-        "workflow",
-        "source_sha",
-        "signer_sha"
-      ],
+      "required": ["active", "expires_at", "scope"],
       "properties": {
-        "attestation_verified": {
-          "type": "boolean"
-        },
-        "runner_environment": {
-          "type": "string",
-          "minLength": 1,
-          "pattern": "^[^\\u0000\\r\\n]+$"
-        },
-        "workflow": {
-          "type": "string",
-          "minLength": 1,
-          "pattern": "^[^\\u0000\\r\\n]+$"
-        },
-        "source_sha": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{40,64}$"
-        },
-        "signer_sha": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{40,64}$"
+        "active": {"type": "boolean"},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repositories", "environments", "actions"],
+          "properties": {
+            "repositories": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+            "environments": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+            "actions": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+          }
         }
       }
     },
     "security": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "critical_vulnerabilities"
-      ],
+      "required": ["critical_vulnerabilities"],
       "properties": {
-        "critical_vulnerabilities": {
-          "type": "integer",
-          "minimum": 0
-        }
+        "critical_vulnerabilities": {"type": "integer", "minimum": 0}
       }
     },
     "approval_role_map": {
       "type": "object",
+      "propertyNames": {"pattern": "^[A-Za-z0-9_.-]{1,100}$"},
       "additionalProperties": {
-        "type": "string",
-        "minLength": 1,
-        "pattern": "^[^\\u0000\\r\\n]+$"
-      }
-    },
-    "check_names": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
         "type": "string",
         "minLength": 1,
         "pattern": "^[^\\u0000\\r\\n]+$"
@@ -96,34 +64,19 @@
         "type": "string",
         "minLength": 1,
         "pattern": "^[^\\u0000\\r\\n]+$"
-      },
-      "default": {}
+      }
     },
     "change_ticket": {
       "oneOf": [
-        {
-          "type": "null"
-        },
+        {"type": "null"},
         {
           "type": "object",
-          "required": [
-            "id",
-            "status",
-            "commit_sha"
-          ],
+          "additionalProperties": false,
+          "required": ["id", "status", "commit_sha"],
           "properties": {
-            "id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "status": {
-              "type": "string",
-              "minLength": 1
-            },
-            "commit_sha": {
-              "type": "string",
-              "pattern": "^[0-9a-f]{40,64}$"
-            }
+            "id": {"type": "string", "minLength": 1},
+            "status": {"type": "string", "minLength": 1},
+            "commit_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}
           }
         }
       ]
