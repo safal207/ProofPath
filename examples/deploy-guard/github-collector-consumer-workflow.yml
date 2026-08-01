@@ -4,18 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       artifact-run-id:
-        description: Successful run, or current run with a completed successful producer job.
+        description: Successful workflow run containing the deployment artifact.
         required: true
       artifact-name:
-        description: Exact GitHub Actions artifact name.
+        description: Exact artifact name.
         required: true
-      source-sha:
-        description: Exact commit whose artifact, checks, and reviews must be collected.
-        required: true
-      pull-request-number:
-        description: PR number for commit-bound approvals. Use 0 to disable review collection.
-        required: false
-        default: "0"
 
 permissions:
   contents: read
@@ -30,22 +23,19 @@ jobs:
       - name: Checkout exact source commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.source-sha }}
+          ref: ${{ github.sha }}
 
       - name: Collect GitHub deployment facts
         id: collector
         uses: safal207/ProofPath/deploy-guard/github-collector@REPLACE_WITH_REVIEWED_40_CHAR_COMMIT_SHA
         with:
           github-token: ${{ github.token }}
-          policy: .proofpath/deploy-policy.json
           config: .proofpath/github-collector.json
           artifact-run-id: ${{ inputs.artifact-run-id }}
           artifact-name: ${{ inputs.artifact-name }}
           repository: ${{ github.repository }}
-          source-sha: ${{ inputs.source-sha }}
-          pull-request-number: ${{ inputs.pull-request-number }}
-          # Optional only after a separate pinned verifier creates this file.
-          # attestation-result: proofpath-evidence/attestation-result.json
+          source-sha: ${{ github.sha }}
+          pull-request-number: "0"
           output: proofpath-evidence/github-trusted-facts.json
           report: proofpath-evidence/github-collector-report.json
 
@@ -85,5 +75,5 @@ jobs:
         if: steps.guard.outputs.decision == 'ACCEPT'
         run: |
           set -euo pipefail
-          echo "ProofPath clearance accepted. Insert the separately reviewed deployment command here."
+          echo "ProofPath clearance accepted. Insert the reviewed deployment command here."
           echo "ProofPath itself does not perform the deployment."
