@@ -54,7 +54,7 @@ jobs:
           agent-id: agent/cloud-deployer-01
           repository: safal207/ProofPath
           source-branch: main
-          source-sha: 4444444444444444444444444444444444444444
+          source-sha: "4444444444444444444444444444444444444444"
           evaluated-at: 2026-08-01T18:00:00Z
           output: artifacts/evidence-builder/deploy-action-evidence.json
 
@@ -78,7 +78,7 @@ jobs:
           agent-id: agent/cloud-deployer-01
           repository: safal207/ProofPath
           source-branch: main
-          source-sha: 4444444444444444444444444444444444444444
+          source-sha: "4444444444444444444444444444444444444444"
           evaluated-at: 2026-08-01T18:00:00Z
           output: artifacts/evidence-builder/deploy-action-evidence.hold.json
 
