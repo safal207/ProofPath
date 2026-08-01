@@ -1,0 +1,90 @@
+{
+  "$id": "https://proofpath.dev/schemas/proofpath-control-cloud-dataset-v0.1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "actions": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "base_price_minor": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "certificate": {
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "additionalProperties": false,
+                "properties": {
+                  "action_id": {"minLength": 1, "type": "string"},
+                  "action_type": {"const": "deploy"},
+                  "agent_id": {"minLength": 1, "type": "string"},
+                  "artifact_digest": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+                  "branch": {"minLength": 1, "type": "string"},
+                  "commit_sha": {"pattern": "^[0-9a-f]{40,64}$", "type": "string"},
+                  "environment": {"minLength": 1, "type": "string"},
+                  "repository": {"minLength": 1, "type": "string"}
+                },
+                "required": ["action_id", "action_type", "agent_id", "repository", "branch", "commit_sha", "environment", "artifact_digest"],
+                "type": "object"
+              },
+              "assurance": {
+                "additionalProperties": false,
+                "properties": {
+                  "assurance_level": {"minLength": 1, "type": "string"},
+                  "coverage": {"enum": ["NOT_FINANCIALLY_COVERED", "PARTNER_COVERED"]},
+                  "policy_id": {"minLength": 1, "type": "string"},
+                  "policy_version": {"minLength": 1, "type": "string"},
+                  "witness_level": {"minLength": 1, "type": "string"}
+                },
+                "required": ["assurance_level", "witness_level", "coverage", "policy_id", "policy_version"],
+                "type": "object"
+              },
+              "authority_granted": {"const": false},
+              "clearance_root": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+              "decision": {"enum": ["ACCEPT", "HOLD", "BLOCK", "CHALLENGE"]},
+              "evidence_root": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+              "execution_allowed": {"type": "boolean"},
+              "primary_reason_code": {"type": ["string", "null"]},
+              "product": {"const": "PROOFPATH_ASSURED_ACTION"},
+              "profile_id": {"const": "proofpath.deploy.clearance-certificate.v0.1"},
+              "policy_root": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+              "valid": {"type": "boolean"}
+            },
+            "required": ["profile_id", "product", "decision", "valid", "primary_reason_code", "action", "assurance", "policy_root", "evidence_root", "clearance_root", "execution_allowed", "authority_granted"],
+            "type": "object"
+          },
+          "dispute_state": {"enum": ["none", "open", "resolved"]},
+          "observed_at": {"format": "date-time", "type": "string"},
+          "operator_assignments": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "operator_id": {"minLength": 1, "type": "string"},
+                "role": {"minLength": 1, "type": "string"},
+                "weight": {"minimum": 1, "type": "integer"}
+              },
+              "required": ["operator_id", "role", "weight"],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "risk_tier": {"enum": ["low", "medium", "high", "critical"]}
+        },
+        "required": ["certificate", "observed_at", "risk_tier", "base_price_minor", "operator_assignments", "dispute_state"],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "financial_mode": {"const": "SIMULATION_ONLY"},
+    "generated_at": {"format": "date-time", "type": "string"},
+    "profile_id": {"const": "proofpath.control-cloud.dataset.v0.1"},
+    "tenant_id": {"minLength": 1, "type": "string"}
+  },
+  "required": ["profile_id", "tenant_id", "generated_at", "financial_mode", "actions"],
+  "title": "ProofPath Control Cloud Dataset v0.1",
+  "type": "object"
+}
