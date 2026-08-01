@@ -1,93 +1,85 @@
-# Completion checklist — v1.1
+# Completion checklist — Personal Agent Safety v1.2
 
-## Scope
+## Boundary
 
-- [ ] Actor, target, side effect, and authoritative system are identified.
-- [ ] Write authority is explicit and current.
-- [ ] Synthetic and real environments are separated.
-- [ ] Policy, memory, and risk sources are identified.
+- [ ] Principal, actor, executor, action, target, side effect, and system of record are identified.
+- [ ] Real and synthetic environments are separated.
+- [ ] Write, merge, release, or external-action authority is explicit.
 
-## Idea Graph
+## Idea and Intent
 
-- [ ] Problem, strategy, assumptions, alternatives, unsafe branch, and verification are present.
-- [ ] Assumptions are not labeled as facts.
-- [ ] Memory influences are referenced explicitly.
+- [ ] Strategy, assumptions, alternatives, risks, and verification are present.
+- [ ] Exactly one current Intent is selected.
+- [ ] Principal, target, scope, maximum effect, validity, revision, replay binding, recovery, and forbidden actions are explicit.
 
-## Intent Graph
+## Identity
 
-- [ ] `intent_id`, principal, target, scope, constraints, and maximum effect are explicit.
-- [ ] Approval revision, expiry, revocation, and replay/idempotency binding are checked.
-- [ ] Allowed recovery and forbidden actions are explicit.
-- [ ] No Memory node acts as authority.
+- [ ] Principal, actor, and executor identities are evidenced.
+- [ ] Identity issuer, audience, authentication time, assurance, and current state are explicit.
+- [ ] Delegation is evidenced and does not expand scope.
+- [ ] Evaluated principal matches current Intent principal.
 
-## Policy Graph
+## Policy
 
-- [ ] Policy ID, issuer, revision, validity, rule, effect, and precedence are explicit.
-- [ ] Mutable policy was refreshed at the execution boundary.
-- [ ] Policy does not silently broaden Intent.
-- [ ] Unknown policy state fails closed.
+- [ ] Policy ID, issuer, revision, effect, precedence, and validity are explicit.
+- [ ] Mandatory deny, constraint, and approval requirements are respected.
 
-## Memory Graph
+## Capability
 
-- [ ] Every node has provenance, purpose, recorded/retrieved time, and confidence.
-- [ ] Freshness and conflict state are explicit.
-- [ ] `authority_effect=none` for every Memory node.
-- [ ] Retrieval is minimized to the current purpose.
-- [ ] Stale, conflicted, inferred, or superseded context is not exposed as current fact.
-- [ ] Sensitive context is excluded unless necessary.
+- [ ] Selected capability ID, provider, action, target scope, state, and lease are explicit.
+- [ ] Capability is enabled and bound to the verified executor.
+- [ ] Capability availability is not treated as authority.
+- [ ] Runtime did not substitute another capability after evaluation.
 
-## Risk Graph
+## Memory
 
-- [ ] Hazards, causal paths, likelihood, impact, uncertainty, and reversibility are explicit.
-- [ ] Mitigations map to causal paths.
-- [ ] Residual risk and escalation threshold are explicit.
-- [ ] Unknown risk is not treated as low.
-- [ ] Containment and recovery risk are evaluated.
+- [ ] Included memory has provenance, purpose, freshness, and no conflict.
+- [ ] Memory has `authority_effect = none`.
+- [ ] Current Intent overrides historical preferences.
 
-## Fact Graph
+## Temporal
 
-- [ ] Each high-impact node has evidence references.
-- [ ] Dispatch, external transition, observation, containment, recovery, and readback are distinguished.
-- [ ] Authoritative readback is not replaced by tool status, memory, policy, or risk assessment.
-- [ ] Unknown states remain unknown.
+- [ ] Evaluation time and clock source are explicit.
+- [ ] Intent, Policy, Identity/session, Capability, and approval windows are checked.
+- [ ] Dispatch deadline and maximum clock skew are explicit.
+- [ ] Bindings are revalidated immediately before dispatch.
+- [ ] Event order is evidenced after execution.
 
-## Alignment
+## Risk
 
-- [ ] Idea→Intent, Intent→Policy, Memory→Idea, Risk→Action, Intent→Fact, and Idea→Fact links exist.
-- [ ] Every mismatch is named.
-- [ ] Missing mapping does not count as alignment.
-- [ ] Final status is derived, not asserted.
+- [ ] Hazards, uncertainty, mitigation, and residual tier are explicit.
+- [ ] Unknown risk is not accepted as low.
+- [ ] Secondary-harm risk is evaluated for recovery.
 
-## Containment and recovery
+## Fact and verification
 
-- [ ] Retries and dependent actions stop first.
-- [ ] Unrelated external effects are preserved.
-- [ ] Recovery is the minimum targeted action.
-- [ ] Recovery remains within current Intent and Policy.
-- [ ] Secondary-harm risk is evaluated.
+- [ ] Every material Fact node has evidence, time/order, and source.
+- [ ] Tool success is not substituted for business truth.
+- [ ] Final state is independently read.
+- [ ] Final invariant matches current Intent.
+- [ ] Evidence manifest and digests are valid.
 
-## Verification
+## Graph integrity
 
-- [ ] Final state is read independently.
-- [ ] Final invariant matches user Intent.
-- [ ] Evidence manifest and checksums are valid.
-- [ ] Producer claim is separated from raw evidence and verifier output.
+- [ ] All nine graphs exist and are acyclic.
+- [ ] Every edge and cross-graph link resolves.
+- [ ] Required aligned links exist.
+- [ ] Open high/critical mismatches prevent `ACCEPT` and `VERIFIED`.
 
-## Negative tests
+## Negative controls
 
 - [ ] Memory-as-authority fails.
-- [ ] Stale or conflicted memory fails when decision-critical.
-- [ ] Policy revision drift fails.
-- [ ] Critical or unknown risk cannot be accepted.
-- [ ] Blind retry, new lineage, and premature success fail where applicable.
-- [ ] Broken graph/evidence integrity fails.
+- [ ] Identity mismatch and weak assurance fail.
+- [ ] Broken delegation fails.
+- [ ] Revoked, unbound, substituted, or out-of-scope capability fails.
+- [ ] Expired/not-yet-valid window and dispatch race fail.
+- [ ] Blind retry, new idempotency key, and premature success fail.
+- [ ] Missing evidence and tampered digest fail.
 
 ## Repository completion
 
 - [ ] Focused tests pass.
-- [ ] Package validator positive example passes.
-- [ ] Semantic negative self-tests pass.
-- [ ] Repository-wide regressions pass.
+- [ ] Repository-wide regression passes.
 - [ ] CI is green.
 - [ ] Review findings are resolved or dispositioned.
 - [ ] PR is mergeable.

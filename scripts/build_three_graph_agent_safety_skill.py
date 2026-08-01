@@ -18,7 +18,27 @@ DIST_DIR = REPO_ROOT / "dist"
 ARCHIVE = DIST_DIR / f"{SKILL_NAME}.zip"
 CHECKSUM = DIST_DIR / f"{SKILL_NAME}.zip.sha256"
 FIXED_TIME = (2026, 1, 1, 0, 0, 0)
-EXPECTED_VERSION = "1.1.0"
+EXPECTED_VERSION = "1.2.0"
+
+REQUIRED = {
+    SKILL_DIR / "LICENSE",
+    SKILL_DIR / "README_RU.md",
+    SKILL_DIR / "SKILL.md",
+    SKILL_DIR / "assets" / "three-graph-bundle.schema.json",
+    SKILL_DIR / "assets" / "personal-agent-safety-bundle.schema.json",
+    SKILL_DIR / "assets" / "personal-agent-safety-v1.2-bundle.schema.json",
+    SKILL_DIR / "assets" / "personal-agent-safety.example.json",
+    SKILL_DIR / "references" / "ARCHITECTURE.md",
+    SKILL_DIR / "references" / "CAPABILITY_GRAPH.md",
+    SKILL_DIR / "references" / "COMPLETION_CHECKLIST.md",
+    SKILL_DIR / "references" / "IDENTITY_GRAPH.md",
+    SKILL_DIR / "references" / "MEMORY_GRAPH.md",
+    SKILL_DIR / "references" / "MISMATCH_CATALOG.md",
+    SKILL_DIR / "references" / "POLICY_GRAPH.md",
+    SKILL_DIR / "references" / "RISK_GRAPH.md",
+    SKILL_DIR / "references" / "TEMPORAL_GRAPH.md",
+    SKILL_DIR / "tools" / "validate_personal_agent_safety_bundle.py",
+}
 
 
 def fail(message: str) -> NoReturn:
@@ -29,18 +49,21 @@ def validate_skill() -> list[Path]:
     skill_file = SKILL_DIR / "SKILL.md"
     if not skill_file.is_file():
         fail(f"missing {skill_file.relative_to(REPO_ROOT)}")
+
     text = skill_file.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         fail("SKILL.md must start with YAML frontmatter")
     parts = text.split("---", 2)
     if len(parts) != 3:
         fail("SKILL.md frontmatter is not closed")
+
     frontmatter = parts[1]
     name_match = re.search(r"^name:\s*(.+?)\s*$", frontmatter, re.MULTILINE)
     description_match = re.search(r"^description:\s*(.+?)\s*$", frontmatter, re.MULTILINE)
     version_match = re.search(r"^\s+version:\s*[\"']?(.+?)[\"']?\s*$", frontmatter, re.MULTILINE)
     if not name_match or not description_match or not version_match:
         fail("SKILL.md frontmatter is missing name, description, or version")
+
     declared_name = name_match.group(1).strip().strip("\"'")
     description = description_match.group(1).strip().strip("\"'")
     version = version_match.group(1).strip().strip("\"'")
@@ -61,28 +84,29 @@ def validate_skill() -> list[Path]:
             continue
         if path.is_file():
             files.append(path)
-    required = {
-        SKILL_DIR / "references" / "ARCHITECTURE.md",
-        SKILL_DIR / "references" / "MEMORY_GRAPH.md",
-        SKILL_DIR / "references" / "POLICY_GRAPH.md",
-        SKILL_DIR / "references" / "RISK_GRAPH.md",
-        SKILL_DIR / "references" / "MISMATCH_CATALOG.md",
-        SKILL_DIR / "references" / "COMPLETION_CHECKLIST.md",
-        SKILL_DIR / "assets" / "three-graph-bundle.schema.json",
-        SKILL_DIR / "assets" / "personal-agent-safety-bundle.schema.json",
-        SKILL_DIR / "assets" / "personal-agent-safety.example.json",
-        SKILL_DIR / "tools" / "validate_personal_agent_safety_bundle.py",
-        SKILL_DIR / "README_RU.md",
-        SKILL_DIR / "LICENSE",
-    }
-    missing = sorted(path for path in required if path not in files)
+
+    actual = set(files)
+    missing = sorted(REQUIRED - actual)
+    unexpected = sorted(actual - REQUIRED)
     if missing:
         fail("missing package files: " + ", ".join(str(path.relative_to(REPO_ROOT)) for path in missing))
+    if unexpected:
+        fail("unexpected package files: " + ", ".join(str(path.relative_to(REPO_ROOT)) for path in unexpected))
 
-    for schema_name in ("three-graph-bundle.schema.json", "personal-agent-safety-bundle.schema.json"):
+    schemas = {
+        "three-graph-bundle.schema.json": ("org.proofpath.three-graph-agent-safety", None),
+        "personal-agent-safety-bundle.schema.json": ("org.proofpath.personal-agent-safety", "1.1.0"),
+        "personal-agent-safety-v1.2-bundle.schema.json": ("org.proofpath.personal-agent-safety", "1.2.0"),
+    }
+    for schema_name, (profile, version) in schemas.items():
         payload = json.loads((SKILL_DIR / "assets" / schema_name).read_text(encoding="utf-8"))
         if not payload.get("$schema", "").endswith("2020-12/schema"):
             fail(f"{schema_name} is not draft 2020-12")
+        if payload["properties"]["profile"]["const"] != profile:
+            fail(f"{schema_name} profile mismatch")
+        if version is not None and payload["properties"]["version"]["const"] != version:
+            fail(f"{schema_name} version mismatch")
+
     validator = SKILL_DIR / "tools" / "validate_personal_agent_safety_bundle.py"
     example = SKILL_DIR / "assets" / "personal-agent-safety.example.json"
     subprocess.run([sys.executable, str(validator), str(example), "--self-test"], check=True)
@@ -92,6 +116,7 @@ def validate_skill() -> list[Path]:
 def build(files: list[Path]) -> str:
     DIST_DIR.mkdir(parents=True, exist_ok=True)
     ARCHIVE.unlink(missing_ok=True)
+
     with zipfile.ZipFile(ARCHIVE, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in files:
             relative = path.relative_to(SKILL_DIR)
@@ -100,13 +125,20 @@ def build(files: list[Path]) -> str:
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             archive.writestr(info, path.read_bytes())
+
     with zipfile.ZipFile(ARCHIVE, "r") as archive:
         bad_member = archive.testzip()
         if bad_member:
             fail(f"ZIP integrity failed at {bad_member}")
         prefix = f"{SKILL_NAME}/"
-        if any(not name.startswith(prefix) for name in archive.namelist()):
+        members = archive.namelist()
+        if any(not name.startswith(prefix) for name in members):
             fail("ZIP contains a file outside the skill root directory")
+        if any("__pycache__" in name or name.endswith(".pyc") for name in members):
+            fail("ZIP contains Python cache files")
+        if len(members) != len(REQUIRED):
+            fail(f"ZIP member count mismatch: expected {len(REQUIRED)}, got {len(members)}")
+
     digest = hashlib.sha256(ARCHIVE.read_bytes()).hexdigest()
     CHECKSUM.write_text(f"{digest}  {ARCHIVE.name}\n", encoding="utf-8")
     return digest

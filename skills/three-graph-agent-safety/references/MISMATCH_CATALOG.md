@@ -1,149 +1,115 @@
-# Mismatch catalog
+# Mismatch catalog — Personal Agent Safety v1.2
 
-## Core truth mismatches
+## Truth and authority
 
 ### IDEA_INTENT_MISMATCH
-
-The proposed strategy exceeds or contradicts current user authority.
-
-Default: `BLOCK` or `HOLD`.
+The strategy exceeds or contradicts current Intent. Default: `BLOCK` or `HOLD`.
 
 ### INTENT_FACT_MISMATCH
-
-Observed effects exceed, omit, or contradict the authorized effect.
-
-Default: stop dependent work, contain, recover, verify.
+Observed effects exceed, omit, or contradict authorized effects. Default: contain, recover, verify.
 
 ### IDEA_FACT_MISMATCH
-
-Reality contradicts the strategy's expected result.
-
-Default: revise the Idea Graph; do not rewrite facts.
-
-## Policy mismatches
-
-### POLICY_INTENT_CONFLICT
-
-Intent requests an effect that mandatory policy denies or constrains.
-
-Default: `BLOCK`, or `HOLD` when a required approval can resolve it.
-
-### POLICY_REVISION_STALE
-
-The decision used an outdated policy revision.
-
-Default: refresh policy at the execution boundary.
-
-### POLICY_AUTHORITY_SUBSTITUTION
-
-A permissive policy is treated as if it were user consent.
-
-Default: `BLOCK` or `HOLD` for missing Intent.
-
-## Memory mismatches
-
-### MEMORY_AUTHORITY_LEAK
-
-Retrieved or remembered context is used as permission for a side effect.
-
-Examples:
-
-- remembered recipient used to send a message;
-- remembered budget used to purchase;
-- past merge approval reused for a new PR.
-
-Default: `BLOCK`.
-
-### MEMORY_STALE
-
-A high-impact decision relies on stale or unknown-freshness context.
-
-Default: `HOLD` and refresh.
-
-### MEMORY_CONFLICT
-
-Retrieved memories disagree with each other or with current instructions.
-
-Default: current Intent wins; unresolved conflict stays `HOLD`.
-
-### MEMORY_SCOPE_EXCEEDED
-
-The system retrieved or used context unrelated to the present purpose.
-
-Default: exclude the context, minimize retrieval, and assess privacy impact.
-
-### MEMORY_INFERENCE_EXPOSED_AS_FACT
-
-An inferred preference or profile claim is presented as an observed fact.
-
-Default: relabel as inference or remove.
-
-## Risk mismatches
-
-### RISK_UNDERSTATED
-
-Likelihood, impact, irreversibility, or residual risk is materially understated.
-
-Default: recompute and fail closed.
-
-### RISK_UNKNOWN_ACCEPTED
-
-Unknown risk is treated as low and the action is accepted.
-
-Default: `HOLD` or `BLOCK`.
-
-### MITIGATION_NOT_ENFORCED
-
-A claimed mitigation is not present at the action boundary.
-
-Default: remove mitigation credit and re-evaluate residual risk.
-
-### SECONDARY_HARM_RISK
-
-Containment or recovery could create additional harm.
-
-Default: choose the smallest reversible action or escalate.
-
-## Execution and evidence mismatches
+Reality contradicts the expected strategy. Revise Idea; never rewrite facts.
 
 ### AUTHORITY_STALE
+Intent or approval is expired, revoked, or superseded. Refresh at the execution boundary.
 
-Approval expired or was revoked between planning and dispatch.
+## Identity
 
-Default: refresh authority.
+### IDENTITY_INTENT_MISMATCH
+The evaluated principal differs from the current Intent principal. Default: `BLOCK`.
+
+### IDENTITY_ASSURANCE_INSUFFICIENT
+Authentication assurance is below the required level. Default: `HOLD` or stronger authentication.
+
+### DELEGATION_CHAIN_BROKEN
+The executor cannot be tied to the principal without scope expansion. Default: `BLOCK`.
+
+### IDENTITY_CHANGED_AFTER_EVALUATION
+Principal, actor, executor, session, credential, or audience changed before dispatch. Default: re-evaluate.
+
+### IDENTITY_AUDIENCE_MISMATCH
+Identity evidence was issued for a different system or audience. Default: `BLOCK`.
+
+## Capability
+
+### CAPABILITY_AUTHORITY_LEAK
+Technical availability is treated as permission. Default: `BLOCK`.
+
+### CAPABILITY_REVOKED
+The selected capability is disabled or revoked. Default: `BLOCK`.
+
+### CAPABILITY_SCOPE_MISMATCH
+Action or target exceeds the capability's declared scope. Default: `BLOCK`.
+
+### CAPABILITY_IDENTITY_MISMATCH
+Capability is bound to a different executor. Default: `BLOCK`.
+
+### CAPABILITY_SUBSTITUTED
+Runtime selected a different tool or capability after evaluation. Default: re-evaluate.
+
+### CAPABILITY_EXPIRED
+Capability lease ended before dispatch. Default: `HOLD` or renew through an authorized path.
+
+## Temporal
+
+### TEMPORAL_WINDOW_EXPIRED
+A required validity window ended. Default: `HOLD` or `BLOCK`.
+
+### TEMPORAL_NOT_YET_VALID
+Action is attempted before authority or policy becomes active. Default: `HOLD`.
+
+### CLOCK_SKEW_EXCEEDED
+Clock uncertainty exceeds policy. Default: `HOLD`.
+
+### EVALUATION_DISPATCH_RACE
+A material binding changed after evaluation but before dispatch. Default: stop and revalidate.
+
+### OBSERVATION_ORDER_UNKNOWN
+Event order cannot be established. Default: `UNKNOWN`.
+
+## Policy, memory, and risk
+
+### POLICY_INTENT_CONFLICT
+Policy denies or narrows the current Intent. Default: obey mandatory policy and explain the conflict.
+
+### POLICY_REVISION_STALE
+A superseded policy revision was evaluated. Default: refresh.
+
+### MEMORY_AUTHORITY_LEAK
+Memory is used to create, expand, renew, or transfer authority. Default: `BLOCK`.
+
+### MEMORY_STALE
+Stale memory influences a high-impact decision. Default: exclude it or confirm current intent.
+
+### MEMORY_CONFLICT
+Retrieved memories disagree. Default: exclude or resolve.
+
+### RISK_UNDERSTATED
+Residual risk is lower than supported by evidence. Default: recalculate and hold.
+
+### RISK_UNKNOWN_ACCEPTED
+Unknown risk is treated as low. Default: `HOLD`.
+
+## Execution and evidence
 
 ### FACT_MISSING
-
-A required business outcome has no authoritative evidence.
-
-Default: `UNKNOWN` or `HOLD`, never `VERIFIED`.
+Required business outcome lacks authoritative evidence. Default: `UNKNOWN`, never `VERIFIED`.
 
 ### UNKNOWN_PROMOTED_TO_SUCCESS
-
-A timeout or ambiguous result is described as successful.
-
-Default: block success announcement and reconcile.
+Timeout or ambiguity is announced as success. Default: reconcile.
 
 ### SCOPE_EXPANDED_DURING_RECOVERY
-
-Recovery creates a new target, recipient, amount, key, or destructive effect.
-
-Default: `BLOCK`; request fresh authority if needed.
+Recovery changes target, recipient, amount, key, or destructive scope. Default: `BLOCK`.
 
 ### DUPLICATE_SIDE_EFFECT
-
-More than one effect exists for a once-only Intent.
-
-Default: stop retries and contain only the agent-created duplicate.
+More than one effect exists for a once-only Intent. Stop retries and contain only lineage-created duplicates.
 
 ### TOOL_SUCCESS_BUSINESS_FAILURE
-
-Tool status reports success while the authoritative invariant is false.
-
-Default: freeze dependent actions, read authoritative state, recover, verify.
+Transport reports success while the business invariant is false. Read authoritative state and recover.
 
 ### EVIDENCE_LINEAGE_BROKEN
+Identity, Intent, Policy, Capability, dispatch, or verification cannot be tied to one lineage. Fail closed.
 
-Request, authority, policy, memory, risk, execution, or verification cannot be tied to one lineage.
-
-Default: fail closed and preserve evidence.
+### SECONDARY_HARM_RISK
+Containment or recovery may cause additional harm. Choose the smallest reversible action or escalate.
