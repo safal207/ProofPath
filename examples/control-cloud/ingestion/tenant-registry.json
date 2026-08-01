@@ -1,0 +1,17 @@
+{
+  "profile_id": "proofpath.control-cloud.tenant-registry.v0.1",
+  "tenants": {
+    "acme-demo": {
+      "active": true,
+      "keys": {
+        "demo-key-1": {
+          "active": true,
+          "secret_env": "PROOFPATH_INGEST_DEMO_SECRET"
+        }
+      },
+      "repository_prefixes": [
+        "acme/"
+      ]
+    }
+  }
+}

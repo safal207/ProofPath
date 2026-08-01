@@ -1,0 +1,49 @@
+{
+  "$id": "https://proofpath.dev/schemas/proofpath-control-cloud-tenant-registry-v0.1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "profile_id": {
+      "const": "proofpath.control-cloud.tenant-registry.v0.1"
+    },
+    "tenants": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {"type": "boolean"},
+          "keys": {
+            "additionalProperties": {
+              "additionalProperties": false,
+              "properties": {
+                "active": {"type": "boolean"},
+                "secret_env": {
+                  "pattern": "^[A-Z][A-Z0-9_]{2,127}$",
+                  "type": "string"
+                }
+              },
+              "required": ["active", "secret_env"],
+              "type": "object"
+            },
+            "minProperties": 1,
+            "type": "object"
+          },
+          "repository_prefixes": {
+            "items": {
+              "pattern": "^[^/\\r\\n]+/$",
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": ["active", "repository_prefixes", "keys"],
+        "type": "object"
+      },
+      "minProperties": 1,
+      "type": "object"
+    }
+  },
+  "required": ["profile_id", "tenants"],
+  "title": "ProofPath Control Cloud Tenant Registry v0.1",
+  "type": "object"
+}

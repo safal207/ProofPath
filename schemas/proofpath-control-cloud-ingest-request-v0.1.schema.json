@@ -1,0 +1,319 @@
+{
+  "$defs": {
+    "assuredAction": {
+      "additionalProperties": false,
+      "properties": {
+        "base_price_minor": {
+          "maximum": 1000000000000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "certificate": {
+          "$ref": "#/$defs/certificate"
+        },
+        "dispute_state": {
+          "enum": [
+            "none",
+            "open",
+            "resolved"
+          ]
+        },
+        "observed_at": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        },
+        "operator_assignments": {
+          "items": {
+            "$ref": "#/$defs/operator"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "risk_tier": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        }
+      },
+      "required": [
+        "base_price_minor",
+        "certificate",
+        "dispute_state",
+        "observed_at",
+        "operator_assignments",
+        "risk_tier"
+      ],
+      "type": "object"
+    },
+    "certificate": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "action_type": {
+              "const": "deploy"
+            },
+            "agent_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "artifact_digest": {
+              "$ref": "#/$defs/digest"
+            },
+            "branch": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "commit_sha": {
+              "pattern": "^[0-9a-f]{40,64}$",
+              "type": "string"
+            },
+            "environment": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "repository": {
+              "pattern": "^[^/\\r\\n]+/[^/\\r\\n]+$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action_id",
+            "action_type",
+            "agent_id",
+            "repository",
+            "branch",
+            "commit_sha",
+            "environment",
+            "artifact_digest"
+          ],
+          "type": "object"
+        },
+        "assurance": {
+          "additionalProperties": false,
+          "properties": {
+            "assurance_level": {
+              "const": "POLICY_VERIFIED"
+            },
+            "coverage": {
+              "const": "NOT_FINANCIALLY_COVERED"
+            },
+            "policy_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "policy_version": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "witness_level": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "assurance_level",
+            "witness_level",
+            "coverage",
+            "policy_id",
+            "policy_version"
+          ],
+          "type": "object"
+        },
+        "authority_granted": {
+          "const": false
+        },
+        "clearance_root": {
+          "$ref": "#/$defs/digest"
+        },
+        "decision": {
+          "enum": [
+            "ACCEPT",
+            "HOLD",
+            "BLOCK",
+            "CHALLENGE"
+          ]
+        },
+        "evidence_root": {
+          "$ref": "#/$defs/digest"
+        },
+        "execution_allowed": {
+          "type": "boolean"
+        },
+        "primary_reason_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "product": {
+          "const": "PROOFPATH_ASSURED_ACTION"
+        },
+        "profile_id": {
+          "const": "proofpath.deploy.clearance-certificate.v0.1"
+        },
+        "policy_root": {
+          "$ref": "#/$defs/digest"
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "profile_id",
+        "product",
+        "decision",
+        "valid",
+        "primary_reason_code",
+        "action",
+        "assurance",
+        "policy_root",
+        "evidence_root",
+        "clearance_root",
+        "execution_allowed",
+        "authority_granted"
+      ],
+      "type": "object"
+    },
+    "digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "operator": {
+      "additionalProperties": false,
+      "properties": {
+        "operator_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._~-]{2,127}$",
+          "type": "string"
+        },
+        "role": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "weight": {
+          "maximum": 10000,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "operator_id",
+        "role",
+        "weight"
+      ],
+      "type": "object"
+    },
+    "provenanceBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "NOT_PROVIDED",
+            "EXTERNAL_RESULT_BOUND"
+          ]
+        },
+        "subject_digest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "verified_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "verifier_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "subject_digest",
+        "verifier_identity",
+        "verified_at"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://proofpath.dev/schemas/proofpath-control-cloud-ingest-request-v0.1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "provenance_binding": {
+            "properties": {
+              "status": {
+                "const": "NOT_PROVIDED"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "provenance_binding": {
+            "properties": {
+              "subject_digest": {
+                "type": "null"
+              },
+              "verified_at": {
+                "type": "null"
+              },
+              "verifier_identity": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "assured_action": {
+      "$ref": "#/$defs/assuredAction"
+    },
+    "profile_id": {
+      "const": "proofpath.control-cloud.ingest-request.v0.1"
+    },
+    "provenance_binding": {
+      "$ref": "#/$defs/provenanceBinding"
+    },
+    "request_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._~-]{2,127}$",
+      "type": "string"
+    },
+    "submitted_at": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "type": "string"
+    },
+    "tenant_id": {
+      "pattern": "^[a-z0-9][a-z0-9-]{2,62}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile_id",
+    "tenant_id",
+    "request_id",
+    "submitted_at",
+    "assured_action",
+    "provenance_binding"
+  ],
+  "title": "ProofPath Control Cloud Ingest Request v0.1",
+  "type": "object"
+}

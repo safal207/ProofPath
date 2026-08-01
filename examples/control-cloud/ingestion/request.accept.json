@@ -1,0 +1,59 @@
+{
+  "assured_action": {
+    "base_price_minor": 1000,
+    "certificate": {
+      "action": {
+        "action_id": "act-ingest-001",
+        "action_type": "deploy",
+        "agent_id": "agent-ci",
+        "artifact_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "branch": "main",
+        "commit_sha": "1111111111111111111111111111111111111111",
+        "environment": "production",
+        "repository": "acme/payments"
+      },
+      "assurance": {
+        "assurance_level": "POLICY_VERIFIED",
+        "coverage": "NOT_FINANCIALLY_COVERED",
+        "policy_id": "prod-deploy",
+        "policy_version": "0.1.0",
+        "witness_level": "SINGLE_WORKFLOW_REFERENCE"
+      },
+      "authority_granted": false,
+      "clearance_root": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "decision": "ACCEPT",
+      "evidence_root": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "execution_allowed": true,
+      "policy_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "primary_reason_code": null,
+      "product": "PROOFPATH_ASSURED_ACTION",
+      "profile_id": "proofpath.deploy.clearance-certificate.v0.1",
+      "valid": true
+    },
+    "dispute_state": "none",
+    "observed_at": "2026-08-02T00:00:00Z",
+    "operator_assignments": [
+      {
+        "operator_id": "witness-eu-1",
+        "role": "reference-witness",
+        "weight": 3
+      },
+      {
+        "operator_id": "witness-us-1",
+        "role": "reference-witness",
+        "weight": 2
+      }
+    ],
+    "risk_tier": "low"
+  },
+  "profile_id": "proofpath.control-cloud.ingest-request.v0.1",
+  "provenance_binding": {
+    "status": "NOT_PROVIDED",
+    "subject_digest": null,
+    "verified_at": null,
+    "verifier_identity": null
+  },
+  "request_id": "req-ingest-001",
+  "submitted_at": "2026-08-02T00:00:00Z",
+  "tenant_id": "acme-demo"
+}

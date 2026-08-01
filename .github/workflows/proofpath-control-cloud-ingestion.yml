@@ -1,0 +1,198 @@
+name: ProofPath Control Cloud Ingestion
+
+on:
+  pull_request:
+    paths:
+      - "control-cloud/ingestion/**"
+      - "examples/control-cloud/ingestion/**"
+      - "schemas/proofpath-control-cloud-ingest-*.schema.json"
+      - "schemas/proofpath-control-cloud-tenant-registry-v0.1.schema.json"
+      - "tests/test_control_cloud_ingestion.py"
+      - "tests/test_control_cloud_ingestion_security.py"
+      - ".github/workflows/proofpath-control-cloud-ingestion.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  ingestion-conformance:
+    runs-on: ubuntu-latest
+    env:
+      PROOFPATH_INGEST_DEMO_SECRET: "test-only-proofpath-ingestion-secret-material-00000001"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate source schemas and focused tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile control-cloud/ingestion/ingest.py
+          python3 -m json.tool examples/control-cloud/ingestion/request.accept.json >/dev/null
+          python3 -m json.tool examples/control-cloud/ingestion/tenant-registry.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-ingest-request-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-ingest-receipt-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-tenant-registry-v0.1.schema.json >/dev/null
+          python3 -m unittest \
+            tests.test_control_cloud_ingestion \
+            tests.test_control_cloud_ingestion_security \
+            -v
+
+      - name: Sign exact request bytes
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ingestion
+          python3 control-cloud/ingestion/ingest.py sign \
+            --body examples/control-cloud/ingestion/request.accept.json \
+            --tenant acme-demo \
+            --key-id demo-key-1 \
+            --secret-env PROOFPATH_INGEST_DEMO_SECRET \
+            --timestamp 2026-08-02T00:00:00Z \
+            --nonce nonce-demo-00000001 \
+            --idempotency-key idem-demo-00000001 \
+            --headers-out /tmp/proofpath-ingest-headers.json
+
+      - name: Ingest authenticated Assured Action
+        run: |
+          set -euo pipefail
+          python3 control-cloud/ingestion/ingest.py ingest \
+            --body examples/control-cloud/ingestion/request.accept.json \
+            --headers /tmp/proofpath-ingest-headers.json \
+            --registry examples/control-cloud/ingestion/tenant-registry.json \
+            --store artifacts/ingestion/store \
+            --tenant acme-demo \
+            --now 2026-08-02T00:00:00Z \
+            --receipt artifacts/ingestion/receipt.json
+
+      - name: Verify idempotent retry
+        run: |
+          set -euo pipefail
+          cp artifacts/ingestion/receipt.json /tmp/original-receipt.json
+          python3 control-cloud/ingestion/ingest.py ingest \
+            --body examples/control-cloud/ingestion/request.accept.json \
+            --headers /tmp/proofpath-ingest-headers.json \
+            --registry examples/control-cloud/ingestion/tenant-registry.json \
+            --store artifacts/ingestion/store \
+            --tenant acme-demo \
+            --now 2026-08-02T00:00:00Z \
+            --receipt artifacts/ingestion/receipt.json
+          cmp /tmp/original-receipt.json artifacts/ingestion/receipt.json
+          test "$(wc -l < artifacts/ingestion/store/tenants/acme-demo/events.jsonl)" = "1"
+
+      - name: Export tenant dataset
+        run: |
+          set -euo pipefail
+          python3 control-cloud/ingestion/ingest.py export \
+            --store artifacts/ingestion/store \
+            --tenant acme-demo \
+            --generated-at 2026-08-02T00:05:00Z \
+            --output artifacts/ingestion/assured-actions.json
+
+      - name: Build Control Cloud snapshot from ingested event
+        run: |
+          set -euo pipefail
+          python3 control-cloud/build_snapshot.py \
+            --dataset artifacts/ingestion/assured-actions.json \
+            --policy examples/control-cloud/settlement-policy.json \
+            --output artifacts/ingestion/control-cloud-snapshot.json \
+            --audit-export artifacts/ingestion/control-cloud-audit.jsonl
+
+      - name: Verify receipt event and snapshot binding
+        env:
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("artifacts/ingestion")
+          receipt_path = root / "receipt.json"
+          event_path = root / "store/tenants/acme-demo/events.jsonl"
+          dataset_path = root / "assured-actions.json"
+          snapshot_path = root / "control-cloud-snapshot.json"
+
+          receipt = json.loads(receipt_path.read_text())
+          event_lines = event_path.read_text().splitlines()
+          dataset = json.loads(dataset_path.read_text())
+          snapshot = json.loads(snapshot_path.read_text())
+
+          assert len(event_lines) == 1
+          event = json.loads(event_lines[0])
+          assert receipt["event_root"] == event["event_root"]
+          assert receipt["event_root"] == "sha256:7ae34fbf3dc038a18617ea4ff3a6e96cbb658466b45454174a1daa07a3765823"
+          assert receipt["receipt_root"] == "sha256:ef208fe0f99bccfe52eec725bb10569386bb4f620bdbf4240b5cc561a94987b1"
+          assert receipt["content_digest"] == "sha256:5d6bd8e05ed3437c4ae1cdfb8ec0f69834b8113a65a0b4ca982ac172b18e3133"
+          assert receipt["financial_status"] == "RECORDED_NOT_PAYABLE"
+          assert receipt["payments_executed"] is False
+          assert receipt["insurance_provided"] is False
+          assert receipt["deployment_performed"] is False
+          assert receipt["authority_granted"] is False
+          assert receipt["provenance_cryptographically_verified_by_api"] is False
+          assert dataset["tenant_id"] == "acme-demo"
+          assert len(dataset["actions"]) == 1
+          assert snapshot["action_count"] == 1
+          assert snapshot["decision_counts"]["ACCEPT"] == 1
+          assert snapshot["assurance_boundary"]["payments_executed"] is False
+          assert snapshot["assurance_boundary"]["authority_granted"] is False
+
+          manifest = {
+              "profile_id": "proofpath.control-cloud.ingestion-conformance.v0.1",
+              "source_sha": os.environ.get("GITHUB_HEAD_SHA") or os.environ["GITHUB_SHA"],
+              "workflow_subject_sha": os.environ["GITHUB_SHA"],
+              "tenant_id": "acme-demo",
+              "request_content_digest": receipt["content_digest"],
+              "event_root": receipt["event_root"],
+              "receipt_root": receipt["receipt_root"],
+              "snapshot_root": snapshot["snapshot_root"],
+              "receipt_sha256": hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+              "event_store_sha256": hashlib.sha256(event_path.read_bytes()).hexdigest(),
+              "dataset_sha256": hashlib.sha256(dataset_path.read_bytes()).hexdigest(),
+              "snapshot_sha256": hashlib.sha256(snapshot_path.read_bytes()).hexdigest(),
+              "event_count": 1,
+              "idempotent_retry_appended_event": False,
+              "payments_executed": False,
+              "insurance_provided": False,
+              "deployment_performed": False,
+              "authority_granted": False,
+              "provenance_cryptographically_verified_by_api": False,
+          }
+          (root / "conformance-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Attest exact ingestion receipt
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: artifacts/ingestion/receipt.json
+
+      - name: Attest exact tenant event store
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: artifacts/ingestion/store/tenants/acme-demo/events.jsonl
+
+      - name: Upload ingestion evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-control-cloud-ingestion-${{ github.run_id }}
+          path: |
+            artifacts/ingestion/receipt.json
+            artifacts/ingestion/store/tenants/acme-demo/events.jsonl
+            artifacts/ingestion/assured-actions.json
+            artifacts/ingestion/control-cloud-snapshot.json
+            artifacts/ingestion/control-cloud-audit.jsonl
+            artifacts/ingestion/conformance-manifest.json
+            control-cloud/ingestion/README.md
+          if-no-files-found: error
+          retention-days: 14
