@@ -6,6 +6,7 @@
   "additionalProperties": false,
   "required": [
     "profile_id",
+    "artifact_job_name",
     "authority",
     "provenance",
     "security",
@@ -16,6 +17,11 @@
   "properties": {
     "profile_id": {
       "const": "proofpath.github.evidence-collector-config.v0.1"
+    },
+    "artifact_job_name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\u0000\\r\\n]+$"
     },
     "authority": {
       "type": "object"
