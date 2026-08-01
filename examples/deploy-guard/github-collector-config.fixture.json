@@ -1,0 +1,46 @@
+{
+  "profile_id": "proofpath.github.evidence-collector-config.v0.1",
+  "artifact_job_name": "build-artifact",
+  "authority": {
+    "active": true,
+    "expires_at": "2026-12-31T23:59:59Z",
+    "scope": {
+      "repositories": [
+        "safal207/ProofPath"
+      ],
+      "environments": [
+        "production"
+      ],
+      "actions": [
+        "deploy"
+      ]
+    }
+  },
+  "provenance": {
+    "attestation_verified": false,
+    "runner_environment": "github-hosted",
+    "workflow": "safal207/ProofPath/.github/workflows/collector-fixture.yml",
+    "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "signer_sha": "cccccccccccccccccccccccccccccccccccccccc"
+  },
+  "security": {
+    "critical_vulnerabilities": 0
+  },
+  "approval_role_map": {
+    "alice": "service-owner",
+    "bob": "security"
+  },
+  "check_names": [
+    "unit-tests",
+    "security-scan"
+  ],
+  "check_app_allowlist": {
+    "unit-tests": "github-actions",
+    "security-scan": "github-actions"
+  },
+  "change_ticket": {
+    "id": "CHG-2026-0042",
+    "status": "approved",
+    "commit_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}
