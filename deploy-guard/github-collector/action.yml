@@ -1,40 +1,34 @@
 name: ProofPath GitHub Evidence Collector
 
-description: Collect commit-bound GitHub checks, reviews, workflow identity, producer-job status, and artifact metadata for Deploy Guard.
+description: Collect commit-bound GitHub checks, reviews, producer-job status, and artifact metadata for Deploy Guard.
 
 author: safal207
 
 inputs:
   github-token:
-    description: GitHub token with actions:read, checks:read, contents:read, and pull-requests:read as needed.
-    required: true
-  policy:
-    description: Deploy Guard policy. Its required_checks are the only check runs collected.
+    description: GitHub token with read access to checks, pull requests, actions, and workflow jobs.
     required: true
   config:
-    description: Path to explicit authority, role mapping, security, ticket, producer-job, and app allowlist configuration.
+    description: Path to explicit authority, role mapping, security, ticket, provenance, checks, and producer-job configuration.
     required: true
   artifact-run-id:
-    description: GitHub Actions run ID that produced the deployment artifact.
+    description: GitHub Actions run ID containing the deployment artifact.
     required: true
   artifact-name:
     description: Exact GitHub Actions artifact name.
     required: true
-  source-sha:
-    description: Exact source commit whose run, checks, reviews, and artifact are collected.
-    required: true
-  pull-request-number:
-    description: Pull request number used for review collection. Zero disables review collection.
-    required: false
-    default: "0"
-  attestation-result:
-    description: Optional exact-bound result from a separate pinned attestation verifier.
-    required: false
-    default: ""
   repository:
     description: Repository in owner/name form. Defaults to GITHUB_REPOSITORY.
     required: false
     default: ""
+  source-sha:
+    description: Exact source commit whose checks, reviews, run, producer job, and artifact are collected.
+    required: false
+    default: ""
+  pull-request-number:
+    description: Pull request number used for review collection. Zero disables review collection.
+    required: false
+    default: "0"
   output:
     description: Path for generated Deploy Evidence Builder trusted facts.
     required: false
@@ -51,11 +45,8 @@ outputs:
   collector-report-path:
     description: Absolute path to collector report JSON.
     value: ${{ steps.collect.outputs.collector-report-path }}
-  collector-root:
-    description: Domain-separated root of the collector report.
-    value: ${{ steps.collect.outputs.collector-root }}
   artifact-digest:
-    description: Exact SHA-256 archive digest reported by GitHub for the selected artifact.
+    description: Exact SHA-256 digest reported by GitHub for the selected artifact.
     value: ${{ steps.collect.outputs.artifact-digest }}
   artifact-id:
     description: Selected GitHub Actions artifact ID.
@@ -63,9 +54,6 @@ outputs:
   artifact-run-id:
     description: GitHub Actions run ID bound into the collection report.
     value: ${{ steps.collect.outputs.artifact-run-id }}
-  workflow:
-    description: Artifact-producing workflow identity derived from the GitHub run.
-    value: ${{ steps.collect.outputs.workflow }}
   repository:
     description: Repository bound into the collection.
     value: ${{ steps.collect.outputs.repository }}
@@ -76,7 +64,7 @@ outputs:
     description: Source commit bound into every collected fact.
     value: ${{ steps.collect.outputs.source-sha }}
   check-count:
-    description: Number of policy-required check results collected.
+    description: Number of configured check results collected.
     value: ${{ steps.collect.outputs.check-count }}
   approval-count:
     description: Number of current commit-bound mapped approvals collected.
@@ -90,14 +78,12 @@ runs:
       shell: bash
       env:
         PROOFPATH_GITHUB_TOKEN: ${{ inputs.github-token }}
-        PROOFPATH_POLICY: ${{ inputs.policy }}
         PROOFPATH_COLLECTOR_CONFIG: ${{ inputs.config }}
         PROOFPATH_ARTIFACT_RUN_ID: ${{ inputs.artifact-run-id }}
         PROOFPATH_ARTIFACT_NAME: ${{ inputs.artifact-name }}
         PROOFPATH_REPOSITORY: ${{ inputs.repository }}
         PROOFPATH_SOURCE_SHA: ${{ inputs.source-sha }}
         PROOFPATH_PULL_REQUEST_NUMBER: ${{ inputs.pull-request-number }}
-        PROOFPATH_ATTESTATION_RESULT: ${{ inputs.attestation-result }}
         PROOFPATH_OUTPUT: ${{ inputs.output }}
         PROOFPATH_REPORT: ${{ inputs.report }}
       run: |
