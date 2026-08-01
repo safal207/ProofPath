@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofpath.dev/schemas/proofpath-deploy-clearance-v0.1.schema.json",
+  "title": "ProofPath Deploy Clearance Certificate v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "product",
+    "certificate_version",
+    "decision",
+    "valid",
+    "primary_reason_code",
+    "reason_codes",
+    "findings",
+    "action",
+    "assurance",
+    "facts",
+    "policy_root",
+    "evidence_root",
+    "clearance_root",
+    "execution_allowed",
+    "authority_granted",
+    "permitted_next_transition",
+    "limitations"
+  ],
+  "properties": {
+    "profile_id": {"const": "proofpath.deploy.clearance-certificate.v0.1"},
+    "product": {"const": "PROOFPATH_ASSURED_ACTION"},
+    "certificate_version": {"const": "0.1"},
+    "decision": {"enum": ["ACCEPT", "HOLD", "BLOCK", "CHALLENGE"]},
+    "valid": {"type": "boolean"},
+    "primary_reason_code": {"type": ["string", "null"]},
+    "reason_codes": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "decision", "path", "message"],
+        "properties": {
+          "code": {"type": "string"},
+          "decision": {"enum": ["HOLD", "BLOCK", "CHALLENGE"]},
+          "path": {"type": "string"},
+          "message": {"type": "string"}
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_id", "action_type", "agent_id", "repository", "branch", "commit_sha", "environment", "artifact_digest"],
+      "properties": {
+        "action_id": {"type": "string"},
+        "action_type": {"const": "deploy"},
+        "agent_id": {"type": "string"},
+        "repository": {"type": "string"},
+        "branch": {"type": "string"},
+        "commit_sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+        "environment": {"type": "string"},
+        "artifact_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assurance_level", "witness_level", "coverage", "policy_id", "policy_version", "approved_witness_count", "external_quorum_verified"],
+      "properties": {
+        "assurance_level": {"const": "POLICY_VERIFIED"},
+        "witness_level": {"const": "SINGLE_WORKFLOW_REFERENCE"},
+        "coverage": {"const": "NOT_FINANCIALLY_COVERED"},
+        "policy_id": {"type": "string"},
+        "policy_version": {"type": "string"},
+        "approved_witness_count": {"type": "integer", "minimum": 0},
+        "external_quorum_verified": {"const": false}
+      }
+    },
+    "facts": {"type": "object"},
+    "policy_root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "evidence_root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "clearance_root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "execution_allowed": {"type": "boolean"},
+    "authority_granted": {"const": false},
+    "permitted_next_transition": {
+      "enum": [
+        "DEPLOY_TO_PRODUCTION",
+        "WAIT_FOR_REQUIRED_EVIDENCE",
+        "REPAIR_POLICY_OR_SAFETY_FAILURE",
+        "INVESTIGATE_CONFLICTING_EVIDENCE"
+      ]
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}, "minItems": 4}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"decision": {"const": "ACCEPT"}}},
+      "then": {"properties": {"valid": {"const": true}, "execution_allowed": {"const": true}, "primary_reason_code": {"type": "null"}}}
+    },
+    {
+      "if": {"properties": {"decision": {"enum": ["HOLD", "BLOCK", "CHALLENGE"]}}},
+      "then": {"properties": {"valid": {"const": false}, "execution_allowed": {"const": false}, "primary_reason_code": {"type": "string"}}}
+    }
+  ]
+}

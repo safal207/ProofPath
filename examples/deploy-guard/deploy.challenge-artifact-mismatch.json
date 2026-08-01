@@ -1,0 +1,39 @@
+{
+  "profile_id": "proofpath.deploy.action-evidence.v0.1",
+  "action_id": "deploy-demo-challenge",
+  "action_type": "deploy",
+  "agent_id": "agent/cloud-deployer-01",
+  "repository": "safal207/ProofPath",
+  "branch": "main",
+  "commit_sha": "4444444444444444444444444444444444444444",
+  "environment": "production",
+  "artifact_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evaluated_at": "2026-08-01T18:00:00Z",
+  "policy": {"policy_id": "production-deploy-standard", "policy_version": "1.0.0"},
+  "authority": {
+    "active": true,
+    "expires_at": "2026-12-31T23:59:59Z",
+    "scope": {"repositories": ["safal207/ProofPath"], "environments": ["production"], "actions": ["deploy"]}
+  },
+  "build_provenance": {
+    "commit_sha": "4444444444444444444444444444444444444444",
+    "artifact_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "attestation_verified": true,
+    "runner_environment": "github-hosted",
+    "workflow": "safal207/ProofPath/.github/workflows/build.yml",
+    "source_sha": "4444444444444444444444444444444444444444",
+    "signer_sha": "5555555555555555555555555555555555555555"
+  },
+  "checks": [
+    {"name": "unit-tests", "status": "success", "commit_sha": "4444444444444444444444444444444444444444"},
+    {"name": "integration-tests", "status": "success", "commit_sha": "4444444444444444444444444444444444444444"},
+    {"name": "security-scan", "status": "success", "commit_sha": "4444444444444444444444444444444444444444"}
+  ],
+  "security": {"critical_vulnerabilities": 0},
+  "approvals": [
+    {"actor": "alice", "role": "service-owner", "approved": true, "commit_sha": "4444444444444444444444444444444444444444"},
+    {"actor": "bob", "role": "security", "approved": true, "commit_sha": "4444444444444444444444444444444444444444"}
+  ],
+  "change_ticket": {"id": "CHG-2026-0042", "status": "approved", "commit_sha": "4444444444444444444444444444444444444444"},
+  "execution": {"performed": false}
+}
