@@ -7,6 +7,7 @@ on:
       - "deploy-guard/action.yml"
       - "deploy-guard/run_action.py"
       - "scripts/verify_proofpath_deploy_guard.py"
+      - "schemas/proofpath-deploy-evidence-inputs-v0.1.schema.json"
       - "examples/deploy-guard/trusted-facts.accept.json"
       - "examples/deploy-guard/evidence-builder-consumer-workflow.yml"
       - "examples/deploy-guard/deploy-policy.json"
@@ -35,6 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile deploy-guard/evidence-builder/build_evidence.py
+          python3 -m json.tool schemas/proofpath-deploy-evidence-inputs-v0.1.schema.json >/dev/null
           python3 -m unittest \
             tests.test_deploy_evidence_builder \
             tests.test_deploy_evidence_builder_security \
@@ -132,6 +134,7 @@ jobs:
             artifacts/evidence-builder-conformance-manifest.json
             deploy-guard/evidence-builder/action.yml
             deploy-guard/evidence-builder/build_evidence.py
+            schemas/proofpath-deploy-evidence-inputs-v0.1.schema.json
             examples/deploy-guard/trusted-facts.accept.json
             examples/deploy-guard/evidence-builder-consumer-workflow.yml
             docs/PROOFPATH_DEPLOY_EVIDENCE_BUILDER.md
