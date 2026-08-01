@@ -1,9 +1,9 @@
 name: Bootstrap Sigstore Admission
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/proofpath-sigstore-admission-verifier-v0.1
+      - agent/proofpath-control-cloud-ingestion-api-v0.1
 
 permissions:
   contents: write
