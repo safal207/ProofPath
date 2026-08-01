@@ -1,0 +1,153 @@
+name: ProofPath Deploy Guard
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  deploy-guard-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile and run focused tests
+        run: |
+          python3 -m py_compile scripts/verify_proofpath_deploy_guard.py
+          python3 -m unittest tests.test_proofpath_deploy_guard -v
+          python3 -m unittest tests.test_deploy_guard_workflow_security -v
+
+      - name: Run four decision scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/certificates
+
+          run_case() {
+            local name="$1"
+            local fixture="$2"
+            local expected_decision="$3"
+            local expected_exit="$4"
+            local output="artifacts/certificates/${name}.json"
+
+            set +e
+            python3 scripts/verify_proofpath_deploy_guard.py \
+              examples/deploy-guard/deploy-policy.json \
+              "$fixture" \
+              --pretty \
+              --output "$output"
+            local actual_exit=$?
+            set -e
+
+            test "$actual_exit" -eq "$expected_exit"
+            python3 - "$output" "$expected_decision" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          certificate = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          expected = sys.argv[2]
+          assert certificate["decision"] == expected, certificate
+          assert certificate["authority_granted"] is False
+          assert certificate["assurance"]["coverage"] == "NOT_FINANCIALLY_COVERED"
+          assert certificate["assurance"]["witness_level"] == "SINGLE_WORKFLOW_REFERENCE"
+          assert certificate["facts"]["execution_observed"] is False
+          assert certificate["execution_allowed"] is (expected == "ACCEPT")
+          PY
+          }
+
+          run_case accept \
+            examples/deploy-guard/deploy.accept.json ACCEPT 0
+          run_case hold-missing-approval \
+            examples/deploy-guard/deploy.hold-missing-approval.json HOLD 2
+          run_case block-tests-failed \
+            examples/deploy-guard/deploy.block-tests-failed.json BLOCK 3
+          run_case challenge-artifact-mismatch \
+            examples/deploy-guard/deploy.challenge-artifact-mismatch.json CHALLENGE 4
+
+      - name: Verify deterministic clearance root
+        run: |
+          python3 - <<'PY'
+          import copy
+          import importlib.util
+          import json
+          from pathlib import Path
+
+          script = Path("scripts/verify_proofpath_deploy_guard.py")
+          spec = importlib.util.spec_from_file_location("guard", script)
+          guard = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(guard)
+
+          path = Path("artifacts/certificates/accept.json")
+          certificate = json.loads(path.read_text(encoding="utf-8"))
+          normalized = copy.deepcopy(certificate)
+          normalized["clearance_root"] = None
+          assert certificate["clearance_root"] == guard.digest(
+              guard.CLEARANCE_DOMAIN, normalized
+          )
+          PY
+
+      - name: Build signed demo manifest
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          certificate_dir = Path("artifacts/certificates")
+          records = []
+          for path in sorted(certificate_dir.glob("*.json")):
+              value = json.loads(path.read_text(encoding="utf-8"))
+              records.append({
+                  "scenario": path.stem,
+                  "decision": value["decision"],
+                  "primary_reason_code": value["primary_reason_code"],
+                  "clearance_root": value["clearance_root"],
+                  "subject_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+              })
+
+          manifest = {
+              "profile_id": "proofpath.deploy.guard-demo-manifest.v0.1",
+              "product": "PROOFPATH_ASSURED_ACTION",
+              "scenario_count": len(records),
+              "decisions": records,
+              "assurance_level": "POLICY_VERIFIED",
+              "witness_level": "SINGLE_WORKFLOW_REFERENCE",
+              "coverage": "NOT_FINANCIALLY_COVERED",
+              "deployment_performed": False,
+              "external_quorum_verified": False,
+              "authority_granted": False,
+          }
+          Path("artifacts/deploy-guard-demo-manifest.json").write_text(
+              json.dumps(manifest, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Keyless-attest ACCEPT clearance certificate
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/certificates/accept.json
+
+      - name: Keyless-attest demo manifest
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/deploy-guard-demo-manifest.json
+
+      - name: Upload signed Deploy Guard evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-deploy-guard-${{ github.run_id }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 14
