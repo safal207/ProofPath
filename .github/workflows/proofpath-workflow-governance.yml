@@ -1,0 +1,379 @@
+name: ProofPath Workflow Governance
+
+on:
+  pull_request:
+    paths:
+      - "control-cloud/governance/**"
+      - "control-cloud/ingestion/governed_ingest.py"
+      - "schemas/proofpath-control-cloud-workflow-governance-*.json"
+      - "schemas/proofpath-control-cloud-governed-ingest-receipt-v0.1.schema.json"
+      - "examples/control-cloud/trusted-workflow-governance-registry.json"
+      - "tests/test_workflow_governance.py"
+      - "tests/test_governed_ingestion.py"
+      - "tests/test_workflow_governance_security.py"
+      - ".github/workflows/proofpath-workflow-governance.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  PROOFPATH_GOVERNANCE_DEMO_SECRET: test-only-governance-ingestion-secret-0000000001
+
+jobs:
+  focused-tests:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Validate schemas and governance tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            control-cloud/governance/verify_workflow_governance.py \
+            control-cloud/ingestion/governed_ingest.py
+          python3 -m json.tool schemas/proofpath-control-cloud-workflow-governance-registry-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-workflow-governance-decision-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-governed-ingest-receipt-v0.1.schema.json >/dev/null
+          python3 -m json.tool examples/control-cloud/trusted-workflow-governance-registry.json >/dev/null
+          python3 -m unittest \
+            tests.test_workflow_governance \
+            tests.test_governed_ingestion \
+            tests.test_workflow_governance_security \
+            -v
+
+  governed-conformance:
+    needs: focused-tests
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Build honest reference admission and governance registry
+        env:
+          WORKFLOW_SUBJECT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/workflow-governance/{trusted-admissions,trusted-decisions,store}
+          observed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          printf '%s' "$observed_at" > /tmp/proofpath-governance-observed-at
+          workflow_digest="sha256:$(sha256sum .github/workflows/proofpath-sigstore-admission.yml | cut -d' ' -f1)"
+          printf '%s' "$workflow_digest" > /tmp/proofpath-governance-workflow-digest
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("artifacts/workflow-governance")
+          sha = os.environ["WORKFLOW_SUBJECT_SHA"]
+          observed_at = Path("/tmp/proofpath-governance-observed-at").read_text()
+          workflow_digest = Path("/tmp/proofpath-governance-workflow-digest").read_text()
+
+          def load(name, path):
+              spec = importlib.util.spec_from_file_location(name, path)
+              module = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(module)
+              return module
+
+          admission = load("workflow_governance_ci_admission", Path("control-cloud/admission/verify_sigstore.py"))
+          certificate = {
+              "profile_id": "proofpath.deploy.clearance-certificate.v0.1",
+              "product": "PROOFPATH_ASSURED_ACTION",
+              "decision": "ACCEPT",
+              "valid": True,
+              "primary_reason_code": None,
+              "action": {
+                  "action_id": "act-workflow-governance-reference",
+                  "action_type": "deploy",
+                  "agent_id": "agent-reference",
+                  "repository": "safal207/ProofPath",
+                  "branch": "main",
+                  "commit_sha": sha,
+                  "environment": "production",
+                  "artifact_digest": "sha256:" + "a" * 64,
+              },
+              "assurance": {
+                  "assurance_level": "POLICY_VERIFIED",
+                  "witness_level": "SINGLE_WORKFLOW_REFERENCE",
+                  "coverage": "NOT_FINANCIALLY_COVERED",
+                  "policy_id": "proofpath-reference-governance",
+                  "policy_version": "0.1.0",
+              },
+              "policy_root": "sha256:" + "b" * 64,
+              "evidence_root": "sha256:" + "c" * 64,
+              "clearance_root": "sha256:" + "d" * 64,
+              "execution_allowed": True,
+              "authority_granted": False,
+          }
+          subject_bytes = admission.canonical_bytes(certificate) + b"\n"
+          result = {
+              "profile_id": admission.RESULT_PROFILE,
+              "decision": "ACCEPT",
+              "verified": True,
+              "verification_mode": "GH_ATTESTATION_VERIFY",
+              "subject_digest": admission.raw_digest(subject_bytes),
+              "certificate_canonical_digest": admission.raw_digest(admission.canonical_bytes(certificate)),
+              "clearance_root": certificate["clearance_root"],
+              "repository": "safal207/ProofPath",
+              "source_sha": sha,
+              "artifact_digest": certificate["action"]["artifact_digest"],
+              "signer_repository": "safal207/ProofPath",
+              "signer_workflow": "safal207/ProofPath/.github/workflows/proofpath-sigstore-admission.yml",
+              "signer_sha": sha,
+              "cert_oidc_issuer": admission.DEFAULT_ISSUER,
+              "predicate_type": admission.DEFAULT_PREDICATE,
+              "runner_environment": "github-hosted",
+              "deny_self_hosted_runners": True,
+              "github_attestation_verified": True,
+              "transparency_timestamp_verified": True,
+              "verified_attestation_count": 1,
+              "verified_timestamp_count": 1,
+              "verifier_identity": "proofpath-control-cloud-sigstore-admission-v0.1",
+              "verified_at": observed_at,
+              "authority_granted": False,
+              "deployment_performed": False,
+              "payments_executed": False,
+              "result_root": None,
+          }
+          result["result_root"] = admission.domain_hash(admission.RESULT_DOMAIN, admission._result_without_root(result))
+          admission.validate_result(result)
+          registry = {
+              "profile_id": "proofpath.control-cloud.workflow-governance-registry.v0.1",
+              "generated_at": observed_at,
+              "records": [{
+                  "record_id": "proofpath-sigstore-admission-reference-v1",
+                  "status": "ACTIVE",
+                  "repository": "safal207/ProofPath",
+                  "owner_scope": "safal207",
+                  "workflow": result["signer_workflow"],
+                  "signer_sha": sha,
+                  "workflow_file_digest": workflow_digest,
+                  "allowed_event_types": ["pull_request"],
+                  "allowed_ref_prefixes": ["refs/pull/"],
+                  "reviewer_quorum": {
+                      "required": 2,
+                      "reviewers": ["synthetic-reviewer-a", "synthetic-reviewer-b", "synthetic-reviewer-c"],
+                      "approvals": ["synthetic-reviewer-a", "synthetic-reviewer-b"],
+                  },
+                  "effective_at": "2025-01-01T00:00:00Z",
+                  "expires_at": "2099-01-01T00:00:00Z",
+                  "review_ticket": "REFERENCE-CI-SYNTHETIC-NOT-INDEPENDENT",
+                  "authority_granted": False,
+              }],
+              "revocations": [],
+          }
+          (root / "clearance-certificate.json").write_bytes(subject_bytes)
+          (root / "admission-result.json").write_bytes(admission.canonical_bytes(result) + b"\n")
+          (root / "governance-registry.json").write_text(json.dumps(registry, indent=2, sort_keys=True) + "\n")
+          admission_path = root / "trusted-admissions" / (result["subject_digest"].split(":", 1)[1] + ".json")
+          admission_path.write_bytes(admission.canonical_bytes(result) + b"\n")
+          PY
+      - name: Evaluate ACTIVE trusted workflow
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          python3 control-cloud/governance/verify_workflow_governance.py evaluate \
+            --admission-result artifacts/workflow-governance/admission-result.json \
+            --registry artifacts/workflow-governance/governance-registry.json \
+            --observed-at "$(cat /tmp/proofpath-governance-observed-at)" \
+            --workflow-file-digest "$(cat /tmp/proofpath-governance-workflow-digest)" \
+            --event-type pull_request \
+            --ref "$WORKFLOW_REF" \
+            --output artifacts/workflow-governance/governance-decision.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("artifacts/workflow-governance")
+          decision = json.loads((root / "governance-decision.json").read_text())
+          assert decision["decision"] == "ACCEPT"
+          assert decision["governance_trust_verified"] is True
+          target = root / "trusted-decisions" / (decision["admission_result_root"].split(":", 1)[1] + ".json")
+          target.write_bytes((root / "governance-decision.json").read_bytes())
+          PY
+      - name: Build and sign exact tenant request
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("artifacts/workflow-governance")
+          certificate = json.loads((root / "clearance-certificate.json").read_text())
+          result = json.loads((root / "admission-result.json").read_text())
+          observed_at = Path("/tmp/proofpath-governance-observed-at").read_text()
+          request = {
+              "profile_id": "proofpath.control-cloud.ingest-request.v0.1",
+              "tenant_id": "proofpath-demo",
+              "request_id": "req-workflow-governance-reference",
+              "submitted_at": observed_at,
+              "assured_action": {
+                  "base_price_minor": 1000,
+                  "certificate": certificate,
+                  "dispute_state": "none",
+                  "observed_at": observed_at,
+                  "operator_assignments": [{"operator_id": "proofpath-reference-witness", "role": "reference-witness", "weight": 1}],
+                  "risk_tier": "low",
+              },
+              "provenance_binding": {
+                  "status": "EXTERNAL_RESULT_BOUND",
+                  "subject_digest": result["subject_digest"],
+                  "verifier_identity": result["verifier_identity"],
+                  "verified_at": result["verified_at"],
+              },
+          }
+          registry = {
+              "profile_id": "proofpath.control-cloud.tenant-registry.v0.1",
+              "tenants": {"proofpath-demo": {
+                  "active": True,
+                  "repository_prefixes": ["safal207/"],
+                  "keys": {"governance-demo-key": {"active": True, "secret_env": "PROOFPATH_GOVERNANCE_DEMO_SECRET"}},
+              }},
+          }
+          canonical = json.dumps(request, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+          (root / "ingest-request.json").write_bytes(canonical)
+          (root / "tenant-registry.json").write_text(json.dumps(registry, indent=2, sort_keys=True) + "\n")
+          PY
+          python3 control-cloud/ingestion/ingest.py sign \
+            --body artifacts/workflow-governance/ingest-request.json \
+            --tenant proofpath-demo \
+            --key-id governance-demo-key \
+            --secret-env PROOFPATH_GOVERNANCE_DEMO_SECRET \
+            --timestamp "$(cat /tmp/proofpath-governance-observed-at)" \
+            --nonce nonce-workflow-governance-0001 \
+            --idempotency-key idem-workflow-governance-0001 \
+            --headers-out /tmp/proofpath-governance-headers.json
+      - name: Append only after dual verification
+        run: |
+          set -euo pipefail
+          python3 control-cloud/ingestion/governed_ingest.py \
+            --body artifacts/workflow-governance/ingest-request.json \
+            --headers /tmp/proofpath-governance-headers.json \
+            --registry artifacts/workflow-governance/tenant-registry.json \
+            --store artifacts/workflow-governance/store \
+            --admissions-dir artifacts/workflow-governance/trusted-admissions \
+            --governance-dir artifacts/workflow-governance/trusted-decisions \
+            --tenant proofpath-demo \
+            --now "$(cat /tmp/proofpath-governance-observed-at)" \
+            --receipt artifacts/workflow-governance/governed-receipt.json
+          cp artifacts/workflow-governance/governed-receipt.json /tmp/original-governed-receipt.json
+          python3 control-cloud/ingestion/governed_ingest.py \
+            --body artifacts/workflow-governance/ingest-request.json \
+            --headers /tmp/proofpath-governance-headers.json \
+            --registry artifacts/workflow-governance/tenant-registry.json \
+            --store artifacts/workflow-governance/store \
+            --admissions-dir artifacts/workflow-governance/trusted-admissions \
+            --governance-dir artifacts/workflow-governance/trusted-decisions \
+            --tenant proofpath-demo \
+            --now "$(cat /tmp/proofpath-governance-observed-at)" \
+            --receipt artifacts/workflow-governance/governed-receipt.json
+          cmp /tmp/original-governed-receipt.json artifacts/workflow-governance/governed-receipt.json
+          test "$(wc -l < artifacts/workflow-governance/store/tenants/proofpath-demo/admitted-events.jsonl)" = "1"
+      - name: Prove mutation revocation and path-change fail closed
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+          WORKFLOW_SUBJECT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          bad_digest="sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          if python3 control-cloud/governance/verify_workflow_governance.py evaluate \
+            --admission-result artifacts/workflow-governance/admission-result.json \
+            --registry artifacts/workflow-governance/governance-registry.json \
+            --observed-at "$(cat /tmp/proofpath-governance-observed-at)" \
+            --workflow-file-digest "$bad_digest" \
+            --event-type pull_request \
+            --ref "$WORKFLOW_REF" \
+            --output artifacts/workflow-governance/mutation-decision.json; then
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("artifacts/workflow-governance")
+          mutation = json.loads((root / "mutation-decision.json").read_text())
+          assert mutation["decision"] == "BLOCK"
+          assert mutation["reason_code"] == "workflow_digest_mutated"
+          registry = json.loads((root / "governance-registry.json").read_text())
+          registry["revocations"].append({
+              "revocation_id": "revoke-reference-workflow-v1",
+              "record_id": "proofpath-sigstore-admission-reference-v1",
+              "effective_at": Path("/tmp/proofpath-governance-observed-at").read_text(),
+              "reason_code": "synthetic_dangerous_change",
+              "approved_by": ["synthetic-reviewer-a", "synthetic-reviewer-b"],
+              "authority_granted": False,
+          })
+          (root / "revoked-registry.json").write_text(json.dumps(registry, indent=2, sort_keys=True) + "\n")
+          (root / "changed-paths.json").write_text(json.dumps([".github/workflows/proofpath-sigstore-admission.yml"]) + "\n")
+          PY
+          if python3 control-cloud/governance/verify_workflow_governance.py evaluate \
+            --admission-result artifacts/workflow-governance/admission-result.json \
+            --registry artifacts/workflow-governance/revoked-registry.json \
+            --observed-at "$(cat /tmp/proofpath-governance-observed-at)" \
+            --workflow-file-digest "$(cat /tmp/proofpath-governance-workflow-digest)" \
+            --event-type pull_request \
+            --ref "$WORKFLOW_REF" \
+            --output artifacts/workflow-governance/revoked-decision.json; then
+            exit 1
+          fi
+          if python3 control-cloud/governance/verify_workflow_governance.py check-change \
+            --registry artifacts/workflow-governance/governance-registry.json \
+            --workflow safal207/ProofPath/.github/workflows/proofpath-sigstore-admission.yml \
+            --observed-signer-sha "$WORKFLOW_SUBJECT_SHA" \
+            --observed-file-digest "$(cat /tmp/proofpath-governance-workflow-digest)" \
+            --changed-paths artifacts/workflow-governance/changed-paths.json \
+            --observed-at "$(cat /tmp/proofpath-governance-observed-at)" \
+            --output artifacts/workflow-governance/revocation-proposal.json; then
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("artifacts/workflow-governance")
+          revoked = json.loads((root / "revoked-decision.json").read_text())
+          proposal = json.loads((root / "revocation-proposal.json").read_text())
+          receipt = json.loads((root / "governed-receipt.json").read_text())
+          assert revoked["decision"] == "BLOCK" and revoked["reason_code"] == "trust_record_revoked"
+          assert proposal["decision"] == "PROPOSE_REVOKE"
+          assert proposal["repository_write_performed"] is False
+          assert receipt["provenance_cryptographically_verified_by_api"] is True
+          assert receipt["governance_trust_verified_by_api"] is True
+          assert receipt["payments_executed"] is False
+          assert receipt["authority_granted"] is False
+          PY
+      - name: Attest exact governance decision
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: artifacts/workflow-governance/governance-decision.json
+      - name: Attest exact governed receipt
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: artifacts/workflow-governance/governed-receipt.json
+      - name: Upload governance evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: proofpath-workflow-governance-${{ github.run_id }}
+          path: |
+            artifacts/workflow-governance/clearance-certificate.json
+            artifacts/workflow-governance/admission-result.json
+            artifacts/workflow-governance/governance-registry.json
+            artifacts/workflow-governance/governance-decision.json
+            artifacts/workflow-governance/governed-receipt.json
+            artifacts/workflow-governance/store/tenants/proofpath-demo/admitted-events.jsonl
+            artifacts/workflow-governance/mutation-decision.json
+            artifacts/workflow-governance/revoked-decision.json
+            artifacts/workflow-governance/revocation-proposal.json
+            control-cloud/governance/README.md
+          if-no-files-found: error
+          retention-days: 14

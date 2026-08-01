@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-08-02T00:00:00Z",
+  "profile_id": "proofpath.control-cloud.workflow-governance-registry.v0.1",
+  "records": [
+    {
+      "allowed_event_types": [
+        "pull_request"
+      ],
+      "allowed_ref_prefixes": [
+        "refs/pull/"
+      ],
+      "authority_granted": false,
+      "effective_at": "2026-08-01T00:00:00Z",
+      "expires_at": "2026-09-01T00:00:00Z",
+      "owner_scope": "safal207",
+      "record_id": "proofpath-sigstore-admission-reference-v1",
+      "repository": "safal207/ProofPath",
+      "review_ticket": "REFERENCE-ONLY-NOT-PRODUCTION-APPROVAL",
+      "reviewer_quorum": {
+        "approvals": [
+          "reference-reviewer-a",
+          "reference-reviewer-b"
+        ],
+        "required": 2,
+        "reviewers": [
+          "reference-reviewer-a",
+          "reference-reviewer-b",
+          "reference-reviewer-c"
+        ]
+      },
+      "signer_sha": "1111111111111111111111111111111111111111",
+      "status": "ACTIVE",
+      "workflow": "safal207/ProofPath/.github/workflows/proofpath-sigstore-admission.yml",
+      "workflow_file_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "revocations": []
+}
