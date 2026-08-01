@@ -1,0 +1,136 @@
+{
+  "$id": "https://proofpath.dev/schemas/proofpath-control-cloud-snapshot-v0.1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action_count": {"minimum": 1, "type": "integer"},
+    "actions": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {"minLength": 1, "type": "string"},
+          "agent_id": {"minLength": 1, "type": "string"},
+          "artifact_digest": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+          "assurance_level": {"minLength": 1, "type": "string"},
+          "authority_granted": {"const": false},
+          "base_price_minor": {"minimum": 0, "type": "integer"},
+          "branch": {"minLength": 1, "type": "string"},
+          "clearance_root": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+          "commit_sha": {"pattern": "^[0-9a-f]{40,64}$", "type": "string"},
+          "coverage": {"minLength": 1, "type": "string"},
+          "decision": {"enum": ["ACCEPT", "HOLD", "BLOCK", "CHALLENGE"]},
+          "dispute_reserve_minor": {"minimum": 0, "type": "integer"},
+          "dispute_state": {"enum": ["none", "open", "resolved"]},
+          "environment": {"minLength": 1, "type": "string"},
+          "evidence_root": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+          "execution_allowed": {"type": "boolean"},
+          "financial_status": {"const": "SIMULATION_ONLY_NOT_PAYABLE"},
+          "gross_price_minor": {"minimum": 0, "type": "integer"},
+          "infrastructure_minor": {"minimum": 0, "type": "integer"},
+          "observed_at": {"format": "date-time", "type": "string"},
+          "operator_payouts": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "amount_minor": {"minimum": 0, "type": "integer"},
+                "operator_id": {"minLength": 1, "type": "string"},
+                "role": {"minLength": 1, "type": "string"},
+                "weight": {"minimum": 1, "type": "integer"}
+              },
+              "required": ["operator_id", "role", "weight", "amount_minor"],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "operator_pool_minor": {"minimum": 0, "type": "integer"},
+          "platform_revenue_minor": {"minimum": 0, "type": "integer"},
+          "policy_id": {"minLength": 1, "type": "string"},
+          "policy_root": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+          "policy_version": {"minLength": 1, "type": "string"},
+          "primary_reason_code": {"type": ["string", "null"]},
+          "repository": {"minLength": 1, "type": "string"},
+          "risk_tier": {"enum": ["low", "medium", "high", "critical"]},
+          "witness_level": {"minLength": 1, "type": "string"}
+        },
+        "required": ["action_id", "observed_at", "decision", "primary_reason_code", "risk_tier", "repository", "branch", "commit_sha", "environment", "agent_id", "artifact_digest", "assurance_level", "witness_level", "coverage", "policy_id", "policy_version", "policy_root", "evidence_root", "clearance_root", "execution_allowed", "authority_granted", "dispute_state", "base_price_minor", "gross_price_minor", "operator_pool_minor", "dispute_reserve_minor", "infrastructure_minor", "platform_revenue_minor", "operator_payouts", "financial_status"],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "assurance_boundary": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_granted": {"const": false},
+        "deployment_performed": {"const": false},
+        "external_quorum_claimed": {"const": false},
+        "financial_status": {"const": "SIMULATION_ONLY_NOT_PAYABLE"},
+        "insurance_provided": {"const": false},
+        "payments_executed": {"const": false}
+      },
+      "required": ["financial_status", "payments_executed", "insurance_provided", "deployment_performed", "authority_granted", "external_quorum_claimed"],
+      "type": "object"
+    },
+    "currency": {"pattern": "^[A-Z]{3}$", "type": "string"},
+    "decision_counts": {
+      "additionalProperties": false,
+      "properties": {
+        "ACCEPT": {"minimum": 0, "type": "integer"},
+        "BLOCK": {"minimum": 0, "type": "integer"},
+        "CHALLENGE": {"minimum": 0, "type": "integer"},
+        "HOLD": {"minimum": 0, "type": "integer"}
+      },
+      "required": ["ACCEPT", "HOLD", "BLOCK", "CHALLENGE"],
+      "type": "object"
+    },
+    "financial_mode": {"const": "SIMULATION_ONLY"},
+    "financial_summary": {
+      "additionalProperties": false,
+      "properties": {
+        "dispute_reserve_minor": {"minimum": 0, "type": "integer"},
+        "gross_revenue_minor": {"minimum": 0, "type": "integer"},
+        "infrastructure_minor": {"minimum": 0, "type": "integer"},
+        "operator_pool_minor": {"minimum": 0, "type": "integer"},
+        "platform_revenue_minor": {"minimum": 0, "type": "integer"}
+      },
+      "required": ["gross_revenue_minor", "operator_pool_minor", "dispute_reserve_minor", "infrastructure_minor", "platform_revenue_minor"],
+      "type": "object"
+    },
+    "generated_at": {"format": "date-time", "type": "string"},
+    "limitations": {"items": {"type": "string"}, "minItems": 5, "type": "array"},
+    "operator_earnings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "action_count": {"minimum": 1, "type": "integer"},
+          "earnings_minor": {"minimum": 0, "type": "integer"},
+          "financial_status": {"const": "SIMULATION_ONLY_NOT_PAYABLE"},
+          "operator_id": {"minLength": 1, "type": "string"},
+          "roles": {"items": {"type": "string"}, "minItems": 1, "type": "array", "uniqueItems": true}
+        },
+        "required": ["operator_id", "roles", "action_count", "earnings_minor", "financial_status"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "profile_id": {"const": "proofpath.control-cloud.snapshot.v0.1"},
+    "risk_counts": {
+      "additionalProperties": false,
+      "properties": {
+        "critical": {"minimum": 0, "type": "integer"},
+        "high": {"minimum": 0, "type": "integer"},
+        "low": {"minimum": 0, "type": "integer"},
+        "medium": {"minimum": 0, "type": "integer"}
+      },
+      "required": ["low", "medium", "high", "critical"],
+      "type": "object"
+    },
+    "settlement_policy": {"type": "object"},
+    "snapshot_root": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+    "tenant_id": {"minLength": 1, "type": "string"}
+  },
+  "required": ["profile_id", "tenant_id", "generated_at", "currency", "financial_mode", "settlement_policy", "action_count", "decision_counts", "risk_counts", "financial_summary", "operator_earnings", "actions", "assurance_boundary", "limitations", "snapshot_root"],
+  "title": "ProofPath Control Cloud Snapshot v0.1",
+  "type": "object"
+}
