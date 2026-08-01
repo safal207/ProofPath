@@ -130,7 +130,7 @@ class DeployEvidenceBuilderSecurityTests(unittest.TestCase):
             "does not replace the systems that verify",
             "does not prove that upstream facts are true",
             "pin both Builder and Guard to the same reviewed full commit SHA",
-            "github.sha can refer to GitHub's synthetic merge commit",
+            "`github.sha` can refer to GitHub's synthetic merge commit",
         ):
             self.assertIn(phrase, text)
 
