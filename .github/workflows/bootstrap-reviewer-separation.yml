@@ -27,7 +27,8 @@ jobs:
             echo 'Reviewed package is already installed.'
             exit 0
           fi
-          test "$(sha256sum .bootstrap/reviewer-separation/payload.b64 | cut -d' ' -f1)" = "d4b9005197a564d3c3f973cd7dadce947a9bd3910d748d254f795c1226a0dadd"
+          cat .bootstrap/reviewer-separation/part* > /tmp/reviewer-payload.b64
+          test "$(sha256sum /tmp/reviewer-payload.b64 | cut -d' ' -f1)" = "d4b9005197a564d3c3f973cd7dadce947a9bd3910d748d254f795c1226a0dadd"
           python3 - <<'PY'
           import base64
           import hashlib
@@ -35,7 +36,7 @@ jobs:
           import pathlib
           import tarfile
 
-          encoded = pathlib.Path('.bootstrap/reviewer-separation/payload.b64').read_bytes()
+          encoded = pathlib.Path('/tmp/reviewer-payload.b64').read_bytes()
           payload = base64.b64decode(encoded, validate=True)
           if hashlib.sha256(payload).hexdigest() != 'f0f904b4c24df85cc9289dd5fe5ae443cdbdf1af7ce97d123097cae58752a973':
               raise SystemExit('decoded payload digest mismatch')
