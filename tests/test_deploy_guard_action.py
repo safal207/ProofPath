@@ -150,7 +150,7 @@ class DeployGuardActionTests(unittest.TestCase):
         self.assertIsInstance(certificate, dict)
         self.assertEqual(certificate["decision"], "BLOCK")
         self.assertEqual(certificate["primary_reason_code"], "DEPLOY_EVIDENCE_INVALID")
-        self.assertIn("full clearance-certificate profile", completed.stdout)
+        self.assertIn("unsupported clearance-certificate version", completed.stdout)
 
     def test_certificate_path_cannot_escape_workspace(self):
         result = self.invoke(
