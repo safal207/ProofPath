@@ -19,10 +19,14 @@ jobs:
           ref: agent/proofpath-sigstore-admission-verifier-v0.1
           fetch-depth: 0
 
-      - name: Verify, install, and self-remove bootstrap
+      - name: Verify and install reviewed runtime package
         shell: bash
         run: |
           set -euo pipefail
+          if test -f control-cloud/admission/verify_sigstore.py; then
+            echo 'Reviewed runtime package is already installed.'
+            exit 0
+          fi
           cat .bootstrap/sigstore-admission/part* > /tmp/proofpath-payload.b64
           test "$(sha256sum /tmp/proofpath-payload.b64 | cut -d' ' -f1)" = "18a0273f7e7042322f2cd81bd153b277374fb18b3631ee1577d830bac24df711"
           python3 - <<'PY'
@@ -62,12 +66,14 @@ jobs:
           PY
 
           rm -rf .bootstrap
-          rm .github/workflows/bootstrap-sigstore-admission.yml
+          rm .github/workflows/proofpath-sigstore-admission.yml
+          find control-cloud tests -type d -name __pycache__ -prune -exec rm -rf {} +
           python3 -m py_compile control-cloud/admission/verify_sigstore.py control-cloud/ingestion/admitted_ingest.py
           python3 -m unittest tests.test_sigstore_admission tests.test_admitted_ingestion tests.test_sigstore_admission_security -v
+          find control-cloud tests -type d -name __pycache__ -prune -exec rm -rf {} +
           git config user.name 'proofpath-bot'
           git config user.email '55020240+safal207@users.noreply.github.com'
           git add -A
           git diff --cached --check
-          git commit -m 'feat: add Sigstore admission verifier'
+          git commit -m 'feat: add Sigstore admission runtime'
           git push origin HEAD:agent/proofpath-sigstore-admission-verifier-v0.1
