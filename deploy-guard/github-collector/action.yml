@@ -1,18 +1,18 @@
 name: ProofPath GitHub Evidence Collector
 
-description: Collect commit-bound GitHub checks, reviews, and artifact metadata for Deploy Guard.
+description: Collect commit-bound GitHub checks, reviews, producer-job status, and artifact metadata for Deploy Guard.
 
 author: safal207
 
 inputs:
   github-token:
-    description: GitHub token with read access to checks, pull requests, and actions metadata.
+    description: GitHub token with read access to checks, pull requests, actions, and workflow jobs.
     required: true
   config:
-    description: Path to explicit authority, role mapping, security, ticket, and provenance configuration.
+    description: Path to explicit authority, role mapping, security, ticket, provenance, and producer-job configuration.
     required: true
   artifact-run-id:
-    description: GitHub Actions run ID that produced the deployment artifact.
+    description: GitHub Actions run ID containing the deployment artifact.
     required: true
   artifact-name:
     description: Exact GitHub Actions artifact name.
@@ -22,7 +22,7 @@ inputs:
     required: false
     default: ""
   source-sha:
-    description: Exact source commit whose checks, reviews, run, and artifact are collected.
+    description: Exact source commit whose checks, reviews, run, producer job, and artifact are collected.
     required: false
     default: ""
   pull-request-number:
@@ -88,4 +88,4 @@ runs:
         PROOFPATH_REPORT: ${{ inputs.report }}
       run: |
         set -euo pipefail
-        python3 "$GITHUB_ACTION_PATH/collect_github_evidence.py"
+        python3 "$GITHUB_ACTION_PATH/collector.py"
