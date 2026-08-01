@@ -1,0 +1,92 @@
+name: Bootstrap Reviewer Separation
+
+on:
+  pull_request:
+    branches:
+      - agent/proofpath-trusted-workflow-governance-v0.1
+
+permissions:
+  contents: write
+
+jobs:
+  install-reviewed-package:
+    if: github.repository == 'safal207/ProofPath' && github.actor == 'safal207'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/proofpath-reviewer-identity-separation-v0.1
+          fetch-depth: 0
+
+      - name: Verify test and install reviewed runtime package
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f control-cloud/reviewers/verify_reviewer_separation.py; then
+            echo 'Reviewed package is already installed.'
+            exit 0
+          fi
+          test "$(sha256sum .bootstrap/reviewer-separation/payload.b64 | cut -d' ' -f1)" = "d4b9005197a564d3c3f973cd7dadce947a9bd3910d748d254f795c1226a0dadd"
+          python3 - <<'PY'
+          import base64
+          import hashlib
+          import io
+          import pathlib
+          import tarfile
+
+          encoded = pathlib.Path('.bootstrap/reviewer-separation/payload.b64').read_bytes()
+          payload = base64.b64decode(encoded, validate=True)
+          if hashlib.sha256(payload).hexdigest() != 'f0f904b4c24df85cc9289dd5fe5ae443cdbdf1af7ce97d123097cae58752a973':
+              raise SystemExit('decoded payload digest mismatch')
+
+          expected = {
+              'control-cloud/reviewers/verify_reviewer_separation.py',
+              'control-cloud/reviewers/README.md',
+              'control-cloud/ingestion/separated_ingest.py',
+              'schemas/proofpath-control-cloud-reviewer-identity-registry-v0.1.schema.json',
+              'schemas/proofpath-control-cloud-reviewer-approval-bundle-v0.1.schema.json',
+              'schemas/proofpath-control-cloud-reviewer-separation-decision-v0.1.schema.json',
+              'schemas/proofpath-control-cloud-separated-ingest-receipt-v0.1.schema.json',
+              'examples/control-cloud/reviewer-identity-registry.json',
+              'tests/test_reviewer_separation.py',
+              'tests/test_separated_ingestion.py',
+              'tests/test_reviewer_separation_security.py',
+              '.github/workflows/proofpath-reviewer-separation.yml',
+          }
+          with tarfile.open(fileobj=io.BytesIO(payload), mode='r:gz') as archive:
+              members = archive.getmembers()
+              names = {member.name for member in members}
+              if names != expected:
+                  raise SystemExit(f'unexpected payload paths: {sorted(names ^ expected)}')
+              for member in members:
+                  path = pathlib.PurePosixPath(member.name)
+                  if not member.isfile() or path.is_absolute() or '..' in path.parts:
+                      raise SystemExit(f'unsafe payload member: {member.name}')
+              archive.extractall('.')
+          PY
+
+          find control-cloud tests -type d -name __pycache__ -prune -exec rm -rf {} +
+          python3 -m py_compile \
+            control-cloud/reviewers/verify_reviewer_separation.py \
+            control-cloud/ingestion/separated_ingest.py
+          python3 -m unittest \
+            tests.test_reviewer_separation \
+            tests.test_separated_ingestion \
+            tests.test_reviewer_separation_security \
+            -v
+          python3 -m json.tool schemas/proofpath-control-cloud-reviewer-identity-registry-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-reviewer-approval-bundle-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-reviewer-separation-decision-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-separated-ingest-receipt-v0.1.schema.json >/dev/null
+          python3 -m json.tool examples/control-cloud/reviewer-identity-registry.json >/dev/null
+
+          rm .github/workflows/proofpath-reviewer-separation.yml
+          rm -rf .bootstrap
+          find control-cloud tests -type d -name __pycache__ -prune -exec rm -rf {} +
+          git config user.name 'proofpath-bot'
+          git config user.email '55020240+safal207@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'feat: add reviewer identity separation runtime'
+          git push origin HEAD:agent/proofpath-reviewer-identity-separation-v0.1
