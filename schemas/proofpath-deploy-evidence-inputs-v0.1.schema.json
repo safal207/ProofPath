@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:proofpath:schema:deploy-evidence-inputs:v0.1",
+  "title": "ProofPath Deploy Evidence Inputs v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "authority",
+    "build_provenance",
+    "checks",
+    "security",
+    "approvals",
+    "change_ticket"
+  ],
+  "properties": {
+    "profile_id": {
+      "const": "proofpath.deploy.evidence-inputs.v0.1"
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["active", "expires_at", "scope"],
+      "properties": {
+        "active": {"type": "boolean"},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repositories", "environments", "actions"],
+          "properties": {
+            "repositories": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "environments": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "actions": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    "build_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commit_sha",
+        "artifact_digest",
+        "attestation_verified",
+        "runner_environment",
+        "workflow",
+        "source_sha",
+        "signer_sha"
+      ],
+      "properties": {
+        "commit_sha": {"$ref": "#/$defs/sha"},
+        "artifact_digest": {"$ref": "#/$defs/digest"},
+        "attestation_verified": {"type": "boolean"},
+        "runner_environment": {"type": "string", "minLength": 1},
+        "workflow": {"type": "string", "minLength": 1},
+        "source_sha": {"$ref": "#/$defs/sha"},
+        "signer_sha": {"$ref": "#/$defs/sha"}
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status", "commit_sha"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "status": {"type": "string", "minLength": 1},
+          "commit_sha": {"$ref": "#/$defs/sha"}
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["critical_vulnerabilities"],
+      "properties": {
+        "critical_vulnerabilities": {"type": "integer", "minimum": 0}
+      }
+    },
+    "approvals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["actor", "role", "approved", "commit_sha"],
+        "properties": {
+          "actor": {"type": "string", "minLength": 1},
+          "role": {"type": "string", "minLength": 1},
+          "approved": {"type": "boolean"},
+          "commit_sha": {"$ref": "#/$defs/sha"}
+        }
+      }
+    },
+    "change_ticket": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "status", "commit_sha"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1},
+            "status": {"type": "string", "minLength": 1},
+            "commit_sha": {"$ref": "#/$defs/sha"}
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40,64}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

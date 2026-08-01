@@ -1,0 +1,91 @@
+name: ProofPath Deploy Evidence Builder
+
+description: Build deterministic, commit-bound Deploy Guard evidence from explicit trusted workflow facts.
+
+author: safal207
+
+inputs:
+  policy:
+    description: Path to the ProofPath Deploy Guard policy JSON.
+    required: true
+  trusted-facts:
+    description: Path to explicit authority, provenance, checks, security, approval, and ticket facts.
+    required: true
+  artifact-digest:
+    description: Exact sha256 digest of the proposed deployment artifact.
+    required: true
+  environment:
+    description: Target deployment environment.
+    required: true
+  agent-id:
+    description: Stable identifier for the proposing agent or automation.
+    required: true
+  action-id:
+    description: Optional stable action identifier. A deterministic identifier is derived when omitted.
+    required: false
+    default: ""
+  repository:
+    description: Source repository. Defaults to GITHUB_REPOSITORY.
+    required: false
+    default: ""
+  source-branch:
+    description: Source branch. Defaults to GITHUB_REF_NAME.
+    required: false
+    default: ""
+  source-sha:
+    description: Exact source commit. Defaults to GITHUB_SHA.
+    required: false
+    default: ""
+  evaluated-at:
+    description: Optional timezone-aware ISO-8601 evaluation time. Current UTC is used when omitted.
+    required: false
+    default: ""
+  output:
+    description: Path for the generated Deploy Guard evidence JSON.
+    required: false
+    default: proofpath-evidence/deploy-action-evidence.json
+
+outputs:
+  evidence-path:
+    description: Absolute path to the generated evidence JSON.
+    value: ${{ steps.build.outputs.evidence-path }}
+  evidence-root:
+    description: Domain-separated SHA-256 root of the generated evidence.
+    value: ${{ steps.build.outputs.evidence-root }}
+  action-id:
+    description: Stable action identifier contained in the evidence.
+    value: ${{ steps.build.outputs.action-id }}
+  repository:
+    description: Repository bound into the evidence.
+    value: ${{ steps.build.outputs.repository }}
+  source-branch:
+    description: Branch bound into the evidence.
+    value: ${{ steps.build.outputs.source-branch }}
+  source-sha:
+    description: Commit bound into the evidence.
+    value: ${{ steps.build.outputs.source-sha }}
+  artifact-digest:
+    description: Artifact digest bound into the evidence.
+    value: ${{ steps.build.outputs.artifact-digest }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build commit-bound deployment evidence
+      id: build
+      shell: bash
+      env:
+        PROOFPATH_POLICY: ${{ inputs.policy }}
+        PROOFPATH_TRUSTED_FACTS: ${{ inputs.trusted-facts }}
+        PROOFPATH_ARTIFACT_DIGEST: ${{ inputs.artifact-digest }}
+        PROOFPATH_ENVIRONMENT: ${{ inputs.environment }}
+        PROOFPATH_AGENT_ID: ${{ inputs.agent-id }}
+        PROOFPATH_ACTION_ID: ${{ inputs.action-id }}
+        PROOFPATH_REPOSITORY: ${{ inputs.repository }}
+        PROOFPATH_SOURCE_BRANCH: ${{ inputs.source-branch }}
+        PROOFPATH_SOURCE_SHA: ${{ inputs.source-sha }}
+        PROOFPATH_EVALUATED_AT: ${{ inputs.evaluated-at }}
+        PROOFPATH_OUTPUT: ${{ inputs.output }}
+      run: |
+        set -euo pipefail
+        python3 "$GITHUB_ACTION_PATH/build_evidence.py"

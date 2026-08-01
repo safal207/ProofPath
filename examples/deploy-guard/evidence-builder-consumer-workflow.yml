@@ -1,0 +1,67 @@
+name: Production deploy with ProofPath evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_digest:
+        description: Exact sha256 digest produced and verified by the build workflow
+        required: true
+        type: string
+      evaluated_at:
+        description: Timezone-aware ISO-8601 time captured by the evidence workflow
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-clearance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact deployment commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      # The consumer repository owns these files. trusted-deploy-facts.json must
+      # be produced from verified upstream job outputs; the builder does not
+      # turn unverified claims into approvals, checks, tickets, or attestations.
+      - name: Build commit-bound ProofPath evidence
+        id: evidence
+        uses: safal207/ProofPath/deploy-guard/evidence-builder@REPLACE_WITH_REVIEWED_40_CHAR_COMMIT_SHA
+        with:
+          policy: .proofpath/deploy-policy.json
+          trusted-facts: .proofpath/trusted-deploy-facts.json
+          artifact-digest: ${{ inputs.artifact_digest }}
+          environment: production
+          agent-id: github-actions/production-deployer
+          repository: ${{ github.repository }}
+          source-branch: ${{ github.ref_name }}
+          source-sha: ${{ github.sha }}
+          evaluated-at: ${{ inputs.evaluated_at }}
+          output: proofpath-evidence/deploy-action-evidence.json
+
+      - name: Evaluate deployment clearance
+        id: guard
+        uses: safal207/ProofPath/deploy-guard@REPLACE_WITH_REVIEWED_40_CHAR_COMMIT_SHA
+        with:
+          policy: .proofpath/deploy-policy.json
+          evidence: ${{ steps.evidence.outputs.evidence-path }}
+          certificate: proofpath-evidence/deploy-clearance.json
+          mode: enforce
+
+      - name: Retain evidence even when clearance fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-deploy-evidence-${{ github.run_id }}
+          path: proofpath-evidence
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Production deployment boundary
+        if: steps.guard.outputs.decision == 'ACCEPT'
+        run: |
+          echo "Replace this line with the consumer's reviewed deployment command."
+          echo "ProofPath does not perform the deployment."
