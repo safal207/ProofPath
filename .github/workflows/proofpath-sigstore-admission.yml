@@ -1,0 +1,424 @@
+name: ProofPath Sigstore Admission
+
+on:
+  pull_request:
+    paths:
+      - "control-cloud/admission/**"
+      - "control-cloud/ingestion/admitted_ingest.py"
+      - "schemas/proofpath-control-cloud-sigstore-admission-*.json"
+      - "schemas/proofpath-control-cloud-admitted-ingest-receipt-v0.1.schema.json"
+      - "tests/test_sigstore_admission.py"
+      - "tests/test_admitted_ingestion.py"
+      - "tests/test_sigstore_admission_security.py"
+      - ".github/workflows/proofpath-sigstore-admission.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  PROOFPATH_SIGSTORE_ADMISSION_DEMO_SECRET: test-only-sigstore-admission-ingestion-secret-00000001
+
+jobs:
+  focused-tests:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Validate source schemas and focused tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            control-cloud/admission/verify_sigstore.py \
+            control-cloud/ingestion/admitted_ingest.py
+          python3 -m json.tool schemas/proofpath-control-cloud-sigstore-admission-policy-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-sigstore-admission-result-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-admitted-ingest-receipt-v0.1.schema.json >/dev/null
+          python3 -m unittest \
+            tests.test_sigstore_admission \
+            tests.test_admitted_ingestion \
+            tests.test_sigstore_admission_security \
+            -v
+
+  attest-reference-certificate:
+    needs: focused-tests
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Build exact canonical Assured Action certificate
+        env:
+          WORKFLOW_SUBJECT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/sigstore-subject
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          sha = os.environ["WORKFLOW_SUBJECT_SHA"]
+          certificate = {
+              "profile_id": "proofpath.deploy.clearance-certificate.v0.1",
+              "product": "PROOFPATH_ASSURED_ACTION",
+              "decision": "ACCEPT",
+              "valid": True,
+              "primary_reason_code": None,
+              "action": {
+                  "action_id": "act-sigstore-admission-reference",
+                  "action_type": "deploy",
+                  "agent_id": "agent-reference",
+                  "repository": "safal207/ProofPath",
+                  "branch": "main",
+                  "commit_sha": sha,
+                  "environment": "production",
+                  "artifact_digest": "sha256:" + ("a" * 64),
+              },
+              "assurance": {
+                  "assurance_level": "POLICY_VERIFIED",
+                  "witness_level": "SINGLE_WORKFLOW_REFERENCE",
+                  "coverage": "NOT_FINANCIALLY_COVERED",
+                  "policy_id": "proofpath-reference-deploy",
+                  "policy_version": "0.1.0",
+              },
+              "policy_root": "sha256:" + ("b" * 64),
+              "evidence_root": "sha256:" + ("c" * 64),
+              "clearance_root": "sha256:" + ("d" * 64),
+              "execution_allowed": True,
+              "authority_granted": False,
+          }
+          data = json.dumps(
+              certificate,
+              ensure_ascii=False,
+              sort_keys=True,
+              separators=(",", ":"),
+              allow_nan=False,
+          ).encode("utf-8") + b"\n"
+          Path("artifacts/sigstore-subject/clearance-certificate.json").write_bytes(data)
+          PY
+      - name: Attest exact certificate bytes
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: artifacts/sigstore-subject/clearance-certificate.json
+      - name: Upload exact certificate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: proofpath-sigstore-admission-subject-${{ github.run_id }}
+          path: artifacts/sigstore-subject/clearance-certificate.json
+          if-no-files-found: error
+          retention-days: 14
+
+  verify-and-ingest:
+    needs:
+      - focused-tests
+      - attest-reference-certificate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Download exact certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: proofpath-sigstore-admission-subject-${{ github.run_id }}
+          path: artifacts/sigstore-admission/subject
+      - name: Build strict verification policy
+        env:
+          WORKFLOW_SUBJECT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/sigstore-admission
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          sha = os.environ["WORKFLOW_SUBJECT_SHA"]
+          policy = {
+              "profile_id": "proofpath.control-cloud.sigstore-admission-policy.v0.1",
+              "repository": "safal207/ProofPath",
+              "signer_repository": "safal207/ProofPath",
+              "signer_workflow": "safal207/ProofPath/.github/workflows/proofpath-sigstore-admission.yml",
+              "source_sha": sha,
+              "signer_sha": sha,
+              "cert_oidc_issuer": "https://token.actions.githubusercontent.com",
+              "predicate_type": "https://slsa.dev/provenance/v1",
+              "deny_self_hosted_runners": True,
+              "required_runner_environment": "github-hosted",
+              "verifier_identity": "proofpath-control-cloud-sigstore-admission-v0.1",
+          }
+          Path("artifacts/sigstore-admission/admission-policy.json").write_text(
+              json.dumps(policy, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+      - name: Cryptographically verify GitHub Sigstore provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          verified_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          printf '%s' "$verified_at" > /tmp/proofpath-verified-at
+          success=false
+          for attempt in 1 2 3 4 5; do
+            if python3 control-cloud/admission/verify_sigstore.py verify \
+              --subject artifacts/sigstore-admission/subject/clearance-certificate.json \
+              --policy artifacts/sigstore-admission/admission-policy.json \
+              --verified-at "$verified_at" \
+              --output artifacts/sigstore-admission/admission-result.json; then
+              success=true
+              break
+            fi
+            sleep 2
+          done
+          test "$success" = "true"
+      - name: Stage server-controlled admission result
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("artifacts/sigstore-admission")
+          result = json.loads((root / "admission-result.json").read_text())
+          digest_hex = result["subject_digest"].split(":", 1)[1]
+          admissions = root / "trusted-admissions"
+          admissions.mkdir(parents=True, exist_ok=True)
+          (admissions / f"{digest_hex}.json").write_bytes(
+              (root / "admission-result.json").read_bytes()
+          )
+          PY
+      - name: Build exact tenant request and registry
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("artifacts/sigstore-admission")
+          certificate = json.loads(
+              (root / "subject/clearance-certificate.json").read_text()
+          )
+          result = json.loads((root / "admission-result.json").read_text())
+          submitted_at = result["verified_at"]
+          request = {
+              "profile_id": "proofpath.control-cloud.ingest-request.v0.1",
+              "tenant_id": "proofpath-demo",
+              "request_id": "req-sigstore-admission-reference",
+              "submitted_at": submitted_at,
+              "assured_action": {
+                  "base_price_minor": 1000,
+                  "certificate": certificate,
+                  "dispute_state": "none",
+                  "observed_at": submitted_at,
+                  "operator_assignments": [
+                      {
+                          "operator_id": "proofpath-reference-witness",
+                          "role": "reference-witness",
+                          "weight": 1,
+                      }
+                  ],
+                  "risk_tier": "low",
+              },
+              "provenance_binding": {
+                  "status": "EXTERNAL_RESULT_BOUND",
+                  "subject_digest": result["subject_digest"],
+                  "verifier_identity": result["verifier_identity"],
+                  "verified_at": result["verified_at"],
+              },
+          }
+          registry = {
+              "profile_id": "proofpath.control-cloud.tenant-registry.v0.1",
+              "tenants": {
+                  "proofpath-demo": {
+                      "active": True,
+                      "repository_prefixes": ["safal207/"],
+                      "keys": {
+                          "sigstore-demo-key": {
+                              "active": True,
+                              "secret_env": "PROOFPATH_SIGSTORE_ADMISSION_DEMO_SECRET",
+                          }
+                      },
+                  }
+              },
+          }
+          canonical = json.dumps(
+              request,
+              ensure_ascii=False,
+              sort_keys=True,
+              separators=(",", ":"),
+              allow_nan=False,
+          ).encode("utf-8")
+          (root / "ingest-request.json").write_bytes(canonical)
+          (root / "tenant-registry.json").write_text(
+              json.dumps(registry, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+      - name: Sign exact tenant request bytes
+        run: |
+          set -euo pipefail
+          submitted_at="$(cat /tmp/proofpath-verified-at)"
+          python3 control-cloud/ingestion/ingest.py sign \
+            --body artifacts/sigstore-admission/ingest-request.json \
+            --tenant proofpath-demo \
+            --key-id sigstore-demo-key \
+            --secret-env PROOFPATH_SIGSTORE_ADMISSION_DEMO_SECRET \
+            --timestamp "$submitted_at" \
+            --nonce nonce-sigstore-admission-0001 \
+            --idempotency-key idem-sigstore-admission-0001 \
+            --headers-out /tmp/proofpath-sigstore-admission-headers.json
+      - name: Ingest only after cryptographic admission
+        run: |
+          set -euo pipefail
+          submitted_at="$(cat /tmp/proofpath-verified-at)"
+          python3 control-cloud/ingestion/admitted_ingest.py ingest \
+            --body artifacts/sigstore-admission/ingest-request.json \
+            --headers /tmp/proofpath-sigstore-admission-headers.json \
+            --registry artifacts/sigstore-admission/tenant-registry.json \
+            --store artifacts/sigstore-admission/store \
+            --admissions-dir artifacts/sigstore-admission/trusted-admissions \
+            --tenant proofpath-demo \
+            --now "$submitted_at" \
+            --receipt artifacts/sigstore-admission/admitted-receipt.json
+      - name: Verify idempotent admitted retry
+        run: |
+          set -euo pipefail
+          submitted_at="$(cat /tmp/proofpath-verified-at)"
+          cp artifacts/sigstore-admission/admitted-receipt.json /tmp/original-admitted-receipt.json
+          python3 control-cloud/ingestion/admitted_ingest.py ingest \
+            --body artifacts/sigstore-admission/ingest-request.json \
+            --headers /tmp/proofpath-sigstore-admission-headers.json \
+            --registry artifacts/sigstore-admission/tenant-registry.json \
+            --store artifacts/sigstore-admission/store \
+            --admissions-dir artifacts/sigstore-admission/trusted-admissions \
+            --tenant proofpath-demo \
+            --now "$submitted_at" \
+            --receipt artifacts/sigstore-admission/admitted-receipt.json
+          cmp /tmp/original-admitted-receipt.json artifacts/sigstore-admission/admitted-receipt.json
+          test "$(wc -l < artifacts/sigstore-admission/store/tenants/proofpath-demo/admitted-events.jsonl)" = "1"
+      - name: Export admitted tenant dataset
+        run: |
+          set -euo pipefail
+          python3 control-cloud/ingestion/admitted_ingest.py export \
+            --store artifacts/sigstore-admission/store \
+            --tenant proofpath-demo \
+            --generated-at "$(cat /tmp/proofpath-verified-at)" \
+            --output artifacts/sigstore-admission/assured-actions.json
+      - name: Build Control Cloud snapshot from admitted event
+        run: |
+          set -euo pipefail
+          python3 control-cloud/build_snapshot.py \
+            --dataset artifacts/sigstore-admission/assured-actions.json \
+            --policy examples/control-cloud/settlement-policy.json \
+            --output artifacts/sigstore-admission/control-cloud-snapshot.json \
+            --audit-export artifacts/sigstore-admission/control-cloud-audit.jsonl
+      - name: Verify admission, receipt, event, and snapshot boundaries
+        env:
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          WORKFLOW_SUBJECT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("artifacts/sigstore-admission")
+          result = json.loads((root / "admission-result.json").read_text())
+          receipt = json.loads((root / "admitted-receipt.json").read_text())
+          events_path = root / "store/tenants/proofpath-demo/admitted-events.jsonl"
+          events = events_path.read_text().splitlines()
+          snapshot = json.loads((root / "control-cloud-snapshot.json").read_text())
+
+          assert result["verified"] is True
+          assert result["decision"] == "ACCEPT"
+          assert result["github_attestation_verified"] is True
+          assert result["transparency_timestamp_verified"] is True
+          assert result["runner_environment"] == "github-hosted"
+          assert result["deny_self_hosted_runners"] is True
+          assert receipt["provenance_cryptographically_verified_by_api"] is True
+          assert receipt["admission_result_root"] == result["result_root"]
+          assert receipt["subject_digest"] == result["subject_digest"]
+          assert receipt["payments_executed"] is False
+          assert receipt["insurance_provided"] is False
+          assert receipt["deployment_performed"] is False
+          assert receipt["authority_granted"] is False
+          assert len(events) == 1
+          event = json.loads(events[0])
+          assert event["admission_result_root"] == result["result_root"]
+          assert snapshot["action_count"] == 1
+          assert snapshot["decision_counts"]["ACCEPT"] == 1
+          assert snapshot["assurance_boundary"]["payments_executed"] is False
+          assert snapshot["assurance_boundary"]["authority_granted"] is False
+
+          manifest = {
+              "profile_id": "proofpath.control-cloud.sigstore-admission-conformance.v0.1",
+              "source_head_sha": os.environ["SOURCE_HEAD_SHA"],
+              "workflow_subject_sha": os.environ["WORKFLOW_SUBJECT_SHA"],
+              "subject_digest": result["subject_digest"],
+              "admission_result_root": result["result_root"],
+              "admitted_receipt_root": receipt["receipt_root"],
+              "admitted_event_root": receipt["event_root"],
+              "snapshot_root": snapshot["snapshot_root"],
+              "admission_result_sha256": hashlib.sha256((root / "admission-result.json").read_bytes()).hexdigest(),
+              "admitted_receipt_sha256": hashlib.sha256((root / "admitted-receipt.json").read_bytes()).hexdigest(),
+              "admitted_event_store_sha256": hashlib.sha256(events_path.read_bytes()).hexdigest(),
+              "provenance_cryptographically_verified_by_api": True,
+              "payments_executed": False,
+              "insurance_provided": False,
+              "deployment_performed": False,
+              "authority_granted": False,
+          }
+          (root / "conformance-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+      - name: Attest exact admission result
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: artifacts/sigstore-admission/admission-result.json
+      - name: Attest exact admitted receipt
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: artifacts/sigstore-admission/admitted-receipt.json
+      - name: Upload admission evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: proofpath-sigstore-admission-${{ github.run_id }}
+          path: |
+            artifacts/sigstore-admission/subject/clearance-certificate.json
+            artifacts/sigstore-admission/admission-policy.json
+            artifacts/sigstore-admission/admission-result.json
+            artifacts/sigstore-admission/ingest-request.json
+            artifacts/sigstore-admission/admitted-receipt.json
+            artifacts/sigstore-admission/store/tenants/proofpath-demo/admitted-events.jsonl
+            artifacts/sigstore-admission/assured-actions.json
+            artifacts/sigstore-admission/control-cloud-snapshot.json
+            artifacts/sigstore-admission/control-cloud-audit.jsonl
+            artifacts/sigstore-admission/conformance-manifest.json
+            control-cloud/admission/README.md
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,63 @@
+{
+  "$id": "https://proofpath.dev/schemas/proofpath-control-cloud-sigstore-admission-policy-v0.1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cert_oidc_issuer": {
+      "const": "https://token.actions.githubusercontent.com"
+    },
+    "deny_self_hosted_runners": {
+      "const": true
+    },
+    "predicate_type": {
+      "const": "https://slsa.dev/provenance/v1"
+    },
+    "profile_id": {
+      "const": "proofpath.control-cloud.sigstore-admission-policy.v0.1"
+    },
+    "repository": {
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "required_runner_environment": {
+      "const": "github-hosted"
+    },
+    "signer_repository": {
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "signer_sha": {
+      "pattern": "^[0-9a-f]{40,64}$",
+      "type": "string"
+    },
+    "signer_workflow": {
+      "pattern": "^(github\\\\.com/)?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/\\\\.github/workflows/[A-Za-z0-9_.-]+\\\\.ya?ml$",
+      "type": "string"
+    },
+    "source_sha": {
+      "pattern": "^[0-9a-f]{40,64}$",
+      "type": "string"
+    },
+    "verifier_identity": {
+      "maxLength": 256,
+      "minLength": 3,
+      "pattern": "^[^\\\\u0000\\\\r\\\\n]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile_id",
+    "repository",
+    "signer_repository",
+    "signer_workflow",
+    "source_sha",
+    "signer_sha",
+    "cert_oidc_issuer",
+    "predicate_type",
+    "deny_self_hosted_runners",
+    "required_runner_environment",
+    "verifier_identity"
+  ],
+  "title": "ProofPath Control Cloud Sigstore admission policy v0.1",
+  "type": "object"
+}
