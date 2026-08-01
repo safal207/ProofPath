@@ -97,6 +97,13 @@ class DeployEvidenceBuilderSecurityTests(unittest.TestCase):
         self.assertNotIn("attestations: write", text)
         self.assertNotIn("pull-requests: write", text)
 
+    def test_numeric_looking_sha_literals_are_quoted_in_yaml(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        quoted = 'source-sha: "4444444444444444444444444444444444444444"'
+        unquoted = "source-sha: 4444444444444444444444444444444444444444"
+        self.assertEqual(text.count(quoted), 2)
+        self.assertNotIn(unquoted, text)
+
     def test_conformance_runs_builder_then_guard_as_real_local_actions(self):
         text = WORKFLOW.read_text(encoding="utf-8")
         builder_position = text.index("uses: ./deploy-guard/evidence-builder")
