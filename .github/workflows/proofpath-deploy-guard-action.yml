@@ -99,7 +99,8 @@ jobs:
 
       - name: Build action integration manifest
         env:
-          ACTION_HEAD_SHA: ${{ github.sha }}
+          ACTION_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          WORKFLOW_SUBJECT_SHA: ${{ github.sha }}
         run: |
           python3 - <<'PY'
           import hashlib
@@ -133,7 +134,8 @@ jobs:
               )
           manifest = {
               "profile_id": "proofpath.deploy.guard-action-conformance.v0.1",
-              "head_sha": os.environ["ACTION_HEAD_SHA"],
+              "source_sha": os.environ["ACTION_SOURCE_SHA"],
+              "workflow_subject_sha": os.environ["WORKFLOW_SUBJECT_SHA"],
               "scenario_count": len(records),
               "scenarios": records,
               "modes": {
