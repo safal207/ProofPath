@@ -1,0 +1,191 @@
+{
+  "actions": [
+    {
+      "base_price_minor": 1000,
+      "certificate": {
+        "action": {
+          "action_id": "act-001",
+          "action_type": "deploy",
+          "agent_id": "agent-0",
+          "artifact_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "branch": "main",
+          "commit_sha": "1111111111111111111111111111111111111111",
+          "environment": "production",
+          "repository": "acme/payments"
+        },
+        "assurance": {
+          "assurance_level": "POLICY_VERIFIED",
+          "coverage": "NOT_FINANCIALLY_COVERED",
+          "policy_id": "prod-deploy",
+          "policy_version": "0.1.0",
+          "witness_level": "SINGLE_WORKFLOW_REFERENCE"
+        },
+        "authority_granted": false,
+        "clearance_root": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "decision": "ACCEPT",
+        "evidence_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "execution_allowed": true,
+        "primary_reason_code": null,
+        "product": "PROOFPATH_ASSURED_ACTION",
+        "profile_id": "proofpath.deploy.clearance-certificate.v0.1",
+        "policy_root": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "valid": true
+      },
+      "dispute_state": "none",
+      "observed_at": "2026-08-01T10:00:00Z",
+      "operator_assignments": [
+        {
+          "operator_id": "witness-eu-1",
+          "role": "reference-witness",
+          "weight": 3
+        },
+        {
+          "operator_id": "witness-us-1",
+          "role": "reference-witness",
+          "weight": 2
+        }
+      ],
+      "risk_tier": "low"
+    },
+    {
+      "base_price_minor": 2000,
+      "certificate": {
+        "action": {
+          "action_id": "act-002",
+          "action_type": "deploy",
+          "agent_id": "agent-1",
+          "artifact_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "branch": "main",
+          "commit_sha": "2222222222222222222222222222222222222222",
+          "environment": "production",
+          "repository": "acme/identity"
+        },
+        "assurance": {
+          "assurance_level": "POLICY_VERIFIED",
+          "coverage": "NOT_FINANCIALLY_COVERED",
+          "policy_id": "prod-deploy",
+          "policy_version": "0.1.0",
+          "witness_level": "SINGLE_WORKFLOW_REFERENCE"
+        },
+        "authority_granted": false,
+        "clearance_root": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "decision": "HOLD",
+        "evidence_root": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "execution_allowed": false,
+        "primary_reason_code": "DEPLOY_APPROVAL_COUNT_INSUFFICIENT",
+        "product": "PROOFPATH_ASSURED_ACTION",
+        "profile_id": "proofpath.deploy.clearance-certificate.v0.1",
+        "policy_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "valid": false
+      },
+      "dispute_state": "none",
+      "observed_at": "2026-08-01T11:00:00Z",
+      "operator_assignments": [
+        {
+          "operator_id": "witness-us-1",
+          "role": "reference-witness",
+          "weight": 1
+        }
+      ],
+      "risk_tier": "medium"
+    },
+    {
+      "base_price_minor": 3000,
+      "certificate": {
+        "action": {
+          "action_id": "act-003",
+          "action_type": "deploy",
+          "agent_id": "agent-2",
+          "artifact_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "branch": "main",
+          "commit_sha": "3333333333333333333333333333333333333333",
+          "environment": "production",
+          "repository": "acme/core-api"
+        },
+        "assurance": {
+          "assurance_level": "POLICY_VERIFIED",
+          "coverage": "NOT_FINANCIALLY_COVERED",
+          "policy_id": "prod-deploy",
+          "policy_version": "0.1.0",
+          "witness_level": "SINGLE_WORKFLOW_REFERENCE"
+        },
+        "authority_granted": false,
+        "clearance_root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "decision": "BLOCK",
+        "evidence_root": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "execution_allowed": false,
+        "primary_reason_code": "DEPLOY_REQUIRED_CHECK_FAILED",
+        "product": "PROOFPATH_ASSURED_ACTION",
+        "profile_id": "proofpath.deploy.clearance-certificate.v0.1",
+        "policy_root": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "valid": false
+      },
+      "dispute_state": "resolved",
+      "observed_at": "2026-08-01T12:00:00Z",
+      "operator_assignments": [
+        {
+          "operator_id": "witness-eu-1",
+          "role": "reference-witness",
+          "weight": 2
+        },
+        {
+          "operator_id": "security-auditor-1",
+          "role": "security-auditor",
+          "weight": 3
+        }
+      ],
+      "risk_tier": "high"
+    },
+    {
+      "base_price_minor": 5000,
+      "certificate": {
+        "action": {
+          "action_id": "act-004",
+          "action_type": "deploy",
+          "agent_id": "agent-3",
+          "artifact_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+          "branch": "main",
+          "commit_sha": "4444444444444444444444444444444444444444",
+          "environment": "production",
+          "repository": "acme/treasury"
+        },
+        "assurance": {
+          "assurance_level": "POLICY_VERIFIED",
+          "coverage": "NOT_FINANCIALLY_COVERED",
+          "policy_id": "prod-deploy",
+          "policy_version": "0.1.0",
+          "witness_level": "SINGLE_WORKFLOW_REFERENCE"
+        },
+        "authority_granted": false,
+        "clearance_root": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "decision": "CHALLENGE",
+        "evidence_root": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "execution_allowed": false,
+        "primary_reason_code": "DEPLOY_ARTIFACT_DIGEST_CONFLICT",
+        "product": "PROOFPATH_ASSURED_ACTION",
+        "profile_id": "proofpath.deploy.clearance-certificate.v0.1",
+        "policy_root": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "valid": false
+      },
+      "dispute_state": "open",
+      "observed_at": "2026-08-01T13:00:00Z",
+      "operator_assignments": [
+        {
+          "operator_id": "challenger-1",
+          "role": "challenger",
+          "weight": 2
+        },
+        {
+          "operator_id": "security-auditor-1",
+          "role": "security-auditor",
+          "weight": 1
+        }
+      ],
+      "risk_tier": "critical"
+    }
+  ],
+  "financial_mode": "SIMULATION_ONLY",
+  "generated_at": "2026-08-01T16:00:00Z",
+  "profile_id": "proofpath.control-cloud.dataset.v0.1",
+  "tenant_id": "acme-demo"
+}
