@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofpath.dev/schemas/assured-action-economy-bundle-v0.1.schema.json",
+  "title": "ProofPath Assured Action Economy Bundle v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "evaluated_at",
+    "job",
+    "assignments",
+    "commitments",
+    "reveals",
+    "disputes"
+  ],
+  "properties": {
+    "profile_id": {
+      "const": "proofpath.assured-action.economy-bundle.v0.1"
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "job": {
+      "$ref": "#/$defs/job"
+    },
+    "assignments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/assignment"
+      }
+    },
+    "commitments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/commitment"
+      }
+    },
+    "reveals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reveal"
+      }
+    },
+    "disputes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dispute"
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "nonEmptyText": {
+      "type": "string",
+      "minLength": 1
+    },
+    "job": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "client_account_id",
+        "action_clearance_root",
+        "risk_class",
+        "assurance_level",
+        "pricing_model",
+        "currency",
+        "customer_charge_minor",
+        "platform_fee_minor",
+        "dispute_reserve_minor",
+        "quorum_required",
+        "minimum_control_domains",
+        "minimum_implementations",
+        "created_at",
+        "challenge_window_ends_at",
+        "coverage",
+        "payment_rail",
+        "job_root"
+      ],
+      "properties": {
+        "job_id": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "client_account_id": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "action_clearance_root": {
+          "$ref": "#/$defs/digest"
+        },
+        "risk_class": {
+          "enum": [
+            "L0_RECORD",
+            "L1_STANDARD",
+            "L2_SENSITIVE",
+            "L3_HIGH_RISK",
+            "L4_CRITICAL"
+          ]
+        },
+        "assurance_level": {
+          "const": "INDEPENDENT_QUORUM"
+        },
+        "pricing_model": {
+          "const": "FIXED_RATE_NO_AUCTION"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "customer_charge_minor": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "platform_fee_minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dispute_reserve_minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "quorum_required": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minimum_control_domains": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minimum_implementations": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "challenge_window_ends_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "coverage": {
+          "const": "NOT_FINANCIALLY_COVERED"
+        },
+        "payment_rail": {
+          "const": "EXTERNAL_PROVIDER_REQUIRED"
+        },
+        "job_root": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "witness_id",
+        "control_domain",
+        "implementation_id",
+        "payout_minor",
+        "admission_receipt_root"
+      ],
+      "properties": {
+        "witness_id": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "control_domain": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "implementation_id": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "payout_minor": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "admission_receipt_root": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "commitment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "witness_id",
+        "commitment_root"
+      ],
+      "properties": {
+        "witness_id": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "commitment_root": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "reveal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "witness_id",
+        "verdict",
+        "action_clearance_root",
+        "evidence_root",
+        "admission_receipt_root",
+        "nonce"
+      ],
+      "properties": {
+        "witness_id": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "verdict": {
+          "enum": [
+            "ACCEPT",
+            "HOLD",
+            "BLOCK",
+            "CHALLENGE"
+          ]
+        },
+        "action_clearance_root": {
+          "$ref": "#/$defs/digest"
+        },
+        "evidence_root": {
+          "$ref": "#/$defs/digest"
+        },
+        "admission_receipt_root": {
+          "$ref": "#/$defs/digest"
+        },
+        "nonce": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "dispute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dispute_id",
+        "challenger_id",
+        "status",
+        "reason_code",
+        "filed_at"
+      ],
+      "properties": {
+        "dispute_id": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "challenger_id": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "status": {
+          "enum": [
+            "OPEN",
+            "RESOLVED",
+            "REJECTED"
+          ]
+        },
+        "reason_code": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "filed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

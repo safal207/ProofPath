@@ -1,0 +1,172 @@
+name: ProofPath Assured Action Economy
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  economy-conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile and run focused tests
+        run: |
+          python3 -m py_compile scripts/evaluate_assured_action_economy.py
+          python3 -m unittest tests.test_assured_action_economy -v
+
+      - name: Build four economy scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/bundles artifacts/receipts
+
+          cp examples/assured-action-economy/deploy-quorum.accept.json \
+            artifacts/bundles/action-accept.json
+
+          python3 - <<'PY'
+          import copy
+          import importlib.util
+          import json
+          from pathlib import Path
+
+          script = Path("scripts/evaluate_assured_action_economy.py")
+          spec = importlib.util.spec_from_file_location("economy", script)
+          economy = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(economy)
+
+          source = json.loads(
+              Path("examples/assured-action-economy/deploy-quorum.accept.json")
+              .read_text(encoding="utf-8")
+          )
+
+          blocked = copy.deepcopy(source)
+          for reveal in blocked["reveals"]:
+              reveal["verdict"] = "BLOCK"
+              commitment = next(
+                  item for item in blocked["commitments"]
+                  if item["witness_id"] == reveal["witness_id"]
+              )
+              commitment["commitment_root"] = economy.compute_commitment(
+                  blocked["job"]["job_id"], reveal
+              )
+
+          dissent = copy.deepcopy(source)
+          dissent["reveals"][2]["verdict"] = "BLOCK"
+          dissent["commitments"][2]["commitment_root"] = economy.compute_commitment(
+              dissent["job"]["job_id"], dissent["reveals"][2]
+          )
+
+          challenged = copy.deepcopy(source)
+          challenged["reveals"][0]["verdict"] = "BLOCK"
+
+          cases = {
+              "action-block": blocked,
+              "dissent-hold": dissent,
+              "commitment-challenge": challenged,
+          }
+          for name, value in cases.items():
+              Path(f"artifacts/bundles/{name}.json").write_text(
+                  json.dumps(value, indent=2, sort_keys=True) + "\n",
+                  encoding="utf-8",
+              )
+          PY
+
+          run_case() {
+            local name="$1"
+            local expected_decision="$2"
+            local expected_action="$3"
+            local expected_exit="$4"
+            local input="artifacts/bundles/${name}.json"
+            local output="artifacts/receipts/${name}.json"
+
+            set +e
+            python3 scripts/evaluate_assured_action_economy.py \
+              "$input" --pretty --output "$output"
+            local actual_exit=$?
+            set -e
+
+            test "$actual_exit" -eq "$expected_exit"
+            python3 - "$output" "$expected_decision" "$expected_action" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          receipt = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          expected_decision = sys.argv[2]
+          expected_action = None if sys.argv[3] == "NONE" else sys.argv[3]
+          assert receipt["decision"] == expected_decision, receipt
+          assert receipt["action_consensus"]["verdict"] == expected_action, receipt
+          assert receipt["external_payment_authority_granted"] is False
+          assert receipt["payment_execution_performed"] is False
+          assert receipt["slashing_performed"] is False
+          assert receipt["coverage"] == "NOT_FINANCIALLY_COVERED"
+          PY
+          }
+
+          run_case action-accept ACCEPT ACCEPT 0
+          run_case action-block ACCEPT BLOCK 0
+          run_case dissent-hold HOLD NONE 2
+          run_case commitment-challenge CHALLENGE NONE 4
+
+      - name: Build signed conformance manifest
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          records = []
+          for path in sorted(Path("artifacts/receipts").glob("*.json")):
+              receipt = json.loads(path.read_text(encoding="utf-8"))
+              records.append({
+                  "scenario": path.stem,
+                  "economy_decision": receipt["decision"],
+                  "action_verdict": receipt["action_consensus"]["verdict"],
+                  "settlement_root": receipt["settlement_root"],
+                  "subject_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+              })
+
+          manifest = {
+              "profile_id": "proofpath.assured-action.economy-conformance-manifest.v0.1",
+              "scenario_count": len(records),
+              "scenarios": records,
+              "payment_execution_performed": False,
+              "external_payment_authority_granted": False,
+              "slashing_performed": False,
+              "coverage": "NOT_FINANCIALLY_COVERED",
+          }
+          Path("artifacts/economy-conformance-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Keyless-attest settlement receipts
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/receipts/*.json
+
+      - name: Keyless-attest conformance manifest
+        uses: actions/attest@v4
+        with:
+          subject-path: artifacts/economy-conformance-manifest.json
+
+      - name: Upload economy evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: proofpath-assured-action-economy-${{ github.run_id }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 14
