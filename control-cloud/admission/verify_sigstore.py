@@ -280,8 +280,6 @@ def build_gh_command(subject: Path, policy: dict[str, Any]) -> list[str]:
         str(subject),
         "--repo",
         policy["repository"],
-        "--signer-repo",
-        policy["signer_repository"],
         "--signer-workflow",
         policy["signer_workflow"],
         "--source-digest",

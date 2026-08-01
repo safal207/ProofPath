@@ -36,7 +36,6 @@ class SigstoreAdmissionSecurityTests(unittest.TestCase):
     def test_gh_identity_policy_is_fully_pinned(self):
         required = [
             '"--repo"',
-            '"--signer-repo"',
             '"--signer-workflow"',
             '"--source-digest"',
             '"--signer-digest"',

@@ -23,8 +23,7 @@ The verifier executes `gh attestation verify` as an argument vector, never throu
 shell. The policy pins:
 
 - the repository associated with the attestation;
-- the signer repository;
-- the exact signer workflow path;
+- the exact signer workflow identity, which also binds its repository;
 - the source repository commit digest;
 - the signer workflow commit digest;
 - the exact GitHub Actions OIDC issuer;
@@ -55,7 +54,6 @@ The runtime invokes the equivalent of:
 ```bash
 gh attestation verify clearance-certificate.json \
   --repo OWNER/REPOSITORY \
-  --signer-repo OWNER/REPOSITORY \
   --signer-workflow OWNER/REPOSITORY/.github/workflows/TRUSTED.yml \
   --source-digest SOURCE_SHA \
   --signer-digest SIGNER_SHA \

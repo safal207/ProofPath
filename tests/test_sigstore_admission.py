@@ -201,7 +201,7 @@ class SigstoreAdmissionTests(unittest.TestCase):
     def test_command_pins_all_identity_fields(self):
         argv = module.build_gh_command(self.subject, self.policy)
         expected = {
-            "--repo", "--signer-repo", "--signer-workflow", "--source-digest",
+            "--repo", "--signer-workflow", "--source-digest",
             "--signer-digest", "--cert-oidc-issuer", "--predicate-type",
             "--deny-self-hosted-runners", "--format",
         }
