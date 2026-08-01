@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofpath.dev/schemas/proofpath-control-cloud-governed-ingest-receipt-v0.1.schema.json",
+  "title": "ProofPath Governed Ingest Receipt v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["profile_id", "status", "tenant_id", "request_id", "action_id", "decision", "content_digest", "admitted_event_root", "admission_result_root", "governance_decision_root", "trust_record_root", "subject_digest", "stored_at", "admitted_receipt_root", "provenance_cryptographically_verified_by_api", "governance_trust_verified_by_api", "financial_status", "payments_executed", "insurance_provided", "deployment_performed", "authority_granted", "repository_write_performed", "receipt_root"],
+  "properties": {
+    "profile_id": {"const": "proofpath.control-cloud.governed-ingest-receipt.v0.1"},
+    "status": {"const": "ACCEPTED_WITH_CRYPTOGRAPHIC_PROVENANCE_AND_WORKFLOW_GOVERNANCE"},
+    "tenant_id": {"type": "string", "minLength": 1},
+    "request_id": {"type": "string", "minLength": 1},
+    "action_id": {"type": "string", "minLength": 1},
+    "decision": {"const": "ACCEPT"},
+    "content_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "admitted_event_root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "admission_result_root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "governance_decision_root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "trust_record_root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "subject_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "stored_at": {"type": "string", "format": "date-time"},
+    "admitted_receipt_root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "provenance_cryptographically_verified_by_api": {"const": true},
+    "governance_trust_verified_by_api": {"const": true},
+    "financial_status": {"const": "RECORDED_NOT_PAYABLE"},
+    "payments_executed": {"const": false},
+    "insurance_provided": {"const": false},
+    "deployment_performed": {"const": false},
+    "authority_granted": {"const": false},
+    "repository_write_performed": {"const": false},
+    "receipt_root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}
