@@ -9,6 +9,7 @@ on:
       - "deploy-guard/run_action.py"
       - "scripts/verify_proofpath_deploy_guard.py"
       - "schemas/proofpath-github-evidence-collector-config-v0.1.schema.json"
+      - "schemas/proofpath-github-attestation-result-v0.1.schema.json"
       - "examples/deploy-guard/github-collector-config.fixture.json"
       - "examples/deploy-guard/github-collector-consumer-workflow.yml"
       - "tests/test_github_evidence_collector.py"
@@ -67,6 +68,9 @@ jobs:
           python3 -m json.tool \
             schemas/proofpath-github-evidence-collector-config-v0.1.schema.json \
             >/dev/null
+          python3 -m json.tool \
+            schemas/proofpath-github-attestation-result-v0.1.schema.json \
+            >/dev/null
           python3 -m unittest \
             tests.test_github_evidence_collector \
             tests.test_github_evidence_collector_security \
@@ -74,7 +78,6 @@ jobs:
 
       - name: Build live collector config and Deploy Guard policy
         env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
@@ -83,7 +86,6 @@ jobs:
           import os
           from pathlib import Path
 
-          sha = os.environ["SOURCE_SHA"]
           branch = os.environ["SOURCE_BRANCH"]
           repository = os.environ["REPOSITORY"]
           root = Path("artifacts/github-collector")
@@ -101,16 +103,8 @@ jobs:
                       "actions": ["deploy"],
                   },
               },
-              "provenance": {
-                  "attestation_verified": False,
-                  "runner_environment": "github-hosted",
-                  "workflow": f"{repository}/.github/workflows/proofpath-github-evidence-collector.yml",
-                  "source_sha": sha,
-                  "signer_sha": sha,
-              },
               "security": {"critical_vulnerabilities": 0},
               "approval_role_map": {},
-              "check_names": ["build-artifact"],
               "check_app_allowlist": {"build-artifact": "github-actions"},
               "change_ticket": None,
           }
@@ -128,7 +122,7 @@ jobs:
               "maximum_critical_vulnerabilities": 0,
               "require_change_ticket": False,
               "require_artifact_attestation": False,
-              "require_github_hosted_runner": True,
+              "require_github_hosted_runner": False,
           }
           (root / "collector-config.json").write_text(
               json.dumps(config, indent=2, sort_keys=True) + "\n",
@@ -145,12 +139,13 @@ jobs:
         uses: ./deploy-guard/github-collector
         with:
           github-token: ${{ github.token }}
+          policy: artifacts/github-collector/deploy-policy.json
           config: artifacts/github-collector/collector-config.json
           artifact-run-id: ${{ github.run_id }}
           artifact-name: proofpath-collector-seed
           repository: ${{ github.repository }}
           source-sha: ${{ github.event.pull_request.head.sha || github.sha }}
-          pull-request-number: ${{ github.event.pull_request.number || 0 }}
+          pull-request-number: "0"
           output: artifacts/github-collector/trusted-facts.json
           report: artifacts/github-collector/collector-report.json
 
@@ -182,7 +177,9 @@ jobs:
         env:
           CHECK_COUNT: ${{ steps.collector.outputs.check-count }}
           APPROVAL_COUNT: ${{ steps.collector.outputs.approval-count }}
+          COLLECTOR_ROOT: ${{ steps.collector.outputs.collector-root }}
           COLLECTED_DIGEST: ${{ steps.collector.outputs.artifact-digest }}
+          COLLECTED_WORKFLOW: ${{ steps.collector.outputs.workflow }}
           COLLECTED_SHA: ${{ steps.collector.outputs.source-sha }}
           COLLECTED_BRANCH: ${{ steps.collector.outputs.source-branch }}
           BUILDER_ROOT: ${{ steps.evidence.outputs.evidence-root }}
@@ -193,7 +190,9 @@ jobs:
           set -euo pipefail
           test "$CHECK_COUNT" = "1"
           test "$APPROVAL_COUNT" = "0"
+          test "$COLLECTOR_ROOT" != ""
           test "$COLLECTED_DIGEST" != ""
+          test "$COLLECTED_WORKFLOW" = "${{ github.repository }}/.github/workflows/proofpath-github-evidence-collector.yml"
           test "$COLLECTED_SHA" = "${{ github.event.pull_request.head.sha || github.sha }}"
           test "$COLLECTED_BRANCH" = "${{ github.head_ref || github.ref_name }}"
           test "$BUILDER_ROOT" = "$GUARD_ROOT"
@@ -207,6 +206,8 @@ jobs:
           ARTIFACT_RUN_ID: ${{ github.run_id }}
           ARTIFACT_ID: ${{ steps.collector.outputs.artifact-id }}
           ARTIFACT_DIGEST: ${{ steps.collector.outputs.artifact-digest }}
+          COLLECTOR_ROOT: ${{ steps.collector.outputs.collector-root }}
+          WORKFLOW_IDENTITY: ${{ steps.collector.outputs.workflow }}
           EVIDENCE_ROOT: ${{ steps.evidence.outputs.evidence-root }}
           CLEARANCE_ROOT: ${{ steps.guard.outputs.clearance-root }}
         run: |
@@ -217,14 +218,20 @@ jobs:
           from pathlib import Path
 
           directory = Path("artifacts/github-collector")
-          report = json.loads((directory / "collector-report.json").read_text(encoding="utf-8"))
-          facts = json.loads((directory / "trusted-facts.json").read_text(encoding="utf-8"))
-          certificate = json.loads((directory / "deploy-clearance.json").read_text(encoding="utf-8"))
+          report_path = directory / "collector-report.json"
+          facts_path = directory / "trusted-facts.json"
+          certificate_path = directory / "deploy-clearance.json"
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          facts = json.loads(facts_path.read_text(encoding="utf-8"))
+          certificate = json.loads(certificate_path.read_text(encoding="utf-8"))
           assert report["collector_live_github_api"] is True
           assert report["collector_verified_authority"] is False
-          assert report["collector_verified_attestation_claim"] is False
+          assert report["collector_verified_attestation_cryptography"] is False
           assert report["workflow_run"]["producer_job"]["conclusion"] == "success"
+          assert report["workflow_run"]["workflow"] == os.environ["WORKFLOW_IDENTITY"]
+          assert report["report_root"] == os.environ["COLLECTOR_ROOT"]
           assert facts["build_provenance"]["artifact_digest"] == os.environ["ARTIFACT_DIGEST"]
+          assert facts["build_provenance"]["attestation_verified"] is False
           assert certificate["decision"] == "ACCEPT"
           assert certificate["evidence_root"] == os.environ["EVIDENCE_ROOT"]
           assert certificate["clearance_root"] == os.environ["CLEARANCE_ROOT"]
@@ -233,20 +240,18 @@ jobs:
               "profile_id": "proofpath.github.evidence-collector-conformance.v0.1",
               "source_sha": os.environ["SOURCE_SHA"],
               "workflow_subject_sha": os.environ["WORKFLOW_SUBJECT_SHA"],
+              "workflow_identity": os.environ["WORKFLOW_IDENTITY"],
               "artifact_run_id": int(os.environ["ARTIFACT_RUN_ID"]),
               "artifact_id": int(os.environ["ARTIFACT_ID"]),
               "artifact_digest": os.environ["ARTIFACT_DIGEST"],
+              "collector_root": os.environ["COLLECTOR_ROOT"],
               "evidence_root": os.environ["EVIDENCE_ROOT"],
               "clearance_root": os.environ["CLEARANCE_ROOT"],
               "decision": "ACCEPT",
-              "collector_report_sha256": hashlib.sha256(
-                  (directory / "collector-report.json").read_bytes()
-              ).hexdigest(),
-              "trusted_facts_sha256": hashlib.sha256(
-                  (directory / "trusted-facts.json").read_bytes()
-              ).hexdigest(),
+              "collector_report_sha256": hashlib.sha256(report_path.read_bytes()).hexdigest(),
+              "trusted_facts_sha256": hashlib.sha256(facts_path.read_bytes()).hexdigest(),
               "collector_verified_authority": False,
-              "collector_verified_attestation_claim": False,
+              "collector_verified_attestation_cryptography": False,
               "deployment_performed": False,
               "authority_granted": False,
           }
@@ -265,6 +270,7 @@ jobs:
             deploy-guard/github-collector/action.yml
             deploy-guard/github-collector/collector.py
             schemas/proofpath-github-evidence-collector-config-v0.1.schema.json
+            schemas/proofpath-github-attestation-result-v0.1.schema.json
             examples/deploy-guard/github-collector-consumer-workflow.yml
             docs/PROOFPATH_GITHUB_EVIDENCE_COLLECTOR.md
           if-no-files-found: error
