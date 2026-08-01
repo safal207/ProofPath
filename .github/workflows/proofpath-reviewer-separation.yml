@@ -1,0 +1,174 @@
+name: ProofPath Reviewer Separation
+
+on:
+  pull_request:
+    paths:
+      - "control-cloud/reviewers/**"
+      - "control-cloud/ingestion/separated_ingest.py"
+      - "schemas/proofpath-control-cloud-reviewer-*.json"
+      - "schemas/proofpath-control-cloud-separated-ingest-receipt-v0.1.schema.json"
+      - "examples/control-cloud/reviewer-identity-registry.json"
+      - "tests/test_reviewer_separation.py"
+      - "tests/test_separated_ingestion.py"
+      - "tests/test_reviewer_separation_security.py"
+      - ".github/workflows/proofpath-reviewer-separation.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  focused-tests:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Validate schemas and focused tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile control-cloud/reviewers/verify_reviewer_separation.py control-cloud/ingestion/separated_ingest.py
+          python3 -m json.tool schemas/proofpath-control-cloud-reviewer-identity-registry-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-reviewer-approval-bundle-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-reviewer-separation-decision-v0.1.schema.json >/dev/null
+          python3 -m json.tool schemas/proofpath-control-cloud-separated-ingest-receipt-v0.1.schema.json >/dev/null
+          python3 -m unittest tests.test_reviewer_separation tests.test_separated_ingestion tests.test_reviewer_separation_security -v
+
+  reviewer-conformance:
+    needs: focused-tests
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Evaluate independent reviewer identities
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/reviewer-separation
+          python3 - <<'PY'
+          import copy, json
+          from pathlib import Path
+          from tests.test_reviewer_separation import reviewers, governance_decision, identity_registry, approval_bundle, NOW
+          from tests.test_separated_ingestion import separated
+
+          root = Path("artifacts/reviewer-separation")
+          gov = governance_decision()
+          registry = identity_registry()
+          bundle = approval_bundle(gov, registry)
+          accepted = reviewers.evaluate(governance_decision=gov, registry=registry, bundle=bundle, observed_at=NOW)
+          assert accepted["decision"] == "ACCEPT"
+          assert accepted["verified_reviewer_count"] == 2
+          assert accepted["verified_organization_count"] == 2
+          assert accepted["author_separation_verified"] is True
+          assert accepted["control_cluster_separation_verified"] is True
+          assert accepted["payment_cluster_separation_verified"] is True
+          root.joinpath("reviewer-decision.json").write_bytes(reviewers.canonical_bytes(accepted) + b"\n")
+          root.joinpath("identity-registry.json").write_bytes(reviewers.canonical_bytes(registry) + b"\n")
+          root.joinpath("approval-bundle.json").write_bytes(reviewers.canonical_bytes(bundle) + b"\n")
+
+          def evaluate_case(name, mutate, expected_reason):
+              case_registry = copy.deepcopy(registry)
+              case_bundle = copy.deepcopy(bundle)
+              mutate(case_registry, case_bundle)
+              result = reviewers.evaluate(governance_decision=gov, registry=case_registry, bundle=case_bundle, observed_at=NOW)
+              assert result["decision"] == "BLOCK"
+              assert result["reason_code"] == expected_reason
+              root.joinpath(name).write_bytes(reviewers.canonical_bytes(result) + b"\n")
+
+          evaluate_case("self-approval.json", lambda r, b: b.update(author_identity_subject=r["reviewers"][0]["identity_subject"]), "author_self_approval")
+          evaluate_case("control-collision.json", lambda r, b: r["reviewers"][1].update(control_cluster_id=r["reviewers"][0]["control_cluster_id"]), "reviewer_control_cluster_collision")
+          def suspend(r, b):
+              r["suspensions"].append({"suspension_id":"suspend-a","reviewer_id":"reviewer-a","effective_at":NOW,"reason_code":"identity-change","approved_by":["security-admin"],"authority_granted":False})
+          evaluate_case("suspended-reviewer.json", suspend, "reviewer_identity_suspended")
+
+          proposal = reviewers.check_identity_change(
+              registry=registry,
+              reviewer_id="reviewer-a",
+              observed_identity_subject=registry["reviewers"][0]["identity_subject"],
+              observed_organization_id="changed-org",
+              observed_control_cluster_id=registry["reviewers"][0]["control_cluster_id"],
+              observed_payment_cluster_id=registry["reviewers"][0]["payment_cluster_id"],
+              observed_identity_evidence_digest=registry["reviewers"][0]["identity_evidence_digest"],
+              observed_at=NOW,
+          )
+          assert proposal["decision"] == "PROPOSE_SUSPEND"
+          assert proposal["repository_write_performed"] is False
+          root.joinpath("suspension-proposal.json").write_bytes(reviewers.canonical_bytes(proposal) + b"\n")
+
+          receipt = {
+              "profile_id": separated.RECEIPT_PROFILE,
+              "status": "ACCEPTED_WITH_PROVENANCE_GOVERNANCE_AND_REVIEWER_SEPARATION",
+              "tenant_id": "proofpath-demo", "request_id": "req-reviewer-reference", "action_id": "act-reviewer-reference", "decision": "ACCEPT",
+              "content_digest": "sha256:" + "1" * 64, "admitted_event_root": "sha256:" + "2" * 64,
+              "admission_result_root": gov["admission_result_root"], "governance_decision_root": gov["decision_root"],
+              "reviewer_separation_decision_root": accepted["decision_root"], "trust_record_root": gov["trust_record_root"],
+              "identity_registry_digest": accepted["identity_registry_digest"], "approval_bundle_digest": accepted["approval_bundle_digest"],
+              "verified_reviewer_count": accepted["verified_reviewer_count"], "verified_organization_count": accepted["verified_organization_count"],
+              "subject_digest": "sha256:" + "3" * 64, "stored_at": NOW, "governed_receipt_root": "sha256:" + "4" * 64,
+              "provenance_cryptographically_verified_by_api": True, "governance_trust_verified_by_api": True,
+              "reviewer_identity_verified_by_api": True, "separation_of_duties_verified_by_api": True,
+              "financial_status": "RECORDED_NOT_PAYABLE", "payments_executed": False, "insurance_provided": False,
+              "deployment_performed": False, "authority_granted": False, "repository_write_performed": False, "receipt_root": None,
+          }
+          receipt["receipt_root"] = reviewers.domain_hash(separated.RECEIPT_DOMAIN, separated._receipt_without_root(receipt))
+          separated.validate_receipt(receipt)
+          root.joinpath("separated-receipt.json").write_bytes(reviewers.canonical_bytes(receipt) + b"\n")
+          PY
+      - name: Append only after triple verification
+        run: |
+          set -euo pipefail
+          python3 -m unittest tests.test_separated_ingestion.SeparatedIngestionTests.test_reviewer_gate_precedes_append -v
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("artifacts/reviewer-separation")
+          decision = json.loads(root.joinpath("reviewer-decision.json").read_text())
+          receipt = json.loads(root.joinpath("separated-receipt.json").read_text())
+          assert decision["separation_of_duties_verified"] is True
+          assert receipt["provenance_cryptographically_verified_by_api"] is True
+          assert receipt["governance_trust_verified_by_api"] is True
+          assert receipt["reviewer_identity_verified_by_api"] is True
+          assert receipt["separation_of_duties_verified_by_api"] is True
+          assert receipt["payments_executed"] is False
+          assert receipt["authority_granted"] is False
+          PY
+      - name: Assert negative reason codes
+        run: |
+          set -euo pipefail
+          grep -q 'author_self_approval' artifacts/reviewer-separation/self-approval.json
+          grep -q 'reviewer_control_cluster_collision' artifacts/reviewer-separation/control-collision.json
+          grep -q 'reviewer_identity_suspended' artifacts/reviewer-separation/suspended-reviewer.json
+          grep -q 'PROPOSE_SUSPEND' artifacts/reviewer-separation/suspension-proposal.json
+      - name: Attest exact reviewer decision
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: artifacts/reviewer-separation/reviewer-decision.json
+      - name: Attest exact separated receipt
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: artifacts/reviewer-separation/separated-receipt.json
+      - name: Upload reviewer separation evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: proofpath-reviewer-separation-${{ github.run_id }}
+          path: |
+            artifacts/reviewer-separation/reviewer-decision.json
+            artifacts/reviewer-separation/separated-receipt.json
+            artifacts/reviewer-separation/self-approval.json
+            artifacts/reviewer-separation/control-collision.json
+            artifacts/reviewer-separation/suspended-reviewer.json
+            artifacts/reviewer-separation/suspension-proposal.json
+            control-cloud/reviewers/README.md
+          if-no-files-found: error
+          retention-days: 14
