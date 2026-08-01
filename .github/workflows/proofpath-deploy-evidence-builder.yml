@@ -9,6 +9,7 @@ on:
       - "scripts/verify_proofpath_deploy_guard.py"
       - "schemas/proofpath-deploy-evidence-inputs-v0.1.schema.json"
       - "examples/deploy-guard/trusted-facts.accept.json"
+      - "examples/deploy-guard/trusted-facts.hold-missing-approvals.json"
       - "examples/deploy-guard/evidence-builder-consumer-workflow.yml"
       - "examples/deploy-guard/deploy-policy.json"
       - "tests/test_deploy_evidence_builder.py"
@@ -42,7 +43,7 @@ jobs:
             tests.test_deploy_evidence_builder_security \
             -v
 
-      - name: Build deployment evidence through the local Action
+      - name: Build complete deployment evidence through the local Action
         id: evidence
         uses: ./deploy-guard/evidence-builder
         with:
@@ -57,7 +58,7 @@ jobs:
           evaluated-at: 2026-08-01T18:00:00Z
           output: artifacts/evidence-builder/deploy-action-evidence.json
 
-      - name: Evaluate generated evidence through Deploy Guard
+      - name: Evaluate complete evidence through Deploy Guard
         id: guard
         uses: ./deploy-guard
         with:
@@ -65,6 +66,30 @@ jobs:
           evidence: ${{ steps.evidence.outputs.evidence-path }}
           certificate: artifacts/evidence-builder/deploy-clearance.json
           mode: enforce
+
+      - name: Build incomplete deployment evidence without inventing approvals
+        id: hold_evidence
+        uses: ./deploy-guard/evidence-builder
+        with:
+          policy: examples/deploy-guard/deploy-policy.json
+          trusted-facts: examples/deploy-guard/trusted-facts.hold-missing-approvals.json
+          artifact-digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          environment: production
+          agent-id: agent/cloud-deployer-01
+          repository: safal207/ProofPath
+          source-branch: main
+          source-sha: 4444444444444444444444444444444444444444
+          evaluated-at: 2026-08-01T18:00:00Z
+          output: artifacts/evidence-builder/deploy-action-evidence.hold.json
+
+      - name: Evaluate incomplete evidence as HOLD
+        id: hold_guard
+        uses: ./deploy-guard
+        with:
+          policy: examples/deploy-guard/deploy-policy.json
+          evidence: ${{ steps.hold_evidence.outputs.evidence-path }}
+          certificate: artifacts/evidence-builder/deploy-clearance.hold.json
+          mode: observe
 
       - name: Verify builder and guard output binding
         env:
@@ -74,6 +99,10 @@ jobs:
           GUARD_DECISION: ${{ steps.guard.outputs.decision }}
           GUARD_EVIDENCE_ROOT: ${{ steps.guard.outputs.evidence-root }}
           GUARD_AUTHORITY_GRANTED: ${{ steps.guard.outputs.authority-granted }}
+          HOLD_BUILDER_ROOT: ${{ steps.hold_evidence.outputs.evidence-root }}
+          HOLD_GUARD_ROOT: ${{ steps.hold_guard.outputs.evidence-root }}
+          HOLD_DECISION: ${{ steps.hold_guard.outputs.decision }}
+          HOLD_REASON: ${{ steps.hold_guard.outputs.primary-reason-code }}
         run: |
           set -euo pipefail
           test "$BUILDER_ROOT" = "$GUARD_EVIDENCE_ROOT"
@@ -81,6 +110,9 @@ jobs:
           test -n "$BUILDER_ACTION_ID"
           test "$GUARD_DECISION" = "ACCEPT"
           test "$GUARD_AUTHORITY_GRANTED" = "false"
+          test "$HOLD_BUILDER_ROOT" = "$HOLD_GUARD_ROOT"
+          test "$HOLD_DECISION" = "HOLD"
+          test "$HOLD_REASON" = "DEPLOY_APPROVAL_COUNT_INSUFFICIENT"
 
       - name: Build evidence-builder conformance manifest
         env:
@@ -89,6 +121,8 @@ jobs:
           EVIDENCE_ROOT: ${{ steps.evidence.outputs.evidence-root }}
           ACTION_ID: ${{ steps.evidence.outputs.action-id }}
           CLEARANCE_ROOT: ${{ steps.guard.outputs.clearance-root }}
+          HOLD_EVIDENCE_ROOT: ${{ steps.hold_evidence.outputs.evidence-root }}
+          HOLD_CLEARANCE_ROOT: ${{ steps.hold_guard.outputs.clearance-root }}
         run: |
           python3 - <<'PY'
           import hashlib
@@ -98,23 +132,46 @@ jobs:
 
           evidence = Path("artifacts/evidence-builder/deploy-action-evidence.json")
           certificate = Path("artifacts/evidence-builder/deploy-clearance.json")
+          hold_evidence = Path("artifacts/evidence-builder/deploy-action-evidence.hold.json")
+          hold_certificate = Path("artifacts/evidence-builder/deploy-clearance.hold.json")
           evidence_value = json.loads(evidence.read_text(encoding="utf-8"))
           certificate_value = json.loads(certificate.read_text(encoding="utf-8"))
+          hold_evidence_value = json.loads(hold_evidence.read_text(encoding="utf-8"))
+          hold_certificate_value = json.loads(hold_certificate.read_text(encoding="utf-8"))
           assert certificate_value["decision"] == "ACCEPT"
           assert certificate_value["evidence_root"] == os.environ["EVIDENCE_ROOT"]
           assert certificate_value["clearance_root"] == os.environ["CLEARANCE_ROOT"]
           assert certificate_value["authority_granted"] is False
           assert evidence_value["execution"]["performed"] is False
+          assert hold_certificate_value["decision"] == "HOLD"
+          assert hold_certificate_value["primary_reason_code"] == "DEPLOY_APPROVAL_COUNT_INSUFFICIENT"
+          assert hold_certificate_value["evidence_root"] == os.environ["HOLD_EVIDENCE_ROOT"]
+          assert hold_certificate_value["clearance_root"] == os.environ["HOLD_CLEARANCE_ROOT"]
+          assert hold_evidence_value["approvals"] == []
           manifest = {
               "profile_id": "proofpath.deploy.evidence-builder-conformance.v0.1",
               "source_sha": os.environ["SOURCE_SHA"],
               "workflow_subject_sha": os.environ["WORKFLOW_SUBJECT_SHA"],
               "action_id": os.environ["ACTION_ID"],
-              "evidence_root": os.environ["EVIDENCE_ROOT"],
-              "clearance_root": os.environ["CLEARANCE_ROOT"],
-              "decision": "ACCEPT",
-              "evidence_sha256": hashlib.sha256(evidence.read_bytes()).hexdigest(),
-              "certificate_sha256": hashlib.sha256(certificate.read_bytes()).hexdigest(),
+              "scenarios": [
+                  {
+                      "name": "complete",
+                      "decision": "ACCEPT",
+                      "evidence_root": os.environ["EVIDENCE_ROOT"],
+                      "clearance_root": os.environ["CLEARANCE_ROOT"],
+                      "evidence_sha256": hashlib.sha256(evidence.read_bytes()).hexdigest(),
+                      "certificate_sha256": hashlib.sha256(certificate.read_bytes()).hexdigest(),
+                  },
+                  {
+                      "name": "missing-approvals",
+                      "decision": "HOLD",
+                      "primary_reason_code": "DEPLOY_APPROVAL_COUNT_INSUFFICIENT",
+                      "evidence_root": os.environ["HOLD_EVIDENCE_ROOT"],
+                      "clearance_root": os.environ["HOLD_CLEARANCE_ROOT"],
+                      "evidence_sha256": hashlib.sha256(hold_evidence.read_bytes()).hexdigest(),
+                      "certificate_sha256": hashlib.sha256(hold_certificate.read_bytes()).hexdigest(),
+                  },
+              ],
               "builder_verified_upstream_facts": False,
               "deployment_performed": False,
               "authority_granted": False,
@@ -136,6 +193,7 @@ jobs:
             deploy-guard/evidence-builder/build_evidence.py
             schemas/proofpath-deploy-evidence-inputs-v0.1.schema.json
             examples/deploy-guard/trusted-facts.accept.json
+            examples/deploy-guard/trusted-facts.hold-missing-approvals.json
             examples/deploy-guard/evidence-builder-consumer-workflow.yml
             docs/PROOFPATH_DEPLOY_EVIDENCE_BUILDER.md
           if-no-files-found: error
