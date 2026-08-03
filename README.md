@@ -1,12 +1,12 @@
 # ProofPath
 
-```markdown
 ## NGI TALER reviewer path
 
 ProofPath Agent Payment Guard was submitted to NGI TALER as an open-source auxiliary layer for privacy-preserving AI-agent payment authorization.
 
 Start here:
 
+- [`docs/GRANT_EVIDENCE_INDEX.md`](docs/GRANT_EVIDENCE_INDEX.md)
 - [`docs/NGI_TALER_REVIEWER_PATH.md`](docs/NGI_TALER_REVIEWER_PATH.md)
 - [`docs/TALER_ALIGNMENT.md`](docs/TALER_ALIGNMENT.md)
 - [`docs/AGENT_PAYMENT_GUARD_DEMO.md`](docs/AGENT_PAYMENT_GUARD_DEMO.md)
@@ -29,8 +29,6 @@ Fund: NGI TALER
 Requested amount: EUR 50,000
 Correct repository: https://github.com/safal207/ProofPath
 ```
-```
-
 
 **Verifiable intent for every critical action.**
 
