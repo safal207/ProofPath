@@ -49,47 +49,15 @@ chmod 600 "$TMP_RECEIPT"
 mv "$TMP_RECEIPT" "$RECEIPT_PATH"
 trap cleanup EXIT INT TERM
 
-python3 - "$RECEIPT_PATH" <<'PY'
-from __future__ import annotations
-
-import json
-import sys
-from pathlib import Path
-
-path = Path(sys.argv[1])
-with path.open("r", encoding="utf-8") as handle:
-    payload = json.load(handle)
-
-receipt = payload["receipt"]
-executions = receipt.get("executions", [])
-request_ids = [
-    item.get("provider_request_id")
-    for item in executions
-    if item.get("provider_request_id")
-]
-markup = [item.get("reasoning_markup", "none") for item in executions]
-origins = sorted({item.get("endpoint_origin") for item in executions if item.get("endpoint_origin")})
-
-summary = {
-    "claim_id": receipt.get("claim_id"),
-    "verdict": receipt.get("verdict"),
-    "requested_replicas": receipt.get("requested_replicas"),
-    "successful_replicas": receipt.get("successful_replicas"),
-    "agreement_score": receipt.get("agreement_score"),
-    "provider_request_ids": request_ids,
-    "reasoning_markup": markup,
-    "endpoint_origins": origins,
-    "receipt_hash": receipt.get("receipt_hash"),
-    "receipt_path": str(path),
-}
-print(json.dumps(summary, indent=2, ensure_ascii=False))
-
-if receipt.get("successful_replicas") != receipt.get("requested_replicas"):
-    raise SystemExit(3)
-if receipt.get("verdict") != "CONSENSUS":
-    raise SystemExit(4)
-PY
+set +e
+python3 "$REPO_ROOT/scripts/gonka_pilot_summary.py" "$RECEIPT_PATH"
+SUMMARY_STATUS=$?
+set -e
 
 echo
 echo "Pilot receipt saved to: $RECEIPT_PATH"
 echo "The receipt contains hashes and metadata, not the API key or reasoning text."
+
+if [[ "$SUMMARY_STATUS" -ne 0 ]]; then
+  exit "$SUMMARY_STATUS"
+fi
