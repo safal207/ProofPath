@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """OpenAI-compatible Gonka execution adapter for ProofPath Compute Witness.
 
-The adapter is intentionally dependency-free and conservative:
+The adapter is dependency-free and conservative:
 
 - credentials are read only from environment variables;
 - HTTPS is required except for localhost development endpoints;
 - identical requests can be executed multiple times;
 - primary failures may use an explicitly configured fallback;
-- local receipts contain hashes and execution metadata, not API keys or prompts;
+- receipts contain hashes and execution metadata, not API keys or prompts;
+- provider reasoning markup is excluded from final-output agreement scoring;
 - the receipt does not claim GPU identity, on-chain settlement, or zkML proof.
 """
 
@@ -32,6 +33,20 @@ from typing import Any, Callable, Protocol
 
 SHA256_PREFIX = "sha256:"
 WHITESPACE_RE = re.compile(r"\s+")
+THINK_BLOCK_RE = re.compile(
+    r"<think(?:\s[^>]*)?>.*?</think\s*>",
+    flags=re.IGNORECASE | re.DOTALL,
+)
+THINK_OPEN_RE = re.compile(r"<think(?:\s[^>]*)?>", flags=re.IGNORECASE)
+THINK_CLOSE_RE = re.compile(r"</think\s*>", flags=re.IGNORECASE)
+
+
+class ReasoningMarkupError(ValueError):
+    """Raised when provider reasoning markup cannot be safely separated."""
+
+    def __init__(self, message: str, status: str) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 class Transport(Protocol):
@@ -84,13 +99,6 @@ class GonkaConfig:
                 model=fallback_model,
             )
 
-        replicas = _env_int("GONKA_REPLICAS", 3, minimum=1, maximum=10)
-        timeout_seconds = _env_float(
-            "GONKA_TIMEOUT_SECONDS", 30.0, minimum=0.1, maximum=300.0
-        )
-        agreement_threshold = _env_float(
-            "GONKA_AGREEMENT_THRESHOLD", 0.85, minimum=0.0, maximum=1.0
-        )
         return cls(
             primary=ProviderConfig(
                 name="gonka",
@@ -98,9 +106,13 @@ class GonkaConfig:
                 api_key=api_key,
                 model=model,
             ),
-            replicas=replicas,
-            timeout_seconds=timeout_seconds,
-            agreement_threshold=agreement_threshold,
+            replicas=_env_int("GONKA_REPLICAS", 3, minimum=1, maximum=10),
+            timeout_seconds=_env_float(
+                "GONKA_TIMEOUT_SECONDS", 30.0, minimum=0.1, maximum=300.0
+            ),
+            agreement_threshold=_env_float(
+                "GONKA_AGREEMENT_THRESHOLD", 0.85, minimum=0.0, maximum=1.0
+            ),
             fallback=fallback,
         )
 
@@ -118,10 +130,9 @@ class UrllibTransport:
         payload: dict[str, Any],
         timeout_seconds: float,
     ) -> tuple[int, dict[str, Any], dict[str, str]]:
-        body = canonical_json_bytes(payload)
         request = urllib.request.Request(
             url=url,
-            data=body,
+            data=canonical_json_bytes(payload),
             headers=headers,
             method="POST",
         )
@@ -135,20 +146,23 @@ class UrllibTransport:
                 raw = response.read(self.max_response_bytes + 1)
                 if len(raw) > self.max_response_bytes:
                     raise RuntimeError("provider response exceeded maximum size")
-                decoded = _decode_json_object(raw, url)
-                selected_headers = _selected_response_headers(response.headers)
-                return int(response.status), decoded, selected_headers
+                return (
+                    int(response.status),
+                    _decode_json_object(raw, url),
+                    _selected_response_headers(response.headers),
+                )
         except urllib.error.HTTPError as exc:
             raw = exc.read(self.max_response_bytes + 1)
-            body_obj: dict[str, Any]
             if len(raw) > self.max_response_bytes:
-                body_obj = {"error": "provider response exceeded maximum size"}
+                body: dict[str, Any] = {
+                    "error": "provider response exceeded maximum size"
+                }
             else:
                 try:
-                    body_obj = _decode_json_object(raw, url)
+                    body = _decode_json_object(raw, url)
                 except RuntimeError:
-                    body_obj = {"error": raw.decode("utf-8", errors="replace")[:1000]}
-            return int(exc.code), body_obj, _selected_response_headers(exc.headers)
+                    body = {"error": raw.decode("utf-8", errors="replace")[:1000]}
+            return int(exc.code), body, _selected_response_headers(exc.headers)
         except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
             raise RuntimeError(f"provider request failed: {type(exc).__name__}") from exc
 
@@ -214,7 +228,6 @@ class GonkaComputeWitnessAdapter:
 
         outputs: list[dict[str, Any]] = []
         executions: list[dict[str, Any]] = []
-
         for index in range(replica_count):
             execution_id = f"{run_id}-r{index + 1}"
             result = self._execute_replica(
@@ -285,9 +298,7 @@ class GonkaComputeWitnessAdapter:
             semantic_request=semantic_request,
             fallback_used=False,
         )
-        if primary_result["content"] is not None:
-            return primary_result
-        if self.config.fallback is None:
+        if primary_result["content"] is not None or self.config.fallback is None:
             return primary_result
 
         fallback_result = self._call_provider(
@@ -322,6 +333,7 @@ class GonkaComputeWitnessAdapter:
             "User-Agent": "ProofPath-Gonka-Compute-Witness/0.1",
         }
         started_at = _format_time(self.now())
+
         try:
             status, body, response_headers = self.transport.post_json(
                 endpoint,
@@ -331,23 +343,38 @@ class GonkaComputeWitnessAdapter:
             )
             completed_at = _format_time(self.now())
             if status < 200 or status >= 300:
-                return {
-                    "content": None,
-                    "receipt": _execution_receipt(
-                        execution_id=execution_id,
-                        provider=provider,
-                        status="ERROR",
-                        started_at=started_at,
-                        completed_at=completed_at,
-                        http_status=status,
-                        response_headers=response_headers,
-                        fallback_used=fallback_used,
-                        error=f"provider returned HTTP {status}",
-                    ),
-                }
-            content = _extract_content(body)
+                return self._error_result(
+                    execution_id=execution_id,
+                    provider=provider,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                    fallback_used=fallback_used,
+                    error=f"provider returned HTTP {status}",
+                    http_status=status,
+                    response_headers=response_headers,
+                )
+
             response_hash = sha256_canonical_json(body)
-            output_hash = sha256_text(content)
+            raw_content = _extract_raw_content(body)
+            raw_output_hash = sha256_text(raw_content)
+            try:
+                content, reasoning_markup = extract_final_answer(raw_content)
+            except ReasoningMarkupError as exc:
+                return self._error_result(
+                    execution_id=execution_id,
+                    provider=provider,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                    fallback_used=fallback_used,
+                    error=str(exc),
+                    http_status=status,
+                    response_headers=response_headers,
+                    response_hash=response_hash,
+                    raw_output_hash=raw_output_hash,
+                    reasoning_markup=exc.status,
+                    provider_request_id=_provider_request_id(body, response_headers),
+                )
+
             return {
                 "content": content,
                 "receipt": _execution_receipt(
@@ -360,24 +387,56 @@ class GonkaComputeWitnessAdapter:
                     response_headers=response_headers,
                     fallback_used=fallback_used,
                     response_hash=response_hash,
-                    output_hash=output_hash,
+                    raw_output_hash=raw_output_hash,
+                    output_hash=sha256_text(content),
+                    reasoning_markup=reasoning_markup,
                     provider_request_id=_provider_request_id(body, response_headers),
                 ),
             }
         except (RuntimeError, ValueError) as exc:
-            completed_at = _format_time(self.now())
-            return {
-                "content": None,
-                "receipt": _execution_receipt(
-                    execution_id=execution_id,
-                    provider=provider,
-                    status="ERROR",
-                    started_at=started_at,
-                    completed_at=completed_at,
-                    fallback_used=fallback_used,
-                    error=str(exc),
-                ),
-            }
+            return self._error_result(
+                execution_id=execution_id,
+                provider=provider,
+                started_at=started_at,
+                completed_at=_format_time(self.now()),
+                fallback_used=fallback_used,
+                error=str(exc),
+            )
+
+    @staticmethod
+    def _error_result(
+        *,
+        execution_id: str,
+        provider: ProviderConfig,
+        started_at: str,
+        completed_at: str,
+        fallback_used: bool,
+        error: str,
+        http_status: int | None = None,
+        response_headers: dict[str, str] | None = None,
+        response_hash: str | None = None,
+        raw_output_hash: str | None = None,
+        reasoning_markup: str | None = None,
+        provider_request_id: str | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "content": None,
+            "receipt": _execution_receipt(
+                execution_id=execution_id,
+                provider=provider,
+                status="ERROR",
+                started_at=started_at,
+                completed_at=completed_at,
+                fallback_used=fallback_used,
+                http_status=http_status,
+                response_headers=response_headers,
+                response_hash=response_hash,
+                raw_output_hash=raw_output_hash,
+                reasoning_markup=reasoning_markup,
+                provider_request_id=provider_request_id,
+                error=error,
+            ),
+        }
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -415,6 +474,54 @@ def compute_agreement_score(outputs: list[str]) -> float:
     return round(sum(scores) / len(scores), 6)
 
 
+def extract_final_answer(raw_content: str) -> tuple[str, str]:
+    """Return final answer and non-sensitive reasoning-markup status.
+
+    Complete ``<think>...</think>`` blocks are removed before agreement scoring.
+    Any unclosed or malformed reasoning markup is rejected instead of being
+    mistaken for a final answer.
+    """
+
+    text = raw_content.strip()
+    if not text:
+        raise ValueError("provider response has no text content")
+
+    has_open = THINK_OPEN_RE.search(text) is not None
+    has_close = THINK_CLOSE_RE.search(text) is not None
+    if not has_open and not has_close:
+        return text, "none"
+    if has_close and not has_open:
+        raise ReasoningMarkupError(
+            "provider response contains closing </think> tag without opening tag",
+            "malformed",
+        )
+
+    without_closed_blocks, block_count = THINK_BLOCK_RE.subn("", text)
+    if THINK_OPEN_RE.search(without_closed_blocks) is not None:
+        raise ReasoningMarkupError(
+            "provider response contains unclosed <think> reasoning block",
+            "unclosed",
+        )
+    if THINK_CLOSE_RE.search(without_closed_blocks) is not None:
+        raise ReasoningMarkupError(
+            "provider response contains malformed </think> reasoning markup",
+            "malformed",
+        )
+    if block_count == 0:
+        raise ReasoningMarkupError(
+            "provider response contains malformed <think> reasoning markup",
+            "malformed",
+        )
+
+    final_answer = without_closed_blocks.strip()
+    if not final_answer:
+        raise ReasoningMarkupError(
+            "provider response contains reasoning but no final answer",
+            "closed-no-final",
+        )
+    return final_answer, "closed"
+
+
 def _execution_receipt(
     *,
     execution_id: str,
@@ -426,7 +533,9 @@ def _execution_receipt(
     http_status: int | None = None,
     response_headers: dict[str, str] | None = None,
     response_hash: str | None = None,
+    raw_output_hash: str | None = None,
     output_hash: str | None = None,
+    reasoning_markup: str | None = None,
     provider_request_id: str | None = None,
     error: str | None = None,
 ) -> dict[str, Any]:
@@ -442,7 +551,9 @@ def _execution_receipt(
         "fallback_used": fallback_used,
         "provider_request_id": provider_request_id,
         "response_hash": response_hash,
+        "raw_output_hash": raw_output_hash,
         "output_hash": output_hash,
+        "reasoning_markup": reasoning_markup,
         "response_headers": response_headers or {},
         "error": error,
     }
@@ -464,7 +575,7 @@ def _derive_verdict(
     return "DIVERGENT"
 
 
-def _extract_content(body: dict[str, Any]) -> str:
+def _extract_raw_content(body: dict[str, Any]) -> str:
     choices = body.get("choices")
     if not isinstance(choices, list) or not choices:
         raise ValueError("provider response has no choices")
@@ -473,9 +584,7 @@ def _extract_content(body: dict[str, Any]) -> str:
         raise ValueError("provider response choice must be an object")
 
     message = first.get("message")
-    content: Any = None
-    if isinstance(message, dict):
-        content = message.get("content")
+    content: Any = message.get("content") if isinstance(message, dict) else None
     if content is None:
         content = first.get("text")
     if isinstance(content, list):
@@ -533,8 +642,11 @@ def _validate_provider(provider: ProviderConfig) -> None:
     if parsed.scheme not in {"https", "http"} or not parsed.netloc:
         raise ValueError(f"{provider.name} base URL must be an absolute HTTP(S) URL")
     hostname = (parsed.hostname or "").lower()
-    local_hosts = {"localhost", "127.0.0.1", "::1"}
-    if parsed.scheme != "https" and hostname not in local_hosts:
+    if parsed.scheme != "https" and hostname not in {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+    }:
         raise ValueError(
             f"{provider.name} base URL must use HTTPS except for localhost"
         )
@@ -614,7 +726,7 @@ def main() -> int:
     parser.add_argument(
         "--include-outputs",
         action="store_true",
-        help="Include raw model outputs in stdout. Receipts never contain them.",
+        help="Include final model outputs in stdout. Receipts never contain them.",
     )
     args = parser.parse_args()
 
