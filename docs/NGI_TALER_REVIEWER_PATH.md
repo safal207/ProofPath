@@ -4,13 +4,23 @@
 
 **ProofPath Agent Payment Guard**
 
-Repository: https://github.com/safal207/ProofPath
+Application: `2026-08-00b`
+
+Fund: NGI TALER
+
+Requested amount: EUR 50,000
+
+Canonical repository: https://github.com/safal207/ProofPath
+
+> Repository correction: the submitted application may reference `https://github.com/ProofPath/AgentPaymentGuard`, which may return `404`. The canonical applicant-controlled repository is `https://github.com/safal207/ProofPath`. This changes discoverability only, not project scope.
 
 ## One-sentence summary
 
 ProofPath Agent Payment Guard is an open-source pre-execution authorization and evidence layer for AI-agent payment proposals.
 
-It treats model output as a proposal, not as payment authorization.
+```text
+Model output is a proposal, not authorization.
+```
 
 ## Why this matters
 
@@ -20,7 +30,7 @@ Traditional payment infrastructure can verify credentials, channels, merchants, 
 
 It does not answer a new agentic-systems question:
 
-> Was this specific AI-proposed payment action authorized by a human intent, within policy, fresh, non-replayed, and auditable before execution?
+> Was this specific AI-proposed payment action authorized by human intent, within policy, fresh, non-replayed, and auditable before execution?
 
 ProofPath focuses on this gap.
 
@@ -28,28 +38,34 @@ ProofPath focuses on this gap.
 
 NGI TALER supports free and open-source work around privacy-preserving digital payments.
 
-ProofPath aligns with that goal by adding a small reusable guard layer around payment proposals:
+ProofPath contributes an auxiliary guard layer around payment proposals:
 
 - signed human intent before execution;
 - policy checks before a payment is allowed;
-- replay protection;
+- freshness and replay protection;
 - privacy-aware audit evidence;
 - portable evidence bundles;
 - open-source implementation and documentation.
 
-ProofPath does not replace GNU Taler.
+ProofPath does not replace GNU Taler and does not currently claim a production GNU Taler integration.
 
-It is designed as an auxiliary authorization and evidence component that can later integrate with GNU Taler-style payment flows and other privacy-preserving payment rails.
+The intended boundary is:
+
+```text
+AI agent proposes payment
+  -> ProofPath validates intent, scope, policy, freshness, and replay state
+  -> ProofPath emits ACCEPT / HOLD / BLOCK
+  -> ACCEPT may be passed to a GNU Taler adapter or another payment rail
+```
 
 ## Reviewer quick path
 
-Start here:
-
-1. Read `docs/TALER_ALIGNMENT.md`.
-2. Run or inspect `examples/agent-payment-guard/run_e2e_evidence_demo.sh`.
-3. Read `docs/AGENT_PAYMENT_GUARD_DEMO.md`.
-4. Inspect the API contract in `openapi/proofpath-guard-service-v0.1.yaml`.
-5. Read `docs/BUDGET_AND_MILESTONES.md`.
+1. Read [`GRANT_EVIDENCE_INDEX.md`](GRANT_EVIDENCE_INDEX.md).
+2. Read this file.
+3. Read [`TALER_ALIGNMENT.md`](TALER_ALIGNMENT.md).
+4. Run the end-to-end and mock-rail demos.
+5. Inspect the API contract in [`../openapi/proofpath-guard-service-v0.1.yaml`](../openapi/proofpath-guard-service-v0.1.yaml).
+6. Read [`BUDGET_AND_MILESTONES.md`](BUDGET_AND_MILESTONES.md).
 
 ## Current project status
 
@@ -57,9 +73,10 @@ The current prototype demonstrates:
 
 - payment proposal evaluation;
 - signed intent envelope checks;
-- asset and recipient policy checks;
-- budget and scope checks;
-- replay detection through persistent nonce state;
+- recipient, asset, budget, purpose, and scope policy checks;
+- freshness and expiry checks;
+- persistent nonce replay protection;
+- deterministic `ACCEPT`, `HOLD`, and `BLOCK` decisions;
 - hash-chained audit logging;
 - evidence export;
 - offline evidence verification;
@@ -68,43 +85,17 @@ The current prototype demonstrates:
 Current non-claims:
 
 - no real wallet custody;
-- no private key management;
-- no production GNU Taler integration yet;
+- no private-key management;
+- no production GNU Taler integration;
 - no regulatory compliance claim;
 - no certified security audit;
-- no production-grade cryptography claim unless explicitly implemented and reviewed.
+- no claim that audit evidence proves external real-world truth.
 
-## Target outcome of the grant
-
-The grant will turn the current prototype into a cleaner open-source payment guard component with:
-
-- a stable proposal schema;
-- a stable signed intent envelope format;
-- a policy engine suitable for AI-agent payment workflows;
-- portable evidence bundles;
-- a command-line verifier;
-- integration documentation for privacy-preserving payment systems;
-- a reference path toward GNU Taler-compatible integration;
-- public test fixtures and reproducible demos.
-
-## Success criteria
-
-A reviewer or developer should be able to:
-
-- run a deterministic demo locally;
-- observe `ACCEPT`, `HOLD`, and `BLOCK` decisions;
-- verify that a replayed payment intent is blocked;
-- export an evidence bundle;
-- verify that evidence offline;
-- understand how the design could integrate with GNU Taler-style flows;
-- reuse the schemas and guard logic in another open-source payment application.
-
-## Suggested reviewer command path
+## Reviewer command path
 
 ```bash
 git clone https://github.com/safal207/ProofPath.git
 cd ProofPath
-
 bash examples/agent-payment-guard/run_demo_check.sh
 bash examples/agent-payment-guard/run_service_check.sh
 bash examples/agent-payment-guard/run_e2e_evidence_demo.sh
@@ -118,18 +109,44 @@ valid signed intent        -> ACCEPT
 same signed intent replay  -> BLOCK / INTENT_REPLAYED
 policy violation           -> HOLD or BLOCK
 accepted proposal          -> reaches mock rail
-blocked proposal           -> never reaches mock rail
+blocked or held proposal   -> never reaches mock rail
 evidence export            -> portable bundle
 offline verification       -> OK
+tampered evidence          -> verification failure
 ```
+
+## Target outcome of the grant
+
+The grant will turn the reviewer-grade prototype into a cleaner open-source payment guard component with:
+
+- stable payment proposal schemas;
+- stable signed-intent envelope profiles;
+- hardened policy and replay semantics;
+- privacy-minimised evidence bundles;
+- command-line evaluation, export, and verification;
+- deterministic GNU Taler-oriented adapter fixtures and integration notes;
+- public test fixtures, threat model, and reproducible demos;
+- external security and ecosystem feedback.
+
+## Success criteria
+
+A reviewer or developer should be able to:
+
+- run a deterministic demo locally;
+- observe `ACCEPT`, `HOLD`, and `BLOCK` decisions;
+- verify that a replayed intent is blocked, including after restart;
+- prove that blocked and held proposals never reach the mock rail;
+- export an evidence bundle;
+- verify the evidence offline;
+- detect tampered evidence;
+- identify the exact integration boundary for a GNU Taler adapter;
+- understand what the guard proves and what it does not prove.
 
 ## Grant proposal reference
 
-Submitted application:
-
 ```text
-Application 2026-08-00b — ProofPath Agent Payment Guard
+Application: 2026-08-00b
 Fund: NGI TALER
 Requested amount: EUR 50,000
-Correct repository: https://github.com/safal207/ProofPath
+Canonical repository: https://github.com/safal207/ProofPath
 ```
