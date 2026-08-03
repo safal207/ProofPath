@@ -5,14 +5,17 @@ on:
     paths:
       - "examples/compute-witness/gonka_adapter.py"
       - "examples/compute-witness/gonka.env.example"
+      - "examples/compute-witness/run_dahl_live_pilot.sh"
       - "scripts/test_gonka_adapter.py"
       - "docs/GONKA_COMPUTE_WITNESS_PILOT.md"
+      - "docs/DAHL_THREE_REPLICA_PILOT.md"
       - ".github/workflows/gonka-adapter-tests.yml"
   push:
     branches:
       - main
     paths:
       - "examples/compute-witness/gonka_adapter.py"
+      - "examples/compute-witness/run_dahl_live_pilot.sh"
       - "scripts/test_gonka_adapter.py"
       - ".github/workflows/gonka-adapter-tests.yml"
 
@@ -28,5 +31,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Validate live pilot shell syntax
+        run: bash -n examples/compute-witness/run_dahl_live_pilot.sh
+      - name: Ensure pilot runner contains no embedded secret
+        run: |
+          if grep -En 'sk-[A-Za-z0-9_-]{12,}|Bearer[[:space:]]+[A-Za-z0-9_-]{12,}' examples/compute-witness/run_dahl_live_pilot.sh; then
+            echo "embedded credential-like value detected" >&2
+            exit 1
+          fi
       - name: Run dependency-free adapter tests
         run: python3 scripts/test_gonka_adapter.py
