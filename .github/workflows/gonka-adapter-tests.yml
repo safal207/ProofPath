@@ -1,0 +1,32 @@
+name: Gonka Adapter Tests
+
+on:
+  pull_request:
+    paths:
+      - "examples/compute-witness/gonka_adapter.py"
+      - "examples/compute-witness/gonka.env.example"
+      - "scripts/test_gonka_adapter.py"
+      - "docs/GONKA_COMPUTE_WITNESS_PILOT.md"
+      - ".github/workflows/gonka-adapter-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "examples/compute-witness/gonka_adapter.py"
+      - "scripts/test_gonka_adapter.py"
+      - ".github/workflows/gonka-adapter-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run dependency-free adapter tests
+        run: python3 scripts/test_gonka_adapter.py
