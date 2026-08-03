@@ -89,7 +89,7 @@ class GonkaAdapterTests(unittest.TestCase):
         times = iter(
             [
                 dt.datetime(2026, 8, 3, 18, 0, index, tzinfo=dt.timezone.utc)
-                for index in range(30)
+                for index in range(40)
             ]
         )
         return MODULE.GonkaComputeWitnessAdapter(
@@ -118,6 +118,9 @@ class GonkaAdapterTests(unittest.TestCase):
         self.assertEqual(3, receipt["successful_replicas"])
         self.assertEqual(1.0, receipt["agreement_score"])
         self.assertTrue(receipt["receipt_hash"].startswith("sha256:"))
+        self.assertTrue(receipt["executions"][0]["response_hash"].startswith("sha256:"))
+        self.assertTrue(receipt["executions"][0]["raw_output_hash"].startswith("sha256:"))
+        self.assertEqual("none", receipt["executions"][0]["reasoning_markup"])
         serialized_receipt = json.dumps(receipt)
         self.assertNotIn("primary-secret", serialized_receipt)
         self.assertNotIn("Assess this claim.", serialized_receipt)
@@ -126,6 +129,64 @@ class GonkaAdapterTests(unittest.TestCase):
             "https://broker.example/v1/chat/completions",
             transport.calls[0]["url"],
         )
+
+    def test_closed_think_blocks_are_removed_before_agreement(self) -> None:
+        transport = ScriptedTransport(
+            [
+                response("<think>private alpha</think>\n\nProofPath OK", "req-1"),
+                response("<THINK>different private beta</THINK>\nProofPath OK", "req-2"),
+                response("<think data-x='1'>gamma</think>ProofPath OK", "req-3"),
+            ]
+        )
+        result = self.adapter(transport).run("trace-think", "Reply exactly.")
+
+        self.assertEqual("CONSENSUS", result["receipt"]["verdict"])
+        self.assertEqual(1.0, result["receipt"]["agreement_score"])
+        self.assertEqual(
+            ["ProofPath OK", "ProofPath OK", "ProofPath OK"],
+            [item["content"] for item in result["outputs"]],
+        )
+        executions = result["receipt"]["executions"]
+        self.assertTrue(all(item["reasoning_markup"] == "closed" for item in executions))
+        self.assertTrue(all(item["raw_output_hash"] for item in executions))
+        self.assertTrue(all(item["output_hash"] for item in executions))
+        serialized_receipt = json.dumps(result["receipt"])
+        self.assertNotIn("private alpha", serialized_receipt)
+        self.assertNotIn("different private beta", serialized_receipt)
+
+    def test_unclosed_think_block_is_rejected(self) -> None:
+        transport = ScriptedTransport(
+            [response("<think>unfinished private reasoning", "req-truncated")]
+        )
+        result = self.adapter(transport).run(
+            "trace-truncated",
+            "Reply exactly.",
+            replicas=1,
+        )
+
+        self.assertEqual("NO_SUCCESSFUL_EXECUTION", result["receipt"]["verdict"])
+        self.assertEqual([], result["outputs"])
+        execution = result["receipt"]["executions"][0]
+        self.assertEqual("ERROR", execution["status"])
+        self.assertEqual("unclosed", execution["reasoning_markup"])
+        self.assertIn("unclosed <think>", execution["error"])
+        self.assertTrue(execution["response_hash"].startswith("sha256:"))
+        self.assertTrue(execution["raw_output_hash"].startswith("sha256:"))
+        self.assertIsNone(execution["output_hash"])
+
+    def test_reasoning_without_final_answer_is_rejected(self) -> None:
+        transport = ScriptedTransport(
+            [response("<think>reasoning only</think>", "req-no-final")]
+        )
+        result = self.adapter(transport).run(
+            "trace-no-final",
+            "Reply exactly.",
+            replicas=1,
+        )
+        execution = result["receipt"]["executions"][0]
+        self.assertEqual("ERROR", execution["status"])
+        self.assertEqual("closed-no-final", execution["reasoning_markup"])
+        self.assertIn("no final answer", execution["error"])
 
     def test_primary_error_uses_explicit_fallback(self) -> None:
         transport = ScriptedTransport(
