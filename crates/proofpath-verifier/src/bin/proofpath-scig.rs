@@ -135,15 +135,24 @@ fn validate(doc: &ScigDocument) -> ValidationReport {
     report.require(non_empty(&doc.incident_id), "incident_id must not be empty");
     report.require(non_empty(&doc.actor.id), "actor.id must not be empty");
     report.require(non_empty(&doc.action.id), "action.id must not be empty");
-    report.require(non_empty(&doc.pre_state.id), "pre_state.id must not be empty");
-    report.require(non_empty(&doc.post_state.id), "post_state.id must not be empty");
+    report.require(
+        non_empty(&doc.pre_state.id),
+        "pre_state.id must not be empty",
+    );
+    report.require(
+        non_empty(&doc.post_state.id),
+        "post_state.id must not be empty",
+    );
     report.require(non_empty(&doc.control.id), "control.id must not be empty");
     report.require(
         non_empty(&doc.control.expected_outcome),
         "control.expected_outcome must not be empty",
     );
 
-    report.require(non_empty(&doc.transition.id), "transition.id must not be empty");
+    report.require(
+        non_empty(&doc.transition.id),
+        "transition.id must not be empty",
+    );
     report.require(
         doc.transition.from == doc.pre_state.id,
         "transition.from must reference pre_state.id",
@@ -156,14 +165,23 @@ fn validate(doc: &ScigDocument) -> ValidationReport {
         doc.transition.action == doc.action.id,
         "transition.action must reference action.id",
     );
-    report.require(non_empty(&doc.transition.phase), "transition.phase must not be empty");
+    report.require(
+        non_empty(&doc.transition.phase),
+        "transition.phase must not be empty",
+    );
     report.require(
         doc.transition.observed_at.contains('T') && doc.transition.observed_at.ends_with('Z'),
         "transition.observed_at must be an RFC3339-like UTC timestamp",
     );
 
-    report.require(!doc.invariants.is_empty(), "at least one invariant is required");
-    report.require(!doc.evidence.is_empty(), "at least one evidence object is required");
+    report.require(
+        !doc.invariants.is_empty(),
+        "at least one invariant is required",
+    );
+    report.require(
+        !doc.evidence.is_empty(),
+        "at least one evidence object is required",
+    );
 
     for invariant in &doc.invariants {
         report.require(non_empty(&invariant.id), "invariant.id must not be empty");
@@ -186,10 +204,19 @@ fn validate(doc: &ScigDocument) -> ValidationReport {
     for edge in &doc.cause {
         report.require(
             CAUSAL_TYPES.contains(&edge.kind.as_str()),
-            format!("causal edge {} -> {} has invalid type {}", edge.source, edge.target, edge.kind),
+            format!(
+                "causal edge {} -> {} has invalid type {}",
+                edge.source, edge.target, edge.kind
+            ),
         );
-        report.require(non_empty(&edge.source), "causal edge source must not be empty");
-        report.require(non_empty(&edge.target), "causal edge target must not be empty");
+        report.require(
+            non_empty(&edge.source),
+            "causal edge source must not be empty",
+        );
+        report.require(
+            non_empty(&edge.target),
+            "causal edge target must not be empty",
+        );
         if let Some(reference) = &edge.evidence_reference {
             report.require(
                 evidence_exists(doc, reference),
@@ -205,9 +232,18 @@ fn validate(doc: &ScigDocument) -> ValidationReport {
         LIFECYCLE_RESULTS.contains(&doc.verification.result.as_str()),
         "verification.result must be passed, failed, or unknown",
     );
-    report.require(non_empty(&doc.verification.test_id), "verification.test_id must not be empty");
-    report.require(non_empty(&doc.verification.expected), "verification.expected must not be empty");
-    report.require(non_empty(&doc.verification.observed), "verification.observed must not be empty");
+    report.require(
+        non_empty(&doc.verification.test_id),
+        "verification.test_id must not be empty",
+    );
+    report.require(
+        non_empty(&doc.verification.expected),
+        "verification.expected must not be empty",
+    );
+    report.require(
+        non_empty(&doc.verification.observed),
+        "verification.observed must not be empty",
+    );
 
     if let Some(reference) = &doc.verification.evidence_reference {
         report.require(
@@ -229,11 +265,23 @@ fn validate(doc: &ScigDocument) -> ValidationReport {
 
     for evidence in &doc.evidence {
         report.require(non_empty(&evidence.id), "evidence.id must not be empty");
-        report.require(non_empty(&evidence.kind), format!("evidence {} type must not be empty", evidence.id));
+        report.require(
+            non_empty(&evidence.kind),
+            format!("evidence {} type must not be empty", evidence.id),
+        );
     }
 
-    let _ = (&doc.actor.kind, &doc.action.kind, &doc.pre_state.kind, &doc.post_state.kind);
-    let _ = (&doc.control.kind, &doc.containment.target_state, &doc.recovery.target_state);
+    let _ = (
+        &doc.actor.kind,
+        &doc.action.kind,
+        &doc.pre_state.kind,
+        &doc.post_state.kind,
+    );
+    let _ = (
+        &doc.control.kind,
+        &doc.containment.target_state,
+        &doc.recovery.target_state,
+    );
 
     report
 }
@@ -279,12 +327,36 @@ fn invariant_label(result: &str) -> &'static str {
 fn print_report(doc: &ScigDocument, report: &ValidationReport) {
     println!("SCIG {}", doc.incident_id);
     for invariant in &doc.invariants {
-        println!("{:<18} {}", invariant.id, invariant_label(&invariant.result));
+        println!(
+            "{:<18} {}",
+            invariant.id,
+            invariant_label(&invariant.result)
+        );
     }
-    println!("{:<18} {}", "CONTAINMENT", lifecycle_label(&doc.containment.result));
-    println!("{:<18} {}", "RECOVERY", lifecycle_label(&doc.recovery.result));
-    println!("{:<18} {}", "VERIFICATION", lifecycle_label(&doc.verification.result));
-    println!("{:<18} {}", "RESULT", if report.is_valid() { "VALID" } else { "INVALID" });
+    println!(
+        "{:<18} {}",
+        "CONTAINMENT",
+        lifecycle_label(&doc.containment.result)
+    );
+    println!(
+        "{:<18} {}",
+        "RECOVERY",
+        lifecycle_label(&doc.recovery.result)
+    );
+    println!(
+        "{:<18} {}",
+        "VERIFICATION",
+        lifecycle_label(&doc.verification.result)
+    );
+    println!(
+        "{:<18} {}",
+        "RESULT",
+        if report.is_valid() {
+            "VALID"
+        } else {
+            "INVALID"
+        }
+    );
 
     if !report.is_valid() {
         eprintln!("\nValidation errors:");
@@ -360,7 +432,10 @@ mod tests {
         doc.transition.to = "wrong-state".to_string();
         let report = validate(&doc);
         assert!(!report.is_valid());
-        assert!(report.errors.iter().any(|error| error.contains("transition.to")));
+        assert!(report
+            .errors
+            .iter()
+            .any(|error| error.contains("transition.to")));
     }
 
     #[test]
@@ -369,7 +444,10 @@ mod tests {
         doc.recovery.result = "failed".to_string();
         let report = validate(&doc);
         assert!(!report.is_valid());
-        assert!(report.errors.iter().any(|error| error.contains("recovery passed")));
+        assert!(report
+            .errors
+            .iter()
+            .any(|error| error.contains("recovery passed")));
     }
 
     #[test]
@@ -378,6 +456,9 @@ mod tests {
         doc.invariants[0].evidence_reference = Some("missing".to_string());
         let report = validate(&doc);
         assert!(!report.is_valid());
-        assert!(report.errors.iter().any(|error| error.contains("missing evidence")));
+        assert!(report
+            .errors
+            .iter()
+            .any(|error| error.contains("missing evidence")));
     }
 }
