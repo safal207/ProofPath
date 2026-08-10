@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/safal207/ProofPath/schemas/safe-causal-incident-graph-v0.1.schema.json",
+  "title": "SAFE Causal Incident Graph v0.1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "incident_id",
+    "actor",
+    "action",
+    "pre_state",
+    "control",
+    "transition",
+    "post_state",
+    "invariants",
+    "cause",
+    "containment",
+    "recovery",
+    "verification",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1" },
+    "incident_id": { "type": "string", "minLength": 1 },
+    "actor": { "$ref": "#/$defs/entity" },
+    "action": { "$ref": "#/$defs/entity" },
+    "pre_state": { "$ref": "#/$defs/entity" },
+    "control": { "$ref": "#/$defs/control" },
+    "transition": { "$ref": "#/$defs/transition" },
+    "post_state": { "$ref": "#/$defs/entity" },
+    "invariants": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/invariant" }
+    },
+    "cause": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/causalEdge" }
+    },
+    "containment": { "$ref": "#/$defs/lifecycleResult" },
+    "recovery": { "$ref": "#/$defs/lifecycleResult" },
+    "verification": { "$ref": "#/$defs/verification" },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/evidence" }
+    }
+  },
+  "$defs": {
+    "entity": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "phase": { "type": "string" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "provenance": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "control": {
+      "allOf": [
+        { "$ref": "#/$defs/entity" },
+        {
+          "type": "object",
+          "required": ["expected_outcome"],
+          "properties": {
+            "expected_outcome": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "transition": {
+      "type": "object",
+      "required": ["id", "from", "action", "to", "phase", "observed_at"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "from": { "type": "string", "minLength": 1 },
+        "action": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "phase": { "type": "string", "minLength": 1 },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "trace_reference": { "$ref": "#/$defs/traceReference" },
+        "provenance": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "invariant": {
+      "type": "object",
+      "required": ["id", "description", "result"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "result": { "enum": ["held", "violated", "unknown"] },
+        "evidence_reference": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "causalEdge": {
+      "type": "object",
+      "required": ["type", "source", "target"],
+      "properties": {
+        "type": {
+          "enum": [
+            "enabled_by",
+            "required",
+            "triggered",
+            "bypassed",
+            "failed_to_prevent",
+            "amplified",
+            "masked",
+            "recovered_by",
+            "verified_by"
+          ]
+        },
+        "source": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "evidence_reference": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "lifecycleResult": {
+      "type": "object",
+      "required": ["action", "result"],
+      "properties": {
+        "action": { "type": "string", "minLength": 1 },
+        "result": { "enum": ["passed", "failed", "unknown"] },
+        "target_state": { "type": "string" },
+        "evidence_reference": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "verification": {
+      "type": "object",
+      "required": ["test_id", "expected", "observed", "result"],
+      "properties": {
+        "test_id": { "type": "string", "minLength": 1 },
+        "expected": { "type": "string" },
+        "observed": { "type": "string" },
+        "result": { "enum": ["passed", "failed", "unknown"] },
+        "evidence_reference": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "traceReference": {
+      "type": "object",
+      "properties": {
+        "trace_id": { "type": "string" },
+        "span_id": { "type": "string" },
+        "parent_span_id": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "trace_id": { "type": "string" },
+        "span_id": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+        "uri": { "type": "string" },
+        "provenance": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  }
+}
