@@ -128,31 +128,22 @@ fn evidence_exists(doc: &ScigDocument, id: &str) -> bool {
     doc.evidence.iter().any(|evidence| evidence.id == id)
 }
 
-fn validate(doc: &ScigDocument) -> ValidationReport {
-    let mut report = ValidationReport::new();
-
+fn validate_identity_and_states(doc: &ScigDocument, report: &mut ValidationReport) {
     report.require(doc.schema_version == "0.1", "schema_version must equal 0.1");
     report.require(non_empty(&doc.incident_id), "incident_id must not be empty");
     report.require(non_empty(&doc.actor.id), "actor.id must not be empty");
     report.require(non_empty(&doc.action.id), "action.id must not be empty");
-    report.require(
-        non_empty(&doc.pre_state.id),
-        "pre_state.id must not be empty",
-    );
-    report.require(
-        non_empty(&doc.post_state.id),
-        "post_state.id must not be empty",
-    );
+    report.require(non_empty(&doc.pre_state.id), "pre_state.id must not be empty");
+    report.require(non_empty(&doc.post_state.id), "post_state.id must not be empty");
     report.require(non_empty(&doc.control.id), "control.id must not be empty");
     report.require(
         non_empty(&doc.control.expected_outcome),
         "control.expected_outcome must not be empty",
     );
+}
 
-    report.require(
-        non_empty(&doc.transition.id),
-        "transition.id must not be empty",
-    );
+fn validate_transition(doc: &ScigDocument, report: &mut ValidationReport) {
+    report.require(non_empty(&doc.transition.id), "transition.id must not be empty");
     report.require(
         doc.transition.from == doc.pre_state.id,
         "transition.from must reference pre_state.id",
@@ -173,16 +164,13 @@ fn validate(doc: &ScigDocument) -> ValidationReport {
         doc.transition.observed_at.contains('T') && doc.transition.observed_at.ends_with('Z'),
         "transition.observed_at must be an RFC3339-like UTC timestamp",
     );
+}
 
+fn validate_invariants(doc: &ScigDocument, report: &mut ValidationReport) {
     report.require(
         !doc.invariants.is_empty(),
         "at least one invariant is required",
     );
-    report.require(
-        !doc.evidence.is_empty(),
-        "at least one evidence object is required",
-    );
-
     for invariant in &doc.invariants {
         report.require(non_empty(&invariant.id), "invariant.id must not be empty");
         report.require(
@@ -200,7 +188,9 @@ fn validate(doc: &ScigDocument) -> ValidationReport {
             );
         }
     }
+}
 
+fn validate_causal_edges(doc: &ScigDocument, report: &mut ValidationReport) {
     for edge in &doc.cause {
         report.require(
             CAUSAL_TYPES.contains(&edge.kind.as_str()),
@@ -224,66 +214,6 @@ fn validate(doc: &ScigDocument) -> ValidationReport {
             );
         }
     }
-
-    validate_lifecycle(doc, &doc.containment, "containment", &mut report);
-    validate_lifecycle(doc, &doc.recovery, "recovery", &mut report);
-
-    report.require(
-        LIFECYCLE_RESULTS.contains(&doc.verification.result.as_str()),
-        "verification.result must be passed, failed, or unknown",
-    );
-    report.require(
-        non_empty(&doc.verification.test_id),
-        "verification.test_id must not be empty",
-    );
-    report.require(
-        non_empty(&doc.verification.expected),
-        "verification.expected must not be empty",
-    );
-    report.require(
-        non_empty(&doc.verification.observed),
-        "verification.observed must not be empty",
-    );
-
-    if let Some(reference) = &doc.verification.evidence_reference {
-        report.require(
-            evidence_exists(doc, reference),
-            format!("verification references missing evidence {reference}"),
-        );
-    }
-
-    if doc.verification.result == "passed" {
-        report.require(
-            doc.recovery.result == "passed",
-            "verification cannot pass unless recovery passed",
-        );
-        report.require(
-            doc.verification.expected == doc.verification.observed,
-            "verification passed but expected and observed differ",
-        );
-    }
-
-    for evidence in &doc.evidence {
-        report.require(non_empty(&evidence.id), "evidence.id must not be empty");
-        report.require(
-            non_empty(&evidence.kind),
-            format!("evidence {} type must not be empty", evidence.id),
-        );
-    }
-
-    let _ = (
-        &doc.actor.kind,
-        &doc.action.kind,
-        &doc.pre_state.kind,
-        &doc.post_state.kind,
-    );
-    let _ = (
-        &doc.control.kind,
-        &doc.containment.target_state,
-        &doc.recovery.target_state,
-    );
-
-    report
 }
 
 fn validate_lifecycle(
@@ -306,6 +236,79 @@ fn validate_lifecycle(
             format!("{label} references missing evidence {reference}"),
         );
     }
+}
+
+fn validate_verification(doc: &ScigDocument, report: &mut ValidationReport) {
+    report.require(
+        LIFECYCLE_RESULTS.contains(&doc.verification.result.as_str()),
+        "verification.result must be passed, failed, or unknown",
+    );
+    report.require(
+        non_empty(&doc.verification.test_id),
+        "verification.test_id must not be empty",
+    );
+    report.require(
+        non_empty(&doc.verification.expected),
+        "verification.expected must not be empty",
+    );
+    report.require(
+        non_empty(&doc.verification.observed),
+        "verification.observed must not be empty",
+    );
+    if let Some(reference) = &doc.verification.evidence_reference {
+        report.require(
+            evidence_exists(doc, reference),
+            format!("verification references missing evidence {reference}"),
+        );
+    }
+    if doc.verification.result == "passed" {
+        report.require(
+            doc.recovery.result == "passed",
+            "verification cannot pass unless recovery passed",
+        );
+        report.require(
+            doc.verification.expected == doc.verification.observed,
+            "verification passed but expected and observed differ",
+        );
+    }
+}
+
+fn validate_evidence(doc: &ScigDocument, report: &mut ValidationReport) {
+    report.require(
+        !doc.evidence.is_empty(),
+        "at least one evidence object is required",
+    );
+    for evidence in &doc.evidence {
+        report.require(non_empty(&evidence.id), "evidence.id must not be empty");
+        report.require(
+            non_empty(&evidence.kind),
+            format!("evidence {} type must not be empty", evidence.id),
+        );
+    }
+}
+
+fn validate(doc: &ScigDocument) -> ValidationReport {
+    let mut report = ValidationReport::new();
+    validate_identity_and_states(doc, &mut report);
+    validate_transition(doc, &mut report);
+    validate_invariants(doc, &mut report);
+    validate_causal_edges(doc, &mut report);
+    validate_lifecycle(doc, &doc.containment, "containment", &mut report);
+    validate_lifecycle(doc, &doc.recovery, "recovery", &mut report);
+    validate_verification(doc, &mut report);
+    validate_evidence(doc, &mut report);
+
+    let _ = (
+        &doc.actor.kind,
+        &doc.action.kind,
+        &doc.pre_state.kind,
+        &doc.post_state.kind,
+        &doc.control.kind,
+        &doc.containment.target_state,
+        &doc.recovery.target_state,
+    );
+
+    report
 }
 
 fn lifecycle_label(result: &str) -> &'static str {
