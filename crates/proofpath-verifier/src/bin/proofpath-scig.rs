@@ -133,8 +133,14 @@ fn validate_identity_and_states(doc: &ScigDocument, report: &mut ValidationRepor
     report.require(non_empty(&doc.incident_id), "incident_id must not be empty");
     report.require(non_empty(&doc.actor.id), "actor.id must not be empty");
     report.require(non_empty(&doc.action.id), "action.id must not be empty");
-    report.require(non_empty(&doc.pre_state.id), "pre_state.id must not be empty");
-    report.require(non_empty(&doc.post_state.id), "post_state.id must not be empty");
+    report.require(
+        non_empty(&doc.pre_state.id),
+        "pre_state.id must not be empty",
+    );
+    report.require(
+        non_empty(&doc.post_state.id),
+        "post_state.id must not be empty",
+    );
     report.require(non_empty(&doc.control.id), "control.id must not be empty");
     report.require(
         non_empty(&doc.control.expected_outcome),
@@ -143,7 +149,10 @@ fn validate_identity_and_states(doc: &ScigDocument, report: &mut ValidationRepor
 }
 
 fn validate_transition(doc: &ScigDocument, report: &mut ValidationReport) {
-    report.require(non_empty(&doc.transition.id), "transition.id must not be empty");
+    report.require(
+        non_empty(&doc.transition.id),
+        "transition.id must not be empty",
+    );
     report.require(
         doc.transition.from == doc.pre_state.id,
         "transition.from must reference pre_state.id",
