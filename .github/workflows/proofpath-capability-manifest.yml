@@ -1,0 +1,55 @@
+name: ProofPath capability manifest
+
+on:
+  pull_request:
+    paths:
+      - 'governance/capability-manifest.v0.1.json'
+      - 'governance/fcrp-self-005.json'
+      - 'docs/CAPABILITY_PROMOTION_CONTRACT.md'
+      - 'scripts/validate_capability_manifest.py'
+      - 'tests/test_capability_manifest.py'
+      - '.github/workflows/proofpath-capability-manifest.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'governance/capability-manifest.v0.1.json'
+      - 'governance/fcrp-self-005.json'
+      - 'docs/CAPABILITY_PROMOTION_CONTRACT.md'
+      - 'scripts/validate_capability_manifest.py'
+      - 'tests/test_capability_manifest.py'
+      - '.github/workflows/proofpath-capability-manifest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capability-canonicality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Validate capability manifest
+        run: python3 scripts/validate_capability_manifest.py governance/capability-manifest.v0.1.json
+
+      - name: Run canonicality regression tests
+        run: python3 -m unittest discover -s tests -p 'test_capability_manifest.py' -v
+
+      - name: Verify FCRP-SELF-005 is bound to the manifest
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          case = json.loads(Path('governance/fcrp-self-005.json').read_text())
+          manifest = Path('governance/capability-manifest.v0.1.json').read_text()
+          assert case['caseId'] == 'FCRP-SELF-005'
+          assert case['divergence']['firstMeaningfulDivergence'] == 'N1'
+          assert case['divergence']['selectedRefactorPoint'] == 'N4'
+          assert case['expectedProtocolDecision'] == 'PASS'
+          assert 'proofpath.poci.contract.v0.1' in manifest
+          assert 'proofpath.scig.v0.1' in manifest
+          print('FCRP_SELF_005_BOUND')
+          PY
