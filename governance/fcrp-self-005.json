@@ -1,0 +1,118 @@
+{
+  "schema": "cgqa.fcrp-case.v0.1",
+  "caseId": "FCRP-SELF-005",
+  "scope": {
+    "nodeId": "proofpath-canonical-reality-drift",
+    "scale": "repository/capability-lifecycle/ecosystem-contract",
+    "idea": "A ProofPath capability must have an unambiguous canonical identity before downstream systems may consume it by default."
+  },
+  "evidence": [
+    {
+      "id": "E1",
+      "kind": "canonical-main",
+      "ref": "ProofPath main@685d50e256a5125a21f4c4584b326411caaa64ad",
+      "claim": "The audited main branch contains SCIG v0.1 as a promoted capability."
+    },
+    {
+      "id": "E2",
+      "kind": "pull-request",
+      "ref": "https://github.com/safal207/ProofPath/pull/193",
+      "claim": "PoCI v0.1 is the earliest open capability in the current stack, is based on main, and remains unmerged."
+    },
+    {
+      "id": "E3",
+      "kind": "repository-observation",
+      "ref": "docs/POCI_SPEC_V0_1.md@main",
+      "claim": "The PoCI specification path from PR #193 is absent from the audited main branch."
+    },
+    {
+      "id": "E4",
+      "kind": "pull-request-graph",
+      "ref": "ProofPath open PRs #193-#216",
+      "claim": "Later PoCI, Deploy Guard, evidence, Control Cloud, admission and governance capabilities form a dependency stack rooted in unpromoted PoCI work."
+    },
+    {
+      "id": "E5",
+      "kind": "local-contract",
+      "ref": "governance/capability-manifest.v0.1.json",
+      "claim": "The repository now declares capability state, exact branch identities and default-consumer eligibility explicitly."
+    },
+    {
+      "id": "E6",
+      "kind": "local-validator",
+      "ref": "scripts/validate_capability_manifest.py",
+      "claim": "The fail-closed validator prevents proposed or experimental capabilities from becoming ambient default dependencies."
+    }
+  ],
+  "timeline": {
+    "past": {
+      "summary": "ProofPath developed PoCI and successive product layers through a long stacked PR trajectory without a general capability-promotion contract.",
+      "evidenceRefs": ["E2", "E4"]
+    },
+    "present": {
+      "summary": "Main has continued to evolve and has promoted other work such as SCIG, while the PoCI-to-Control-Cloud stack remains branch-only and can be confused with canonical architecture.",
+      "evidenceRefs": ["E1", "E3", "E4"]
+    },
+    "future": {
+      "summary": "Every capability has explicit lifecycle state and exact identity; cross-repository consumers default only to canonical capabilities and must opt in to exact non-canonical heads.",
+      "evidenceRefs": ["E5", "E6"]
+    }
+  },
+  "causalPath": [
+    {
+      "id": "N1",
+      "level": "repository-capability",
+      "phase": "first-divergence",
+      "statement": "PoCI v0.1 became the dependency root of subsequent ProofPath architecture while remaining outside main and lacking a repository-level promotion state contract.",
+      "evidenceRefs": ["E2", "E3"]
+    },
+    {
+      "id": "N2",
+      "level": "branch-graph",
+      "phase": "amplification",
+      "statement": "Successive capabilities were stacked on the unpromoted root, increasing implementation depth without increasing canonicality.",
+      "evidenceRefs": ["E4"]
+    },
+    {
+      "id": "N3",
+      "level": "ecosystem",
+      "phase": "symptom",
+      "statement": "Architecture and downstream consumers can mistake well-tested branch capabilities for ordinary ProofPath surfaces unless exact status is carried with the capability reference.",
+      "evidenceRefs": ["E4"]
+    },
+    {
+      "id": "N4",
+      "level": "repository-governance",
+      "phase": "refactor",
+      "statement": "Introduce a machine-readable capability manifest and fail-closed promotion rules separating CANONICAL, PROPOSED, EXPERIMENTAL, SUPERSEDED and ARCHIVED states.",
+      "evidenceRefs": ["E5", "E6"]
+    }
+  ],
+  "divergence": {
+    "symptomPoint": "N3",
+    "firstMeaningfulDivergence": "N1",
+    "causePoint": "N1",
+    "selectedRefactorPoint": "N4",
+    "evidenceRefs": ["E2", "E3", "E4", "E5", "E6"]
+  },
+  "navigation": {
+    "direction": "UP",
+    "reason": "The defect is not in one feature implementation; it is the repository-level lifecycle contract governing how feature branches become ecosystem-consumable capabilities."
+  },
+  "refactor": {
+    "point": "N4",
+    "change": "Make canonicality explicit, prohibit ambient consumption of non-canonical capabilities, require exact head pins for experiments, and promote only through reconciled exact-head review and merge.",
+    "expectedEffect": "Branch innovation remains possible without allowing conceptual architecture to outrun canonical repository reality."
+  },
+  "verification": {
+    "local": "PASS",
+    "upward": "PASS",
+    "evidenceRefs": ["E5", "E6"],
+    "stopConditions": {
+      "parentInvariantsPreserved": true,
+      "crossBoundaryEffectsAbsent": true,
+      "causalExplanationComplete": true
+    }
+  },
+  "expectedProtocolDecision": "PASS"
+}

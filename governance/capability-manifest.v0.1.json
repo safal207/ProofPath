@@ -1,0 +1,267 @@
+{
+  "schema_version": "proofpath.capability-manifest.v0.1",
+  "repository": "safal207/ProofPath",
+  "observed_at": "2026-08-14",
+  "observed_main_sha": "685d50e256a5125a21f4c4584b326411caaa64ad",
+  "policy": {
+    "default_consumer_status": "CANONICAL",
+    "noncanonical_requires_exact_head_pin": true,
+    "noncanonical_requires_explicit_opt_in": true,
+    "canonical_dependency_must_be_canonical": true
+  },
+  "capabilities": [
+    {
+      "id": "proofpath.scig.v0.1",
+      "kind": "protocol",
+      "status": "CANONICAL",
+      "source_pr": 219,
+      "head_sha": null,
+      "canonical_commit": "685d50e256a5125a21f4c4584b326411caaa64ad",
+      "depends_on": [],
+      "consumer_default_allowed": true,
+      "note": "SAFE Causal Incident Graph v0.1 is present in main and is the positive control for the promotion model."
+    },
+    {
+      "id": "proofpath.poci.contract.v0.1",
+      "kind": "protocol",
+      "status": "PROPOSED",
+      "source_pr": 193,
+      "head_sha": "643f3cda04f7e2e86935059083ea0424988852b0",
+      "canonical_commit": null,
+      "depends_on": [],
+      "consumer_default_allowed": false,
+      "note": "First open capability in the current PoCI stack and FCRP-SELF-005 first meaningful divergence."
+    },
+    {
+      "id": "proofpath.poci.fixtures.v0.1",
+      "kind": "verification-fixtures",
+      "status": "PROPOSED",
+      "source_pr": 194,
+      "head_sha": "84b10f5071305602f561d9c67d4643263c5723b2",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.contract.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.poci.python-verifier.v0.1",
+      "kind": "verifier",
+      "status": "PROPOSED",
+      "source_pr": 195,
+      "head_sha": "05de05bb1aac72899e36fe65c2150269725ec2f8",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.fixtures.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.poci.ci-demo.v0.1",
+      "kind": "verification-workflow",
+      "status": "PROPOSED",
+      "source_pr": 196,
+      "head_sha": "1ec1ef999f2e54a2045662c1440f1f726d1db19c",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.python-verifier.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.poci.rust-verifier.v0.1",
+      "kind": "verifier",
+      "status": "PROPOSED",
+      "source_pr": 197,
+      "head_sha": "ff1b898babbb88ec98113c9d982680ed4a1e15f1",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.ci-demo.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.poci.multigraph.v0.1",
+      "kind": "protocol",
+      "status": "PROPOSED",
+      "source_pr": 198,
+      "head_sha": "2e5d0991a6fb96db8e7589fa312d6b312ca0e4e5",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.rust-verifier.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.poci.quorum.v0.1",
+      "kind": "verification-network",
+      "status": "PROPOSED",
+      "source_pr": 199,
+      "head_sha": "2558c00ae54e28fc6024cffd1590f9e49f50fff2",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.multigraph.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.poci.signed-multirunner.v0.1",
+      "kind": "verification-network",
+      "status": "PROPOSED",
+      "source_pr": 200,
+      "head_sha": "a726f2a8b3bd9c6c4469be542e30bb54b230d510",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.quorum.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.poci.cross-repo-federation.v0.1",
+      "kind": "verification-network",
+      "status": "PROPOSED",
+      "source_pr": 201,
+      "head_sha": "0a821562a7336c918ab76006dd47d8dc8f8a6fa6",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.signed-multirunner.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.poci.org-independence.v0.1",
+      "kind": "governance",
+      "status": "PROPOSED",
+      "source_pr": 202,
+      "head_sha": "25c2431d20915dd933e2d4a04be8d424df97554c",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.cross-repo-federation.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.poci.external-sdk.v0.1",
+      "kind": "sdk",
+      "status": "PROPOSED",
+      "source_pr": 204,
+      "head_sha": "469d742cfe59b12875c5c6e1fc0ce660c38ab1dd",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.org-independence.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.poci.external-admission.v0.1",
+      "kind": "admission",
+      "status": "PROPOSED",
+      "source_pr": 205,
+      "head_sha": "74c2f352aab0620f997042cd6bf7ec3ad7056e9b",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.external-sdk.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.deploy-guard.v0.1",
+      "kind": "product-protocol",
+      "status": "PROPOSED",
+      "source_pr": 206,
+      "head_sha": "384826649b5a8c24e0d31a57a0f8756f61053ca4",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.poci.external-admission.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.deploy-guard-action.v0.1",
+      "kind": "integration",
+      "status": "PROPOSED",
+      "source_pr": 207,
+      "head_sha": "bb2aec89b3d2b8e9efd5a1996e6a2665aa53af3a",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.deploy-guard.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.deploy-evidence-builder.v0.1",
+      "kind": "evidence-builder",
+      "status": "PROPOSED",
+      "source_pr": 208,
+      "head_sha": "38e699244a2af59fe45975a29e271e0fd0e1ac49",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.deploy-guard-action.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.github-evidence-collector.v0.1",
+      "kind": "collector",
+      "status": "PROPOSED",
+      "source_pr": 209,
+      "head_sha": "bc7805b17324a92d4201b11f66192857d9a4c5f7",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.deploy-evidence-builder.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.assured-action-economy.v0.1",
+      "kind": "economy-simulation",
+      "status": "PROPOSED",
+      "source_pr": 210,
+      "head_sha": "f6614d1faf4b3c0b5bf1400edee769f89efea780",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.deploy-evidence-builder.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.control-cloud.v0.1",
+      "kind": "product-layer",
+      "status": "PROPOSED",
+      "source_pr": 211,
+      "head_sha": "aaf0fd0f53616b456eb4984f8d37384cb6688c95",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.github-evidence-collector.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.control-cloud-ingestion.v0.1",
+      "kind": "ingestion",
+      "status": "PROPOSED",
+      "source_pr": 213,
+      "head_sha": "2b07fc3713b3d410d87247b22a4e023fd8dfb5cc",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.control-cloud.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.sigstore-admission.v0.1",
+      "kind": "admission",
+      "status": "PROPOSED",
+      "source_pr": 214,
+      "head_sha": "eda93927ab82e4e9c8cb8e01ecadb02e6d13c910",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.control-cloud-ingestion.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.workflow-governance.v0.1",
+      "kind": "governance",
+      "status": "PROPOSED",
+      "source_pr": 215,
+      "head_sha": "87be25b5383fbddf3fec437f53346d1865594672",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.sigstore-admission.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.reviewer-separation.v0.1",
+      "kind": "governance",
+      "status": "PROPOSED",
+      "source_pr": 216,
+      "head_sha": "4e7a206bc8ea4e486318c77ab13f089017f4ab80",
+      "canonical_commit": null,
+      "depends_on": ["proofpath.workflow-governance.v0.1"],
+      "consumer_default_allowed": false
+    },
+    {
+      "id": "proofpath.master-context.v0.3",
+      "kind": "documentation",
+      "status": "PROPOSED",
+      "source_pr": 217,
+      "head_sha": "5579316decdc84185bc3197e56c1d80ed2428b4a",
+      "canonical_commit": null,
+      "depends_on": [],
+      "consumer_default_allowed": false,
+      "note": "A context document cannot promote capabilities that are not present in main."
+    },
+    {
+      "id": "proofpath.gonka-compute-witness-pilot.v0.1",
+      "kind": "experimental-adapter",
+      "status": "EXPERIMENTAL",
+      "source_pr": 218,
+      "head_sha": "390c03784289ad9c65001c28e0737baac6030069",
+      "canonical_commit": null,
+      "depends_on": [],
+      "consumer_default_allowed": false
+    }
+  ]
+}
