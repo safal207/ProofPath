@@ -36,7 +36,7 @@ jobs:
         run: python3 scripts/validate_capability_manifest.py governance/capability-manifest.v0.1.json
 
       - name: Run canonicality regression tests
-        run: python3 -m unittest tests.test_capability_manifest -v
+        run: python3 -m unittest discover -s tests -p 'test_capability_manifest.py' -v
 
       - name: Verify FCRP-SELF-005 is bound to the manifest
         run: |
