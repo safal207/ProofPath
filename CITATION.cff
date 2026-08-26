@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use ProofPath in research or engineering work, please cite this repository."
+title: "ProofPath: Pre-Execution Authorization and Evidence for AI-Agent Actions"
+type: software
+authors:
+  - family-names: "Safonov"
+    given-names: "Aleksei"
+repository-code: "https://github.com/safal207/ProofPath"
+url: "https://github.com/safal207/ProofPath"
+license: "MIT"
+keywords:
+  - AI agent security
+  - agentic payments
+  - verifiable intent
+  - authorization
+  - replay protection
+  - audit evidence

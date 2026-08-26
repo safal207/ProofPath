@@ -1,34 +1,56 @@
-# ProofPath
+<!-- seo-product-intro:start -->
+# ProofPath — AI Agent Authorization & Agentic Payment Security
 
-## NGI TALER reviewer path
+**A defensive pre-execution gateway for AI-agent security, agentic payments, verifiable intent, replay protection, human approval, and auditable action evidence.**
 
-ProofPath Agent Payment Guard was submitted to NGI TALER as an open-source auxiliary layer for privacy-preserving AI-agent payment authorization.
+> **Model output is a proposal, not authorization.**
 
-Start here:
+ProofPath asks one question before a high-risk action reaches a payment rail, API, infrastructure surface, or irreversible tool:
 
-- [`docs/GRANT_EVIDENCE_INDEX.md`](docs/GRANT_EVIDENCE_INDEX.md)
-- [`docs/NGI_TALER_REVIEWER_PATH.md`](docs/NGI_TALER_REVIEWER_PATH.md)
-- [`docs/TALER_ALIGNMENT.md`](docs/TALER_ALIGNMENT.md)
-- [`docs/AGENT_PAYMENT_GUARD_DEMO.md`](docs/AGENT_PAYMENT_GUARD_DEMO.md)
-- [`docs/BUDGET_AND_MILESTONES.md`](docs/BUDGET_AND_MILESTONES.md)
+> Should this exact action be allowed to execute now — under this intent, authority, scope, budget, recipient, approval, and replay state?
 
-Reviewer quick commands:
+```text
+agent proposal
+      ↓
+exact intent + authority + policy + replay checks
+      ↓
+ACCEPT / HOLD / BLOCK
+      ↓
+tamper-evident audit record + portable evidence
+```
+
+## Product surfaces
+
+| Surface | What it protects |
+|---|---|
+| Agent Payment Guard | AI-initiated payments: asset, budget, recipient, approval, nonce, and evidence boundaries |
+| Pre-execution API gateway | High-risk API and tool actions before upstream execution |
+| CI evidence gate | Audit-log verification and pass/fail checks inside delivery workflows |
+| Personal Agent Guard | Local approval and evidence boundaries around AI coding tools |
+
+## Fastest proof
 
 ```bash
-bash examples/agent-payment-guard/run_demo_check.sh
-bash examples/agent-payment-guard/run_service_check.sh
 bash examples/agent-payment-guard/run_e2e_evidence_demo.sh
 bash examples/agent-payment-guard/run_mock_rail_demo.sh
 ```
 
-Grant metadata:
+The demo proves that an accepted proposal reaches the mock rail, a replayed envelope is blocked, and the decision trail can be exported and verified offline.
 
-```text
-Application: 2026-08-00b
-Fund: NGI TALER
-Requested amount: EUR 50,000
-Correct repository: https://github.com/safal207/ProofPath
-```
+[Read the Agent Payment Guard brief](docs/agent-payment-guard-brief.md) · [Inspect the reviewer path](docs/REVIEWER_FIRST_SCREEN.md) · [Open architecture](docs/architecture.md)
+
+<details>
+<summary><strong>NGI TALER grant reviewer path</strong></summary>
+
+ProofPath Agent Payment Guard was submitted as an open-source auxiliary layer for privacy-preserving AI-agent payment authorization.
+
+- [Grant evidence index](docs/GRANT_EVIDENCE_INDEX.md)
+- [NGI TALER reviewer path](docs/NGI_TALER_REVIEWER_PATH.md)
+- [TALER alignment](docs/TALER_ALIGNMENT.md)
+- [Budget and milestones](docs/BUDGET_AND_MILESTONES.md)
+
+</details>
+<!-- seo-product-intro:end -->
 
 **Verifiable intent for every critical action.**
 
